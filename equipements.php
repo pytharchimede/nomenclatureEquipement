@@ -26,74 +26,7 @@ $catTop = $categories[array_search($catMax, $catData)];
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
-    <style>
-        .card {
-            border-radius: 16px;
-        }
-
-        .modal-content {
-            border-radius: 16px;
-        }
-
-        .table thead {
-            background: #f5f5f5;
-        }
-
-        .form-label {
-            font-weight: 500;
-        }
-
-        .mini-card {
-            min-width: 180px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px #eee;
-            background: #fff;
-            padding: 1rem 1.2rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .mini-card .material-icons {
-            font-size: 2.2rem;
-            color: #1976d2;
-        }
-
-        .mini-graph {
-            width: 120px !important;
-            height: 60px !important;
-        }
-
-        @media (max-width: 991px) {
-            .mini-card {
-                min-width: 120px;
-                padding: 0.7rem 0.5rem;
-            }
-
-            .mini-graph {
-                width: 80px !important;
-                height: 40px !important;
-            }
-        }
-
-        #drop-area {
-            border: 2px dashed #1976d2;
-            border-radius: 12px;
-            padding: 2rem;
-            text-align: center;
-            background: #f8fafd;
-            cursor: pointer;
-        }
-
-        #drop-area.dragover {
-            background: #e3f2fd;
-            border-color: #1976d2;
-        }
-
-        .progress {
-            height: 22px;
-        }
-    </style>
+    <link href="css/style_equipements.css" rel="stylesheet">
 </head>
 
 <body>
@@ -156,14 +89,20 @@ $catTop = $categories[array_search($catMax, $catData)];
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title mb-0" style="color:#1976d2;">Liste des équipements</h5>
-                        <button id="exportFilteredBtn" class="btn btn-outline-primary" style="display:none;">
-                            <span class="material-icons">file_download</span>Exporter la sélection
-                        </button>
+                        <div>
+                            <button id="exportFilteredBtn" class="btn btn-outline-primary me-2" style="display:none;">
+                                <span class="material-icons">file_download</span>Exporter la sélection
+                            </button>
+                            <button id="deleteSelectedBtn" class="btn btn-outline-danger" style="display:none;">
+                                <span class="material-icons">delete</span>Supprimer la sélection
+                            </button>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead>
                                 <tr>
+                                    <th><input type="checkbox" id="selectAllEquip"></th>
                                     <th>Code</th>
                                     <th>Désignation</th>
                                     <th>Repère</th>
@@ -197,6 +136,7 @@ $catTop = $categories[array_search($catMax, $catData)];
                             <tbody>
                                 <?php foreach ($equipements as $eq): ?>
                                     <tr>
+                                        <td><input type="checkbox" class="equip-checkbox" value="<?= $eq['id'] ?>"></td>
                                         <td data-id="<?= $eq['id'] ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['designation_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['repere_equipement']) ?></td>
@@ -313,6 +253,9 @@ $catTop = $categories[array_search($catMax, $catData)];
             <!-- Bouton Exporter la sélection -->
             <button id="exportFilteredBtn" class="btn btn-outline-primary">
                 <span class="material-icons">file_download</span>Exporter la sélection
+            </button>
+            <button id="deleteSelectedBtn" class="btn btn-outline-danger" style="display:none;">
+                <span class="material-icons">delete</span>Supprimer la sélection
             </button>
         </div>
     </div>
@@ -676,11 +619,13 @@ $catTop = $categories[array_search($catMax, $catData)];
             // 2. Ajoute l'écouteur sur chaque ligne du tableau
             document.querySelectorAll('table.table tbody tr').forEach(tr => {
                 tr.style.cursor = 'pointer';
-                tr.addEventListener('click', function() {
-                    // Récupère les données de la ligne
+                tr.addEventListener('click', function(e) {
+                    // Si le clic vient d'une case à cocher, on ne fait rien
+                    if (e.target && e.target.classList.contains('equip-checkbox')) return;
+                    // ... récupération des données et ouverture du modal ...
                     const tds = this.querySelectorAll('td');
                     const equipement = {
-                        id: tds[0].dataset.id ?? '', // à adapter si tu as un champ id caché
+                        id: tds[0].dataset.id ?? '',
                         code_equipement: tds[0].textContent.trim(),
                         designation_equipement: tds[1].textContent.trim(),
                         repere_equipement: tds[2].textContent.trim(),
@@ -689,7 +634,6 @@ $catTop = $categories[array_search($catMax, $catData)];
                         numero_serie_fabricant: tds[5].textContent.trim(),
                         categorie_equipement: tds[6].textContent.trim(),
                         date_creation: tds[7].textContent.trim()
-                        // Ajoute les autres champs si besoin
                     };
                     showEditModal(equipement);
                 });
@@ -883,6 +827,83 @@ $catTop = $categories[array_search($catMax, $catData)];
 
                     document.body.appendChild(form);
                     form.submit();
+                });
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectAll = document.getElementById('selectAllEquip');
+            const checkboxes = document.querySelectorAll('.equip-checkbox');
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+
+            function updateDeleteBtn() {
+                const checked = document.querySelectorAll('.equip-checkbox:checked');
+                deleteBtn.style.display = checked.length > 0 ? '' : 'none';
+                if (checked.length > 0) {
+                    deleteBtn.innerHTML = `<span class="material-icons">delete</span>Supprimer la sélection (${checked.length})`;
+                }
+            }
+
+            // Sélectionner tout
+            if (selectAll) {
+                selectAll.addEventListener('change', function() {
+                    checkboxes.forEach(cb => {
+                        if (cb.closest('tr').style.display !== 'none') {
+                            cb.checked = selectAll.checked;
+                        }
+                    });
+                    updateDeleteBtn();
+                });
+            }
+
+            // Mise à jour bouton suppression sur chaque case
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateDeleteBtn);
+            });
+
+            // Mise à jour bouton suppression après filtrage
+            document.querySelectorAll('#filter-row input, #filter-row select').forEach(input => {
+                input.addEventListener('input', function() {
+                    updateDeleteBtn();
+                });
+                input.addEventListener('change', function() {
+                    updateDeleteBtn();
+                });
+            });
+
+            // Suppression de masse
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', function() {
+                    const checked = Array.from(document.querySelectorAll('.equip-checkbox:checked'));
+                    if (checked.length === 0) return;
+                    if (!confirm(`Voulez-vous vraiment supprimer ${checked.length} équipement(s) ? Cette action est irréversible.`)) return;
+
+                    // Récupère les IDs à supprimer
+                    const ids = checked.map(cb => cb.value);
+
+                    // Envoi AJAX (ou formulaire POST) vers un script PHP de suppression
+                    fetch('request/equipement_delete.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                ids
+                            })
+                        })
+                        .then(r => r.json()) // <-- parenthèses ajoutées ici
+                        .then(res => {
+                            if (res.success) {
+                                // Retire les lignes supprimées du DOM
+                                checked.forEach(cb => cb.closest('tr').remove());
+                                updateDeleteBtn();
+                                alert(res.message || "Suppression réussie !");
+                            } else {
+                                alert(res.message || "Erreur lors de la suppression.");
+                            }
+                        })
+                        .catch(() => alert("Erreur réseau lors de la suppression."));
                 });
             }
         });

@@ -81,4 +81,14 @@ class Equipement
         $stmt = $pdo->prepare("DELETE FROM equipements WHERE id = ?");
         return $stmt->execute([$id]);
     }
+
+    public static function deleteByIds($ids)
+    {
+        if (empty($ids) || !is_array($ids)) return false;
+        $pdo = Database::getConnection();
+        // Création des placeholders (?, ?, ?, ...)
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $pdo->prepare("DELETE FROM equipements WHERE id IN ($placeholders)");
+        return $stmt->execute($ids);
+    }
 }
