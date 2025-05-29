@@ -3,6 +3,12 @@ require_once '../model/Database.php';
 require_once '../model/Equipement.php';
 require '../vendor/autoload.php';
 
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+
+
 $type = $_GET['type'] ?? 'excel';
 $equipements = Equipement::getAll();
 
@@ -81,12 +87,103 @@ if ($type === 'pdf') {
     exit;
 }
 
-// --- EXPORT EXCEL (ton code existant) ---
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Border;
+// --- EXPORT FILTRÉ ---
+if (isset($_GET['filtered']) && $_GET['filtered'] == 1 && isset($_POST['filtered_data'])) {
+    $columns = [
+        'Code Equipement',
+        'Désignation équipement',
+        'Repère équipement',
+        'Fabricant',
+        "Type d'objet",
+        'N° série fabricant',
+        'Catégorie équipement',
+        'Date création'
+    ];
+    $filteredData = json_decode($_POST['filtered_data'], true);
 
+    // Récupère les filtres
+    $filters = [];
+    if (isset($_POST['filters'])) {
+        $filters = json_decode($_POST['filters'], true);
+    }
+
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('Équipements filtrés');
+
+    $rowNum = 1;
+
+    // Affiche les critères de recherche non vides
+    if (!empty($filters)) {
+        $sheet->setCellValue('A' . $rowNum, 'Critères de recherche utilisés :');
+        $rowNum++;
+        foreach ($filters as $filter) {
+            $label = $columns[$filter['col']] ?? $filter['label'];
+            $sheet->setCellValue('A' . $rowNum, $label);
+            $sheet->setCellValue('B' . $rowNum, $filter['value']);
+            $rowNum++;
+        }
+        $rowNum++; // Ligne vide avant l'entête
+    }
+
+    // Entête
+    $colLetters = range('A', 'Z');
+    foreach ($columns as $i => $col) {
+        $cell = $colLetters[$i] . $rowNum;
+        $sheet->setCellValue($cell, $col);
+    }
+
+    // Style entête
+    $sheet->getStyle('A' . $rowNum . ':H' . $rowNum)->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1976D2']],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '1976D2']]]
+    ]);
+    $sheet->freezePane('A' . ($rowNum + 1));
+
+    // Largeur auto
+    foreach ($colLetters as $i => $col) {
+        if ($i >= count($columns)) break;
+        $sheet->getColumnDimension($col)->setAutoSize(true);
+    }
+
+    // Données filtrées
+    $rowNum++;
+    foreach ($filteredData as $row) {
+        foreach ($row as $i => $val) {
+            $sheet->setCellValue($colLetters[$i] . $rowNum, $val);
+        }
+        $rowNum++;
+    }
+
+    // Bordures sur tout le tableau
+    $sheet->getStyle('A1:H' . ($rowNum - 1))->applyFromArray([
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => Border::BORDER_THIN,
+                'color' => ['rgb' => 'B0BEC5']
+            ]
+        ]
+    ]);
+
+    // Ligne de total en bas
+    $sheet->setCellValue('A' . $rowNum, 'Total équipements :');
+    $sheet->setCellValue('B' . $rowNum, count($filteredData));
+    $sheet->getStyle('A' . $rowNum . ':B' . $rowNum)->applyFromArray([
+        'font' => ['bold' => true, 'color' => ['rgb' => '388E3C']]
+    ]);
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header('Content-Disposition: attachment;filename="equipements_filtrés.xlsx"');
+    header('Cache-Control: max-age=0');
+
+    $writer = new Xlsx($spreadsheet);
+    $writer->save('php://output');
+    exit;
+}
+
+// --- EXPORT COMPLET ---
 $spreadsheet = new Spreadsheet();
 $sheet = $spreadsheet->getActiveSheet();
 $sheet->setTitle('Équipements');

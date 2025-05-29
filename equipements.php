@@ -154,7 +154,12 @@ $catTop = $categories[array_search($catMax, $catData)];
             <!-- Tableau des équipements -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
-                    <h5 class="card-title mb-3" style="color:#1976d2;">Liste des équipements</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0" style="color:#1976d2;">Liste des équipements</h5>
+                        <button id="exportFilteredBtn" class="btn btn-outline-primary" style="display:none;">
+                            <span class="material-icons">file_download</span>Exporter la sélection
+                        </button>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
                             <thead>
@@ -167,6 +172,26 @@ $catTop = $categories[array_search($catMax, $catData)];
                                     <th>N° Série</th>
                                     <th>Catégorie</th>
                                     <th>Date création</th>
+                                </tr>
+                                <tr id="filter-row">
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
+                                    <th>
+                                        <select class="form-select form-select-sm">
+                                            <option value="">Tous</option>
+                                            <?php
+                                            $cats = array_unique(array_column($equipements, 'categorie_equipement'));
+                                            foreach ($cats as $cat) {
+                                                echo '<option value="' . htmlspecialchars($cat) . '">' . htmlspecialchars($cat) . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    </th>
+                                    <th><input type="date" class="form-control form-control-sm"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -285,6 +310,10 @@ $catTop = $categories[array_search($catMax, $catData)];
                     </form>
                 </div>
             </div>
+            <!-- Bouton Exporter la sélection -->
+            <button id="exportFilteredBtn" class="btn btn-outline-primary">
+                <span class="material-icons">file_download</span>Exporter la sélection
+            </button>
         </div>
     </div>
     <!-- Chart.js -->
@@ -734,6 +763,128 @@ $catTop = $categories[array_search($catMax, $catData)];
             document.querySelector('a[href*="export_equipements.php?type=pdf"]').addEventListener('click', function(e) {
                 showExportLoader();
             });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.querySelector('table.table');
+            const tbody = table.querySelector('tbody');
+            const filterRow = document.getElementById('filter-row');
+            const filterInputs = filterRow.querySelectorAll('input, select');
+            const totalDiv = document.querySelector('.mini-card div > div[style*="font-size:1.3rem"][style*="font-weight:700;"]');
+            const miniPie = Chart.getChart('miniPie');
+            const miniBar = Chart.getChart('miniBar');
+            const exportFilteredBtn = document.getElementById('exportFilteredBtn');
+
+            function filterTable() {
+                let total = 0;
+                let catCounts = {};
+                tbody.querySelectorAll('tr').forEach(tr => {
+                    let show = true;
+                    filterInputs.forEach((input, idx) => {
+                        let val = input.value.trim().toLowerCase();
+                        let cell = tr.children[idx];
+                        if (!cell) return;
+                        if (input.type === 'select-one') {
+                            if (val && cell.textContent.trim().toLowerCase() !== val) show = false;
+                        } else if (input.type === 'date') {
+                            if (val && cell.textContent.trim().substr(0, 10) !== val) show = false;
+                        } else {
+                            if (val && !cell.textContent.toLowerCase().includes(val)) show = false;
+                        }
+                    });
+                    tr.style.display = show ? '' : 'none';
+                    if (show) {
+                        total++;
+                        let cat = tr.children[6].textContent.trim();
+                        catCounts[cat] = (catCounts[cat] || 0) + 1;
+                    }
+                });
+                // MAJ total
+                if (totalDiv) totalDiv.textContent = total;
+
+                // MAJ graphes
+                if (miniPie && miniBar) {
+                    miniPie.data.datasets[0].data = miniPie.data.labels.map(lab => catCounts[lab] || 0);
+                    miniPie.update();
+                    miniBar.data.datasets[0].data = miniBar.data.labels.map(lab => catCounts[lab] || 0);
+                    miniBar.update();
+                }
+
+                // Affiche ou masque le bouton d'export selon le résultat
+                if (exportFilteredBtn) {
+                    exportFilteredBtn.style.display = total > 0 ? '' : 'none';
+                }
+            }
+
+            filterInputs.forEach(input => {
+                input.addEventListener('input', filterTable);
+                input.addEventListener('change', filterTable);
+            });
+
+            // Appel initial pour l'état du bouton au chargement
+            filterTable();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const exportFilteredBtn = document.getElementById('exportFilteredBtn');
+            if (exportFilteredBtn) {
+                exportFilteredBtn.addEventListener('click', function() {
+                    const rows = Array.from(document.querySelectorAll('table.table tbody tr'))
+                        .filter(tr => tr.style.display !== 'none');
+                    if (rows.length === 0) {
+                        alert("Aucune donnée à exporter !");
+                        return;
+                    }
+                    const data = rows.map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+
+                    // Récupère les critères de filtre non vides
+                    const filterRow = document.getElementById('filter-row');
+                    const filterInputs = filterRow.querySelectorAll('input, select');
+                    const columnLabels = [
+                        "Code Equipement",
+                        "Désignation équipement",
+                        "Repère équipement",
+                        "Fabricant",
+                        "Type d'objet",
+                        "N° série fabricant",
+                        "Catégorie équipement",
+                        "Date création"
+                    ];
+                    const filters = [];
+                    filterInputs.forEach((input, idx) => {
+                        if (input.value && input.value.trim() !== '') {
+                            filters.push({
+                                col: idx,
+                                label: columnLabels[idx],
+                                value: input.value
+                            });
+                        }
+                    });
+
+                    // Envoie en POST vers le script d'export filtré
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = 'request/export_equipements.php?type=excel&filtered=1';
+                    form.style.display = 'none';
+
+                    const inputData = document.createElement('input');
+                    inputData.type = 'hidden';
+                    inputData.name = 'filtered_data';
+                    inputData.value = JSON.stringify(data);
+                    form.appendChild(inputData);
+
+                    const inputFilters = document.createElement('input');
+                    inputFilters.type = 'hidden';
+                    inputFilters.name = 'filters';
+                    inputFilters.value = JSON.stringify(filters);
+                    form.appendChild(inputFilters);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                });
+            }
         });
     </script>
 </body>
