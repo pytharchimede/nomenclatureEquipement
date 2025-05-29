@@ -63,6 +63,15 @@ class Article
         return $stmt->execute([$id]);
     }
 
+    public static function deleteByIds($ids)
+    {
+        if (!is_array($ids) || empty($ids)) return false;
+        $pdo = Database::getConnection();
+        $in  = str_repeat('?,', count($ids) - 1) . '?';
+        $stmt = $pdo->prepare("DELETE FROM articles WHERE id IN ($in)");
+        return $stmt->execute($ids);
+    }
+
     public static function add($data)
     {
         $pdo = Database::getConnection();
