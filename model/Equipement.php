@@ -98,4 +98,20 @@ class Equipement
         $stmt = $pdo->query("SELECT COUNT(*) FROM equipements WHERE date_creation >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
         return $stmt->fetchColumn();
     }
+
+    public static function exists($code_equipement)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM equipements WHERE code_equipement = ?");
+        $stmt->execute([$code_equipement]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    public static function add($data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "INSERT INTO equipements (code_equipement) VALUES (?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([$data['code_equipement']]);
+    }
 }

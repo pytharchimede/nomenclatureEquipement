@@ -107,4 +107,86 @@ class Nomenclature
         $stmt = $pdo->query("SELECT COUNT(*) FROM nomenclatures WHERE date_creation >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
         return (int)$stmt->fetchColumn();
     }
+
+    public static function exists($code_equipement, $code_article)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM nomenclatures WHERE code_equipement = ? AND code_article = ?");
+        $stmt->execute([$code_equipement, $code_article]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    public static function add($data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "INSERT INTO nomenclatures (code_equipement, code_article, repere_equipement, designation_equipement, fabricant, type, numero_serie_fabricant, designation_article, numero_poste, quantite, unite, poste_technique, metier, date_creation, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['code_equipement'],
+            $data['code_article'],
+            $data['repere_equipement'],
+            $data['designation_equipement'],
+            $data['fabricant'],
+            $data['type'],
+            $data['numero_serie_fabricant'],
+            $data['designation_article'],
+            $data['numero_poste'],
+            $data['quantite'],
+            $data['unite'],
+            $data['poste_technique'],
+            $data['metier'],
+            $data['date_creation'],
+            $data['source']
+        ]);
+    }
+
+    public static function getPage($offset, $limit)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM nomenclatures ORDER BY id DESC LIMIT :offset, :limit");
+        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function getPageFiltered($offset, $limit, $filters = [])
+    {
+        $pdo = Database::getConnection();
+        $where = [];
+        $params = [];
+        foreach ($filters as $col => $val) {
+            if ($val !== '') {
+                $where[] = "$col LIKE ?";
+                $params[] = "%$val%";
+            }
+        }
+        $sql = "SELECT * FROM nomenclatures";
+        if ($where) $sql .= " WHERE " . implode(' AND ', $where);
+        $sql .= " ORDER BY id DESC LIMIT ?, ?";
+        $params[] = (int)$offset;
+        $params[] = (int)$limit;
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countFiltered($filters = [])
+    {
+        $pdo = Database::getConnection();
+        $where = [];
+        $params = [];
+        foreach ($filters as $col => $val) {
+            if ($val !== '') {
+                $where[] = "$col LIKE ?";
+                $params[] = "%$val%";
+            }
+        }
+        $sql = "SELECT COUNT(*) FROM nomenclatures";
+        if ($where) $sql .= " WHERE " . implode(' AND ', $where);
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    }
 }

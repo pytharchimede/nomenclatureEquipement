@@ -72,28 +72,20 @@ class Article
         return $stmt->execute($ids);
     }
 
-    public static function add($data)
-    {
-        $pdo = Database::getConnection();
-        $sql = "INSERT INTO articles (
-            code_article, designation_article, type_article, temsup_niv_mdt, ancien_num_article,
-            uq_base, fabricant, numero_piece_fabricant, groupe_articles, groupe_marche_externe,
-            document, description, date_creation, cree_par
-        ) VALUES (
-            :code_article, :designation_article, :type_article, :temsup_niv_mdt, :ancien_num_article,
-            :uq_base, :fabricant, :numero_piece_fabricant, :groupe_articles, :groupe_marche_externe,
-            :document, :description, :date_creation, :cree_par
-        )";
-        $stmt = $pdo->prepare($sql);
-        return $stmt->execute($data);
-    }
-
     public static function exists($code_article)
     {
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM articles WHERE code_article = ?");
         $stmt->execute([$code_article]);
         return $stmt->fetchColumn() > 0;
+    }
+
+    public static function add($data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "INSERT INTO articles (code_article) VALUES (?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([$data['code_article']]);
     }
 
     public static function countAddedLast30Days()
