@@ -20,6 +20,14 @@ class Equipement
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public static function getByCode($code)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM equipements WHERE code_equipement = ?");
+        $stmt->execute([$code]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public static function create($data)
     {
         $pdo = Database::getConnection();

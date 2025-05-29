@@ -75,6 +75,24 @@ $catTop = $categories[array_search($catMax, $catData)];
                 height: 40px !important;
             }
         }
+
+        #drop-area {
+            border: 2px dashed #1976d2;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8fafd;
+            cursor: pointer;
+        }
+
+        #drop-area.dragover {
+            background: #e3f2fd;
+            border-color: #1976d2;
+        }
+
+        .progress {
+            height: 22px;
+        }
     </style>
 </head>
 
@@ -241,20 +259,28 @@ $catTop = $categories[array_search($catMax, $catData)];
                     </form>
                 </div>
             </div>
-            <!-- Modal Import -->
+            <!-- Modal Import amélioré -->
             <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
                 <div class="modal-dialog">
-                    <form class="modal-content" method="post" action="equipement_import.php" enctype="multipart/form-data">
+                    <form class="modal-content" id="excelImportForm" enctype="multipart/form-data" onsubmit="return false;">
                         <div class="modal-header">
                             <h5 class="modal-title" id="importModalLabel">Importer depuis Excel</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <input type="file" name="excel_file" accept=".xls,.xlsx" class="form-control" required>
-                            <small class="text-muted">Téléchargez un fichier respectant la structure fournie.</small>
+                            <div id="drop-area" class="border border-2 border-primary rounded-3 p-4 text-center mb-3" style="cursor:pointer; background:#f8fafd;">
+                                <span class="material-icons" style="font-size:2.5rem;color:#1976d2;">upload_file</span>
+                                <p class="mb-1">Glissez-déposez votre fichier Excel ici<br><span class="text-muted" style="font-size:0.95em;">(ou cliquez pour sélectionner)</span></p>
+                                <input type="file" id="excelFileInput" name="excel_file" accept=".xls,.xlsx" style="display:none;" required>
+                                <div id="fileName" class="text-success mt-2"></div>
+                            </div>
+                            <div class="progress mb-2" style="height: 22px; display:none;" id="importProgressBarContainer">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" id="importProgressBar" style="width:0%">0%</div>
+                            </div>
+                            <div id="importResult" class="mt-2"></div>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-success">Importer</button>
+                            <button type="button" class="btn btn-success" id="startImportBtn" disabled>Importer</button>
                         </div>
                     </form>
                 </div>
@@ -322,6 +348,95 @@ $catTop = $categories[array_search($catMax, $catData)];
                     }
                 }
             }
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('excelFileInput');
+            const fileName = document.getElementById('fileName');
+            const startImportBtn = document.getElementById('startImportBtn');
+            let selectedFile = null;
+
+            // Drag & drop
+            dropArea.addEventListener('click', () => fileInput.click());
+            dropArea.addEventListener('dragover', e => {
+                e.preventDefault();
+                dropArea.classList.add('dragover');
+            });
+            dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+            dropArea.addEventListener('drop', e => {
+                e.preventDefault();
+                dropArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileChange();
+                }
+            });
+            fileInput.addEventListener('change', handleFileChange);
+
+            function handleFileChange() {
+                if (fileInput.files.length) {
+                    selectedFile = fileInput.files[0];
+                    fileName.textContent = selectedFile.name;
+                    startImportBtn.disabled = false;
+                } else {
+                    fileName.textContent = '';
+                    startImportBtn.disabled = true;
+                }
+            }
+
+            // Import AJAX
+            startImportBtn.addEventListener('click', function() {
+                if (!selectedFile) return;
+                const formData = new FormData();
+                formData.append('excel_file', selectedFile);
+
+                // Reset UI
+                document.getElementById('importResult').innerHTML = '';
+                const progressBar = document.getElementById('importProgressBar');
+                const progressBarContainer = document.getElementById('importProgressBarContainer');
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+                progressBarContainer.style.display = 'block';
+
+                // AJAX upload
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'request/equipement_import.php', true);
+
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        let percent = Math.round((e.loaded / e.total) * 100);
+                        progressBar.style.width = percent + '%';
+                        progressBar.textContent = percent + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    let result = '';
+                    try {
+                        result = JSON.parse(xhr.responseText);
+                        if (result.success) {
+                            document.getElementById('importResult').innerHTML = '<div class="alert alert-success">' + result.message + '</div>';
+                        } else {
+                            document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">' + result.message + '</div>';
+                        }
+                    } catch {
+                        document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur lors de l\'importation.</div>';
+                    }
+                    startImportBtn.disabled = true;
+                    fileInput.value = '';
+                    fileName.textContent = '';
+                };
+
+                xhr.onerror = function() {
+                    document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
+                };
+
+                xhr.send(formData);
+            });
         });
     </script>
 </body>
