@@ -75,4 +75,36 @@ class Nomenclature
         $stmt = $pdo->prepare("DELETE FROM nomenclatures WHERE id = ?");
         return $stmt->execute([$id]);
     }
+
+    // Compte le nombre total de nomenclatures
+    public static function countAll()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(*) FROM nomenclatures");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Compte le nombre d'articles distincts liés à au moins une nomenclature
+    public static function countDistinctArticles()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_article) FROM nomenclatures WHERE code_article IS NOT NULL AND code_article != ''");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Compte le nombre d'équipements distincts liés à au moins une nomenclature
+    public static function countDistinctEquipements()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_equipement) FROM nomenclatures WHERE code_equipement IS NOT NULL AND code_equipement != ''");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Compte le nombre de nomenclatures créées sur les 30 derniers jours
+    public static function countAddedLast30Days()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(*) FROM nomenclatures WHERE date_creation >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
+        return (int)$stmt->fetchColumn();
+    }
 }

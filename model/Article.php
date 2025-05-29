@@ -95,4 +95,11 @@ class Article
         $stmt->execute([$code_article]);
         return $stmt->fetchColumn() > 0;
     }
+
+    public static function countAddedLast30Days()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(*) FROM articles WHERE date_creation >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
+        return (int)$stmt->fetchColumn();
+    }
 }

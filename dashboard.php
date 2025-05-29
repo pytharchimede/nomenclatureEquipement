@@ -1,5 +1,25 @@
 <?php
 // Vous pouvez ajouter ici la logique PHP pour récupérer les alertes ou statistiques si besoin
+require_once 'model/Equipement.php';
+require_once 'model/Article.php';
+require_once 'model/Nomenclature.php';
+
+$totalEquipements = count(Equipement::getAll());
+$totalArticles = count(Article::getAll());
+$totalNomenclatures = Nomenclature::countAll(); // À créer si besoin
+
+$articlesLies = Nomenclature::countDistinctArticles(); // À créer
+$equipAvecPiece = Nomenclature::countDistinctEquipements(); // À créer
+
+$articlesNonLies = $totalArticles - $articlesLies;
+$equipSansPiece = $totalEquipements - $equipAvecPiece;
+
+$pourcentArticlesLies = $totalArticles > 0 ? round($articlesLies / $totalArticles * 100, 1) : 0;
+$pourcentEquipAvecPiece = $totalEquipements > 0 ? round($equipAvecPiece / $totalEquipements * 100, 1) : 0;
+
+$nbAjoutsEquip = Equipement::countAddedLast30Days();
+$nbAjoutsArticles = Article::countAddedLast30Days(); // à créer dans Article.php
+$nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -47,11 +67,60 @@
                     </div>
                 </div>
             </div>
-            <!-- Graphique -->
+            <!-- Compteurs -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-primary"><?= $totalEquipements ?></div>
+                            <div>Équipements</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-success"><?= $totalArticles ?></div>
+                            <div>Articles</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-info"><?= $totalNomenclatures ?></div>
+                            <div>Nomenclatures</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h2"><?= $pourcentArticlesLies ?>%</div>
+                            <div>Articles liés à un équipement</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h2"><?= $pourcentEquipAvecPiece ?>%</div>
+                            <div>Équipements avec pièce</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Graphiques -->
             <div class="card mb-4 shadow-sm" style="border-radius:16px;">
                 <div class="card-body">
                     <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des équipements par catégorie</h5>
                     <canvas id="equipChart" height="80"></canvas>
+                </div>
+            </div>
+            <div class="card mb-4 shadow-sm" style="border-radius:16px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par famille</h5>
+                    <canvas id="articleChart" height="80"></canvas>
                 </div>
             </div>
             <!-- Liens d'exportation -->
@@ -59,6 +128,9 @@
                 <a href="export_equipements.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Équipements</a>
                 <a href="export_articles.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Articles</a>
                 <a href="export_nomenclatures.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Nomenclatures</a>
+            </div>
+            <div class="small text-muted">
+                +<?= $nbAjoutsEquip ?> équipements ajoutés sur 30 jours
             </div>
         </div>
     </div>
@@ -104,6 +176,50 @@
                         }
                     }
                 });
+
+                // Graphique pour la répartition des articles par famille
+                const ctxArticle = document.getElementById('articleChart').getContext('2d');
+                new Chart(ctxArticle, {
+                    type: 'pie',
+                    data: {
+                        labels: data.articleLabels,
+                        datasets: [{
+                            label: 'Répartition des articles',
+                            data: data.articleValues,
+                            backgroundColor: [
+                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
+                            ],
+                            borderWidth: 2,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    color: '#333',
+                                    font: {
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(tooltipItem) {
+                                        let label = tooltipItem.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += tooltipItem.raw;
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
             })
             .catch(() => {
                 // fallback si l'API ne répond pas
@@ -117,6 +233,40 @@
                             data: [12, 8, 5, 3, 2],
                             backgroundColor: [
                                 '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
+                            ],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
+
+        // Graphique articles par famille
+        fetch('request/dashboard_articles_stats.php')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('articleChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: "Nombre d'articles",
+                            data: data.values,
+                            backgroundColor: [
+                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
                             ],
                             borderRadius: 8
                         }]

@@ -91,4 +91,11 @@ class Equipement
         $stmt = $pdo->prepare("DELETE FROM equipements WHERE id IN ($placeholders)");
         return $stmt->execute($ids);
     }
+
+    public static function countAddedLast30Days()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(*) FROM equipements WHERE date_creation >= DATE_SUB(NOW(), INTERVAL 30 DAY)");
+        return $stmt->fetchColumn();
+    }
 }
