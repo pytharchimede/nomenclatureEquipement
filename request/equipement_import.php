@@ -60,13 +60,18 @@ try {
     $inserted = 0;
     $duplicates = 0;
     $errors = 0;
+    $log = [];
 
-    foreach ($rows as $row) {
+    foreach ($rows as $i => $row) {
+        $ligneMsg = "Ligne " . ($i + 2) . ": ";
         $code_equipement = trim($row[$colMap['Code Equipement']] ?? '');
-        if ($code_equipement === '') continue;
-
+        if ($code_equipement === '') {
+            $log[] = ['message' => $ligneMsg . "Code équipement vide, ignorée.", 'enCours' => false];
+            continue;
+        }
         // Vérifie si l'équipement existe déjà via la classe Equipement
         if (Equipement::getByCode($code_equipement)) {
+            $log[] = ['message' => $ligneMsg . "Doublon détecté ($code_equipement), ignorée.", 'enCours' => false];
             $duplicates++;
             continue;
         }
@@ -102,15 +107,18 @@ try {
 
         // Insertion via la classe Equipement
         if (Equipement::create($data)) {
+            $log[] = ['message' => $ligneMsg . "Ajouté ($code_equipement)", 'enCours' => false];
             $inserted++;
         } else {
+            $log[] = ['message' => $ligneMsg . "Erreur lors de l'ajout ($code_equipement)", 'enCours' => false];
             $errors++;
         }
     }
 
     echo json_encode([
         'success' => true,
-        'message' => "Import terminé : $inserted ajout(s), $duplicates doublon(s), $errors erreur(s)."
+        'message' => "Import terminé : $inserted ajout(s), $duplicates doublon(s), $errors erreur(s).",
+        'log' => $log
     ]);
     exit;
 } catch (Exception $e) {

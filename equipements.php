@@ -172,7 +172,7 @@ $catTop = $categories[array_search($catMax, $catData)];
                             <tbody>
                                 <?php foreach ($equipements as $eq): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($eq['code_equipement']) ?></td>
+                                        <td data-id="<?= $eq['id'] ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['designation_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['repere_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['fabricant']) ?></td>
@@ -389,10 +389,8 @@ $catTop = $categories[array_search($catMax, $catData)];
             // Import AJAX
             startImportBtn.addEventListener('click', function() {
                 if (!selectedFile) return;
-                const formData = new FormData();
-                formData.append('excel_file', selectedFile);
-
-                // Reset UI
+                startImportBtn.disabled = true;
+                startImportBtn.textContent = "Import en cours...";
                 document.getElementById('importResult').innerHTML = '';
                 const progressBar = document.getElementById('importProgressBar');
                 const progressBarContainer = document.getElementById('importProgressBarContainer');
@@ -400,44 +398,286 @@ $catTop = $categories[array_search($catMax, $catData)];
                 progressBar.textContent = '0%';
                 progressBarContainer.style.display = 'block';
 
-                // AJAX upload
-                const xhr = new XMLHttpRequest();
-                xhr.open('POST', 'request/equipement_import.php', true);
+                // Affichage du log
+                let logDiv = document.getElementById('importLog');
+                if (!logDiv) {
+                    logDiv = document.createElement('div');
+                    logDiv.id = 'importLog';
+                    logDiv.style.maxHeight = '180px';
+                    logDiv.style.overflowY = 'auto';
+                    logDiv.className = 'mt-2 small';
+                    document.getElementById('importResult').appendChild(logDiv);
+                } else {
+                    logDiv.innerHTML = '';
+                }
 
-                xhr.upload.onprogress = function(e) {
-                    if (e.lengthComputable) {
-                        let percent = Math.round((e.loaded / e.total) * 100);
-                        progressBar.style.width = percent + '%';
-                        progressBar.textContent = percent + '%';
+                // Envoi du fichier en AJAX
+                const formData = new FormData();
+                formData.append('excel_file', selectedFile);
+
+                fetch('request/equipement_import.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(res => {
+                    // Affichage du log détaillé
+                    if (res.log && Array.isArray(res.log)) {
+                        logDiv.innerHTML = '';
+                        res.log.forEach((ligne, idx) => {
+                            logDiv.innerHTML += `<div${ligne.enCours ? ' style="background:#e3f2fd;"' : ''}>${ligne.message}</div>`;
+                        });
                     }
-                };
-
-                xhr.onload = function() {
                     progressBar.style.width = '100%';
                     progressBar.textContent = '100%';
-                    let result = '';
-                    try {
-                        result = JSON.parse(xhr.responseText);
-                        if (result.success) {
-                            document.getElementById('importResult').innerHTML = '<div class="alert alert-success">' + result.message + '</div>';
-                        } else {
-                            document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">' + result.message + '</div>';
-                        }
-                    } catch {
-                        document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur lors de l\'importation.</div>';
+                    if (res.success) {
+                        document.getElementById('importResult').innerHTML += '<div class="alert alert-success mt-2">' + res.message + '</div>';
+                    } else {
+                        document.getElementById('importResult').innerHTML += '<div class="alert alert-danger mt-2">' + res.message + '</div>';
                     }
-                    startImportBtn.disabled = true;
+                    // Bouton devient "Fermer"
+                    startImportBtn.textContent = "Fermer";
+                    startImportBtn.disabled = false;
+                    startImportBtn.onclick = function() {
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
+                        startImportBtn.textContent = "Importer";
+                        startImportBtn.disabled = true;
+                    };
                     fileInput.value = '';
                     fileName.textContent = '';
-                };
-
-                xhr.onerror = function() {
+                })
+                .catch(() => {
                     document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
+                    startImportBtn.textContent = "Fermer";
+                    startImportBtn.disabled = false;
+                    startImportBtn.onclick = function() {
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
+                        startImportBtn.textContent = "Importer";
+                        startImportBtn.disabled = true;
+                    };
+                });
+            });
+
+            // Formulaire d'ajout AJAX
+            const addForm = document.querySelector('#addEquipModal form');
+            const addBtn = addForm.querySelector('button[type="submit"]');
+            const addResult = document.createElement('div');
+            addResult.className = "w-100 mt-2";
+            addForm.querySelector('.modal-footer').prepend(addResult);
+
+            addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                addBtn.disabled = true;
+                addResult.innerHTML = '';
+                const formData = new FormData(addForm);
+
+                fetch('request/equipement_add.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            addResult.innerHTML = '<div class="alert alert-success">' + res.message + '</div>';
+                            addForm.reset();
+                            // Optionnel : rafraîchir la page ou le tableau dynamiquement ici
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1200);
+                        } else {
+                            addResult.innerHTML = '<div class="alert alert-danger">' + res.message + '</div>';
+                        }
+                    })
+                    .catch(() => {
+                        addResult.innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
+                    })
+                    .finally(() => {
+                        addBtn.disabled = false;
+                    });
+            });
+
+            // 1. Génère dynamiquement le modal de modification
+            function showEditModal(equipement) {
+                // Crée le modal si pas déjà présent
+                let editModal = document.getElementById('editEquipModal');
+                if (!editModal) {
+                    editModal = document.createElement('div');
+                    editModal.className = 'modal fade';
+                    editModal.id = 'editEquipModal';
+                    editModal.tabIndex = -1;
+                    editModal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <form class="modal-content" id="editEquipForm">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Modifier l'équipement</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body row g-3">
+                                <!-- Les champs seront injectés ici -->
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            </div>
+                        </form>
+                    </div>`;
+                    document.body.appendChild(editModal);
+                }
+
+                // Génère les champs du formulaire avec valeurs pré-remplies
+                const fields = [{
+                        name: 'code_equipement',
+                        label: 'Code équipement',
+                        required: true
+                    },
+                    {
+                        name: 'designation_equipement',
+                        label: 'Désignation'
+                    },
+                    {
+                        name: 'repere_equipement',
+                        label: 'Repère'
+                    },
+                    {
+                        name: 'fabricant',
+                        label: 'Fabricant'
+                    },
+                    {
+                        name: 'type_objet',
+                        label: "Type d'objet"
+                    },
+                    {
+                        name: 'designation_type',
+                        label: 'Désignation type'
+                    },
+                    {
+                        name: 'numero_serie_fabricant',
+                        label: 'N° série fabricant'
+                    },
+                    {
+                        name: 'numero_piece_fabricant',
+                        label: 'N° pièce fabricant'
+                    },
+                    {
+                        name: 'poste_technique',
+                        label: 'Poste technique'
+                    },
+                    {
+                        name: 'designation_poste_technique',
+                        label: 'Désignation poste technique'
+                    },
+                    {
+                        name: 'poste_travail_principal',
+                        label: 'Poste travail principal'
+                    },
+                    {
+                        name: 'categorie_equipement',
+                        label: 'Catégorie équipement'
+                    },
+                    {
+                        name: 'centre_de_couts',
+                        label: 'Centre de coûts'
+                    },
+                    {
+                        name: 'date_creation',
+                        label: 'Date création',
+                        type: 'date'
+                    }
+                ];
+                let html = '';
+                fields.forEach(f => {
+                    let value = equipement[f.name] ?? '';
+                    let type = f.type || 'text';
+                    let underline = value.trim() === '' ? 'border-bottom border-2 border-danger' : 'border-success';
+                    html += `
+                    <div class="col-md-6">
+                        <label class="form-label">${f.label}</label>
+                        <input type="${type}" name="${f.name}" class="form-control ${underline}" value="${type==='date' && value ? value.substr(0,10) : value}">
+                    </div>`;
+                });
+                editModal.querySelector('.modal-body').innerHTML = html + `<input type="hidden" name="id" value="${equipement.id}">`;
+
+                // Ajoute la gestion AJAX du formulaire de modification
+                const editForm = editModal.querySelector('form');
+                let editResult = editModal.querySelector('.edit-result');
+                if (!editResult) {
+                    editResult = document.createElement('div');
+                    editResult.className = "w-100 mt-2 edit-result";
+                    editModal.querySelector('.modal-footer').prepend(editResult);
+                }
+                editForm.onsubmit = function(e) {
+                    e.preventDefault();
+                    editResult.innerHTML = '';
+                    const formData = new FormData(editForm);
+                    fetch('request/equipement_edit.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                editResult.innerHTML = '<div class="alert alert-success">' + res.message + '</div>';
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 1200);
+                            } else {
+                                editResult.innerHTML = '<div class="alert alert-danger">' + res.message + '</div>';
+                            }
+                        })
+                        .catch(() => {
+                            editResult.innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
+                        });
                 };
 
-                xhr.send(formData);
+                // Affiche le modal
+                let modal = bootstrap.Modal.getOrCreateInstance(editModal);
+                modal.show();
+
+                // Validation des champs
+                setTimeout(() => {
+                    editModal.querySelectorAll('input.form-control').forEach(input => {
+                        // Ajoute la validation dynamique
+                        input.addEventListener('input', function() {
+                            updateFieldValidation(this);
+                        });
+                        // Validation initiale (pour cocher vert les champs déjà remplis)
+                        updateFieldValidation(input);
+                    });
+                }, 50);
+            }
+
+            // 2. Ajoute l'écouteur sur chaque ligne du tableau
+            document.querySelectorAll('table.table tbody tr').forEach(tr => {
+                tr.style.cursor = 'pointer';
+                tr.addEventListener('click', function() {
+                    // Récupère les données de la ligne
+                    const tds = this.querySelectorAll('td');
+                    const equipement = {
+                        id: tds[0].dataset.id ?? '', // à adapter si tu as un champ id caché
+                        code_equipement: tds[0].textContent.trim(),
+                        designation_equipement: tds[1].textContent.trim(),
+                        repere_equipement: tds[2].textContent.trim(),
+                        fabricant: tds[3].textContent.trim(),
+                        type_objet: tds[4].textContent.trim(),
+                        numero_serie_fabricant: tds[5].textContent.trim(),
+                        categorie_equipement: tds[6].textContent.trim(),
+                        date_creation: tds[7].textContent.trim()
+                        // Ajoute les autres champs si besoin
+                    };
+                    showEditModal(equipement);
+                });
             });
         });
+
+        // Fonction utilitaire pour la validation des champs
+        function updateFieldValidation(input) {
+            if (input.value.trim() === '') {
+                input.classList.remove('border-success');
+                input.classList.add('border-bottom', 'border-2', 'border-danger');
+            } else {
+                input.classList.remove('border-danger', 'border-bottom', 'border-2');
+                input.classList.add('border-success');
+            }
+        }
     </script>
 </body>
 
