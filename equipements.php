@@ -678,6 +678,64 @@ $catTop = $categories[array_search($catMax, $catData)];
             }
         }
     </script>
+    <!-- À placer juste avant </body> -->
+    <div class="modal fade" id="exportLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content text-center p-4">
+                <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                <div id="exportProgressText" style="font-size:1.2rem;">Préparation de l’export, veuillez patienter...</div>
+                <div class="progress mt-3" style="height:18px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBar" style="width:0%">0%</div>
+                </div>
+                <button id="closeExportModalBtn" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
+                <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function showExportLoader() {
+                const modal = new bootstrap.Modal(document.getElementById('exportLoadingModal'));
+                modal.show();
+
+                let progress = 0;
+                const progressBar = document.getElementById('exportProgressBar');
+                const progressText = document.getElementById('exportProgressText');
+                const closeBtn = document.getElementById('closeExportModalBtn');
+                closeBtn.style.display = 'none';
+                progressBar.style.width = '0%';
+                progressBar.textContent = '0%';
+                progressText.textContent = "Préparation de l’export, veuillez patienter...";
+
+                const interval = setInterval(() => {
+                    progress += Math.floor(Math.random() * 10) + 5;
+                    if (progress > 100) progress = 100;
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = progress + '%';
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        progressText.textContent = "Téléchargement en cours...";
+                    }
+                }, 400);
+
+                // Affiche le bouton "Fermer" après 10 secondes
+                setTimeout(() => {
+                    closeBtn.style.display = '';
+                }, 10000);
+
+                closeBtn.onclick = function() {
+                    modal.hide();
+                };
+            }
+
+            document.querySelector('a[href*="export_equipements.php?type=excel"]').addEventListener('click', function(e) {
+                showExportLoader();
+            });
+            document.querySelector('a[href*="export_equipements.php?type=pdf"]').addEventListener('click', function(e) {
+                showExportLoader();
+            });
+        });
+    </script>
 </body>
 
 </html>
