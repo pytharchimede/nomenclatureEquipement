@@ -31,18 +31,18 @@
             <!-- Alertes -->
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                    <div class="alert alert-warning d-flex align-items-center" role="alert" id="alert-equip">
                         <span class="material-icons me-2">warning</span>
                         <div>
-                            2 équipements sans pièces de rechange détectés !
+                            <!-- Contenu dynamique -->
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                    <div class="alert alert-info d-flex align-items-center" role="alert" id="alert-article">
                         <span class="material-icons me-2">info</span>
                         <div>
-                            3 articles non liés à des équipements.
+                            <!-- Contenu dynamique -->
                         </div>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
         }
 
         // Données de test simulées via "API"
-        fetch('https://mocki.io/v1/7e1e7b7e-1b2c-4e7e-9e9e-1e1e1e1e1e1e') // Remplacez par votre endpoint réel
+        fetch('request/dashboard_stats.php')
             .then(response => response.json())
             .then(data => {
                 const ctx = document.getElementById('equipChart').getContext('2d');
@@ -85,7 +85,7 @@
                             label: 'Nombre d\'équipements',
                             data: data.values,
                             backgroundColor: [
-                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
+                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
                             ],
                             borderRadius: 8
                         }]
@@ -135,6 +135,30 @@
                         }
                     }
                 });
+            });
+
+        // Récupération des alertes
+        fetch('request/dashboard_alerts.php')
+            .then(response => response.json())
+            .then(data => {
+                // Équipements sans pièces de rechange
+                const alertEquip = document.querySelector('#alert-equip div');
+                if (alertEquip) {
+                    if (data.equipSansPiece > 0) {
+                        alertEquip.textContent = `${data.equipSansPiece} équipement(s) sans pièces de rechange détecté(s) !`;
+                    } else {
+                        alertEquip.textContent = "Tous les équipements ont des pièces de rechange.";
+                    }
+                }
+                // Articles non liés
+                const alertArticle = document.querySelector('#alert-article div');
+                if (alertArticle) {
+                    if (data.articlesNonLies > 0) {
+                        alertArticle.textContent = `${data.articlesNonLies} article(s) non lié(s) à des équipements.`;
+                    } else {
+                        alertArticle.textContent = "Tous les articles sont liés à des équipements.";
+                    }
+                }
             });
     </script>
 </body>
