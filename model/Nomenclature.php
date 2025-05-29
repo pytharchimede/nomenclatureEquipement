@@ -1,0 +1,78 @@
+<?php
+require_once __DIR__ . '/../model/Database.php';
+
+class Nomenclature
+{
+    public $id, $code_equipement, $code_article, $repere_equipement, $designation_equipement, $fabricant, $type, $numero_serie_fabricant, $designation_article, $numero_poste, $quantite, $unite, $poste_technique, $metier, $date_creation, $source;
+
+    public static function getAll()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT * FROM nomenclatures");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function getById($id)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM nomenclatures WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public static function create($data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "INSERT INTO nomenclatures (code_equipement, code_article, repere_equipement, designation_equipement, fabricant, type, numero_serie_fabricant, designation_article, numero_poste, quantite, unite, poste_technique, metier, date_creation, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['code_equipement'],
+            $data['code_article'],
+            $data['repere_equipement'],
+            $data['designation_equipement'],
+            $data['fabricant'],
+            $data['type'],
+            $data['numero_serie_fabricant'],
+            $data['designation_article'],
+            $data['numero_poste'],
+            $data['quantite'],
+            $data['unite'],
+            $data['poste_technique'],
+            $data['metier'],
+            $data['date_creation'],
+            $data['source']
+        ]);
+    }
+
+    public static function update($id, $data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "UPDATE nomenclatures SET code_equipement=?, code_article=?, repere_equipement=?, designation_equipement=?, fabricant=?, type=?, numero_serie_fabricant=?, designation_article=?, numero_poste=?, quantite=?, unite=?, poste_technique=?, metier=?, date_creation=?, source=? WHERE id=?";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            $data['code_equipement'],
+            $data['code_article'],
+            $data['repere_equipement'],
+            $data['designation_equipement'],
+            $data['fabricant'],
+            $data['type'],
+            $data['numero_serie_fabricant'],
+            $data['designation_article'],
+            $data['numero_poste'],
+            $data['quantite'],
+            $data['unite'],
+            $data['poste_technique'],
+            $data['metier'],
+            $data['date_creation'],
+            $data['source'],
+            $id
+        ]);
+    }
+
+    public static function delete($id)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("DELETE FROM nomenclatures WHERE id = ?");
+        return $stmt->execute([$id]);
+    }
+}
