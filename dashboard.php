@@ -9,7 +9,7 @@
     <title>Dashboard Nomenclature Équipements</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="plugins/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <!-- Material Icons -->
@@ -20,19 +20,7 @@
 <body>
     <div class="d-flex">
         <!-- Sidebar -->
-        <nav class="sidebar p-3" id="sidebar">
-            <div class="mb-4 d-flex align-items-center">
-                <span class="material-icons" style="font-size:2rem;color:#1976d2;">dashboard</span>
-                <span style="font-size:1.3rem;font-weight:700;color:#1976d2;">Nomenclature</span>
-            </div>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link active" href="#"><span class="material-icons">home</span>Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><span class="material-icons">build</span>Équipements</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><span class="material-icons">widgets</span>Articles</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><span class="material-icons">list_alt</span>Nomenclatures</a></li>
-                <li class="nav-item"><a class="nav-link" href="#"><span class="material-icons">file_download</span>Exportation</a></li>
-            </ul>
-        </nav>
+        <?php include 'menu.php'; ?>
         <!-- Main Content -->
         <div class="flex-grow-1 content">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -75,9 +63,9 @@
         </div>
     </div>
     <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="plugins/js/chart.js"></script>
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="plugins/js/bootstrap.bundle.min.js"></script>
     <script>
         // Responsive sidebar
         function toggleSidebar() {
