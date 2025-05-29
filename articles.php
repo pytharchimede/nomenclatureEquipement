@@ -193,17 +193,17 @@ $uniteData = array_values($unites);
                                 <?php foreach ($articles as $art): ?>
                                     <tr>
                                         <td><input type="checkbox" class="article-checkbox" value="<?= $art['id'] ?>"></td>
-                                        <td data-id="<?= $art['id'] ?>"><?= htmlspecialchars($art['code_article']) ?></td>
-                                        <td><?= htmlspecialchars($art['designation_article']) ?></td>
-                                        <td><?= htmlspecialchars($art['type_article']) ?></td>
-                                        <td><?= htmlspecialchars($art['uq_base']) ?></td>
-                                        <td><?= htmlspecialchars($art['fabricant']) ?></td>
-                                        <td><?= htmlspecialchars($art['numero_piece_fabricant']) ?></td>
-                                        <td><?= htmlspecialchars($art['groupe_articles']) ?></td>
-                                        <td><?= htmlspecialchars($art['document']) ?></td>
-                                        <td><?= htmlspecialchars($art['description']) ?></td>
-                                        <td><?= htmlspecialchars($art['date_creation']) ?></td>
-                                        <td><?= htmlspecialchars($art['cree_par']) ?></td>
+                                        <td data-id="<?= $art['id'] ?>"><?= htmlspecialchars($art['code_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['designation_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['type_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['uq_base'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['numero_piece_fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['groupe_articles'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['document'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['description'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['date_creation'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($art['cree_par'] ?? '') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
