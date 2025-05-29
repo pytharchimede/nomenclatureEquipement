@@ -46,25 +46,14 @@ class Article
     public static function update($id, $data)
     {
         $pdo = Database::getConnection();
-        $sql = "UPDATE articles SET code_article=?, designation_article=?, type_article=?, temsup_niv_mdt=?, ancien_num_article=?, uq_base=?, fabricant=?, numero_piece_fabricant=?, groupe_articles=?, groupe_marche_externe=?, document=?, description=?, date_creation=?, cree_par=? WHERE id=?";
+        $sql = "UPDATE articles SET 
+            code_article=:code_article, designation_article=:designation_article, type_article=:type_article, temsup_niv_mdt=:temsup_niv_mdt, ancien_num_article=:ancien_num_article,
+            uq_base=:uq_base, fabricant=:fabricant, numero_piece_fabricant=:numero_piece_fabricant, groupe_articles=:groupe_articles, groupe_marche_externe=:groupe_marche_externe,
+            document=:document, description=:description, date_creation=:date_creation, cree_par=:cree_par
+            WHERE id=:id";
+        $data['id'] = $id;
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            $data['code_article'],
-            $data['designation_article'],
-            $data['type_article'],
-            $data['temsup_niv_mdt'],
-            $data['ancien_num_article'],
-            $data['uq_base'],
-            $data['fabricant'],
-            $data['numero_piece_fabricant'],
-            $data['groupe_articles'],
-            $data['groupe_marche_externe'],
-            $data['document'],
-            $data['description'],
-            $data['date_creation'],
-            $data['cree_par'],
-            $id
-        ]);
+        return $stmt->execute($data);
     }
 
     public static function delete($id)
@@ -72,5 +61,29 @@ class Article
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("DELETE FROM articles WHERE id = ?");
         return $stmt->execute([$id]);
+    }
+
+    public static function add($data)
+    {
+        $pdo = Database::getConnection();
+        $sql = "INSERT INTO articles (
+            code_article, designation_article, type_article, temsup_niv_mdt, ancien_num_article,
+            uq_base, fabricant, numero_piece_fabricant, groupe_articles, groupe_marche_externe,
+            document, description, date_creation, cree_par
+        ) VALUES (
+            :code_article, :designation_article, :type_article, :temsup_niv_mdt, :ancien_num_article,
+            :uq_base, :fabricant, :numero_piece_fabricant, :groupe_articles, :groupe_marche_externe,
+            :document, :description, :date_creation, :cree_par
+        )";
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute($data);
+    }
+
+    public static function exists($code_article)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM articles WHERE code_article = ?");
+        $stmt->execute([$code_article]);
+        return $stmt->fetchColumn() > 0;
     }
 }
