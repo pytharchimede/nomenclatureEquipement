@@ -416,46 +416,45 @@ $catTop = $categories[array_search($catMax, $catData)];
                 formData.append('excel_file', selectedFile);
 
                 fetch('request/equipement_import.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(r => r.json())
-                .then(res => {
-                    // Affichage du log détaillé
-                    if (res.log && Array.isArray(res.log)) {
-                        logDiv.innerHTML = '';
-                        res.log.forEach((ligne, idx) => {
-                            logDiv.innerHTML += `<div${ligne.enCours ? ' style="background:#e3f2fd;"' : ''}>${ligne.message}</div>`;
-                        });
-                    }
-                    progressBar.style.width = '100%';
-                    progressBar.textContent = '100%';
-                    if (res.success) {
-                        document.getElementById('importResult').innerHTML += '<div class="alert alert-success mt-2">' + res.message + '</div>';
-                    } else {
-                        document.getElementById('importResult').innerHTML += '<div class="alert alert-danger mt-2">' + res.message + '</div>';
-                    }
-                    // Bouton devient "Fermer"
-                    startImportBtn.textContent = "Fermer";
-                    startImportBtn.disabled = false;
-                    startImportBtn.onclick = function() {
-                        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
-                        startImportBtn.textContent = "Importer";
-                        startImportBtn.disabled = true;
-                    };
-                    fileInput.value = '';
-                    fileName.textContent = '';
-                })
-                .catch(() => {
-                    document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
-                    startImportBtn.textContent = "Fermer";
-                    startImportBtn.disabled = false;
-                    startImportBtn.onclick = function() {
-                        bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
-                        startImportBtn.textContent = "Importer";
-                        startImportBtn.disabled = true;
-                    };
-                });
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        // Affichage du log détaillé
+                        if (res.log && Array.isArray(res.log)) {
+                            logDiv.innerHTML = '';
+                            res.log.forEach((ligne, idx) => {
+                                logDiv.innerHTML += `<div${ligne.enCours ? ' style="background:#e3f2fd;"' : ''}>${ligne.message}</div>`;
+                            });
+                        }
+                        progressBar.style.width = '100%';
+                        progressBar.textContent = '100%';
+                        if (res.success) {
+                            document.getElementById('importResult').innerHTML += '<div class="alert alert-success mt-2">' + res.message + '</div>';
+                        } else {
+                            document.getElementById('importResult').innerHTML += '<div class="alert alert-danger mt-2">' + res.message + '</div>';
+                        }
+                        // Bouton devient "Fermer"
+                        startImportBtn.textContent = "Fermer";
+                        startImportBtn.disabled = false;
+                        startImportBtn.onclick = function() {
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
+                            location.reload(); // <-- Ajoute ceci pour rafraîchir la page
+                        };
+                        fileInput.value = '';
+                        fileName.textContent = '';
+                    })
+                    .catch(() => {
+                        document.getElementById('importResult').innerHTML = '<div class="alert alert-danger">Erreur réseau.</div>';
+                        startImportBtn.textContent = "Fermer";
+                        startImportBtn.disabled = false;
+                        startImportBtn.onclick = function() {
+                            bootstrap.Modal.getOrCreateInstance(document.getElementById('importModal')).hide();
+                            startImportBtn.textContent = "Importer";
+                            startImportBtn.disabled = true;
+                        };
+                    });
             });
 
             // Formulaire d'ajout AJAX
