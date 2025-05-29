@@ -54,25 +54,25 @@ class Equipement
     public static function update($id, $data)
     {
         $pdo = Database::getConnection();
-        $sql = "UPDATE equipements SET code_equipement=?, designation_equipement=?, repere_equipement=?, fabricant=?, type_objet=?, designation_type=?, numero_serie_fabricant=?, numero_piece_fabricant=?, poste_technique=?, designation_poste_technique=?, poste_travail_principal=?, categorie_equipement=?, centre_de_couts=?, date_creation=? WHERE id=?";
+        $sql = "UPDATE equipements SET
+            code_equipement = :code_equipement,
+            designation_equipement = :designation_equipement,
+            repere_equipement = :repere_equipement,
+            fabricant = :fabricant,
+            type_objet = :type_objet,
+            designation_type = :designation_type,
+            numero_serie_fabricant = :numero_serie_fabricant,
+            numero_piece_fabricant = :numero_piece_fabricant,
+            poste_technique = :poste_technique,
+            designation_poste_technique = :designation_poste_technique,
+            poste_travail_principal = :poste_travail_principal,
+            categorie_equipement = :categorie_equipement,
+            centre_de_couts = :centre_de_couts,
+            date_creation = :date_creation
+            WHERE id = :id";
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            $data['code_equipement'],
-            $data['designation_equipement'],
-            $data['repere_equipement'],
-            $data['fabricant'],
-            $data['type_objet'],
-            $data['designation_type'],
-            $data['numero_serie_fabricant'],
-            $data['numero_piece_fabricant'],
-            $data['poste_technique'],
-            $data['designation_poste_technique'],
-            $data['poste_travail_principal'],
-            $data['categorie_equipement'],
-            $data['centre_de_couts'],
-            $data['date_creation'],
-            $id
-        ]);
+        $data['id'] = $id;
+        return $stmt->execute($data);
     }
 
     public static function delete($id)
