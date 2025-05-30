@@ -52,6 +52,47 @@ foreach ($rows as $row) {
     foreach ($map as $col => $field) {
         $data[$field] = isset($row[$col]) ? trim($row[$col]) : null;
     }
+
+    $ligneInfo = [
+        'code_equipement' => $data['code_equipement'],
+        'code_article' => $data['code_article'],
+        'details' => $data
+    ];
+
+    // Cas 1 & 2 : gestion des absences de code_equipement ou code_article
+    if (empty($data['code_equipement']) || empty($data['code_article'])) {
+        $equipementExiste = !empty($data['code_equipement']) && Equipement::exists($data['code_equipement']);
+        $articleExiste = !empty($data['code_article']) && Article::exists($data['code_article']);
+
+        // Si les deux n'existent pas, ignorer la ligne
+        if (empty($data['code_equipement']) && empty($data['code_article'])) {
+            $ligneInfo['message'] = "Ligne ignorée : code équipement et code article manquants";
+            $errors[] = $ligneInfo;
+            continue;
+        }
+
+        // Si code_equipement existe dans nomenclature mais pas dans Equipement, l'ajouter
+        if (!empty($data['code_equipement']) && !Equipement::exists($data['code_equipement'])) {
+            Equipement::add(['code_equipement' => $data['code_equipement']]);
+            $ligneInfo['message'] = "Ajouté uniquement dans Equipement (nomenclature ignorée)";
+            $errors[] = $ligneInfo;
+            continue;
+        }
+
+        // Si code_article existe dans nomenclature mais pas dans Article, l'ajouter
+        if (!empty($data['code_article']) && !Article::exists($data['code_article'])) {
+            Article::add(['code_article' => $data['code_article']]);
+            $ligneInfo['message'] = "Ajouté uniquement dans Article (nomenclature ignorée)";
+            $errors[] = $ligneInfo;
+            continue;
+        }
+
+        // Sinon, ignorer la ligne
+        $ligneInfo['message'] = "Ligne ignorée : code équipement ou code article manquant";
+        $errors[] = $ligneInfo;
+        continue;
+    }
+
     // Formatage de la date (accepte 23/2/2015 ou 23/02/2015)
     if (!empty($data['date_creation'])) {
         $date = date_create_from_format('d/m/Y', $data['date_creation']);
@@ -64,11 +105,13 @@ foreach ($rows as $row) {
             $data['date_creation'] = null;
         }
     }
+
     // Vérifie doublon (code_equipement + code_article)
     if (Nomenclature::exists($data['code_equipement'], $data['code_article'])) {
         $duplicates[] = $data['code_equipement'] . ' / ' . $data['code_article'];
         continue;
     }
+
     // Ajoute l'équipement s'il n'existe pas
     if (!Equipement::exists($data['code_equipement'])) {
         Equipement::add(['code_equipement' => $data['code_equipement']]);
@@ -81,13 +124,21 @@ foreach ($rows as $row) {
     if (Nomenclature::add($data)) {
         $imported++;
     } else {
-        $errors[] = ($data['code_equipement'] ?? '') . ' / ' . ($data['code_article'] ?? '');
+        $ligneInfo['message'] = "Erreur lors de l'ajout de la nomenclature";
+        $errors[] = $ligneInfo;
     }
+}
+
+// Génération du rapport d'importation
+$residualRows = [];
+foreach ($errors as $err) {
+    $residualRows[] = $err['details'] ?? [];
 }
 
 echo json_encode([
     'success' => true,
     'imported' => $imported,
     'duplicates' => $duplicates,
-    'errors' => $errors
+    'errors' => $errors, // rapport détaillé
+    'residual' => $residualRows // lignes non importées
 ]);

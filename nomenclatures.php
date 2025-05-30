@@ -738,9 +738,28 @@ $uniteData = array_values($unites);
                         if (res.imported) html += `<div>${res.imported} nomenclature(s) importée(s).</div>`;
                         if (res.duplicates && res.duplicates.length)
                             html += `<div class="text-warning">Doublons ignorés :<ul>${res.duplicates.map(d => `<li>${d}</li>`).join('')}</ul></div>`;
-                        if (res.errors && res.errors.length)
-                            html += `<div class="text-danger">Erreurs :<ul>${res.errors.map(d => `<li>${d}</li>`).join('')}</ul></div>`;
+                        if (res.errors && res.errors.length) {
+                            html += `<div class="text-danger">Lignes non importées :<ul>${
+                                res.errors.map((d, i) => `<li>${i+1}. ${d.code_equipement ?? ''} / ${d.code_article ?? ''} - ${d.message ?? d.error ?? ''}</li>`).join('')
+                            }</ul></div>`;
+                            if (res.residual && res.residual.length) {
+                                html += `<button class="btn btn-outline-secondary btn-sm mt-2" id="exportResidualBtn">
+                                            <span class="material-icons" style="font-size:1em;vertical-align:middle;">download</span>
+                                            Exporter le fichier résiduel
+                                        </button>`;
+                            }
+                        }
                         importLog.innerHTML = html;
+
+                        // Gestion export résiduel
+                        setTimeout(() => {
+                            const exportBtn = document.getElementById('exportResidualBtn');
+                            if (exportBtn) {
+                                exportBtn.onclick = function() {
+                                    exportResidualFile(res.residual);
+                                };
+                            }
+                        }, 100);
                     } catch {
                         importLog.innerHTML = "<div class='text-danger'>Erreur inattendue lors de l'import.</div>";
                     }
@@ -970,6 +989,34 @@ $uniteData = array_values($unites);
                     addNomenclatureMsg.innerHTML = "";
                     addNomenclatureForm.reset();
                 });
+            }
+
+            function exportResidualFile(rows) {
+                if (!rows || !rows.length) return;
+                // Génère un CSV
+                const headers = [
+                    "code_equipement", "code_article", "repere_equipement", "designation_equipement", "fabricant",
+                    "type", "numero_serie_fabricant", "designation_article", "numero_poste", "quantite", "unite",
+                    "poste_technique", "metier", "date_creation", "source"
+                ];
+                let csv = headers.join(';') + '\n';
+                rows.forEach(row => {
+                    csv += headers.map(h => `"${(row[h] ?? '').replace(/"/g, '""')}"`).join(';') + '\n';
+                });
+                // Nom du fichier : residuel_nomenclatures_YYYYMMDD_HHMMSS.csv
+                const now = new Date();
+                const pad = n => n.toString().padStart(2, '0');
+                const fileName = `residuel_nomenclatures_${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.csv`;
+                // Téléchargement
+                const blob = new Blob([csv], {
+                    type: 'text/csv'
+                });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             }
         });
     </script>
