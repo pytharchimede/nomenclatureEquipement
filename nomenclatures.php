@@ -2,6 +2,25 @@
 require_once 'model/Nomenclature.php';
 $nomenclatures = Nomenclature::getAll();
 
+// Détection des doublons (code_equipement + code_article)
+$dups = [];
+$seen = [];
+foreach ($nomenclatures as $nom) {
+    $key = ($nom['code_equipement'] ?? '') . '|' . ($nom['code_article'] ?? '');
+    if (!$nom['code_equipement'] || !$nom['code_article']) continue;
+    if (isset($seen[$key])) {
+        $dups[$key][] = $nom;
+    } else {
+        $seen[$key] = $nom;
+    }
+}
+foreach ($seen as $key => $first) {
+    if (isset($dups[$key])) {
+        array_unshift($dups[$key], $first);
+    }
+}
+$hasDups = count($dups) > 0;
+
 // Statistiques pour mini-cards
 $total = count($nomenclatures);
 
@@ -149,6 +168,19 @@ $uniteData = array_values($unites);
                     </div>
                 </div>
             </div>
+
+            <?php if ($hasDups): ?>
+                <div class="alert alert-danger d-flex align-items-center justify-content-between" style="font-size:1.1em;">
+                    <div>
+                        <span class="material-icons me-2" style="vertical-align:middle;">warning</span>
+                        <b>Doublons détectés :</b>
+                        <?= count($dups) ?> doublon(s) trouvé(s) (même code équipement et code article).
+                    </div>
+                    <a href="gestion_doublons_nomenclature.php" class="btn btn-danger btn-sm">
+                        Gérer les doublons
+                    </a>
+                </div>
+            <?php endif; ?>
             <!-- Tableau des nomenclatures -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
@@ -325,6 +357,7 @@ $uniteData = array_values($unites);
                     </form>
                 </div>
             </div>
+
         </div>
     </div>
     <!-- Chart.js -->

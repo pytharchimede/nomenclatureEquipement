@@ -10,6 +10,27 @@ function isActive($pages)
     }
     return $currentPage === $pages ? 'active' : '';
 }
+
+// Détection des doublons nomenclature
+require_once __DIR__ . '/model/Nomenclature.php';
+$nomenclatures = Nomenclature::getAll();
+$dups = [];
+$seen = [];
+foreach ($nomenclatures as $nom) {
+    $key = ($nom['code_equipement'] ?? '') . '|' . ($nom['code_article'] ?? '');
+    if (!$nom['code_equipement'] || !$nom['code_article']) continue;
+    if (isset($seen[$key])) {
+        $dups[$key][] = $nom;
+    } else {
+        $seen[$key] = $nom;
+    }
+}
+foreach ($seen as $key => $first) {
+    if (isset($dups[$key])) {
+        array_unshift($dups[$key], $first);
+    }
+}
+$nbDoublons = count($dups);
 ?>
 <nav class="sidebar p-3" id="sidebar">
     <div class="mb-4 d-flex align-items-center">
@@ -34,12 +55,21 @@ function isActive($pages)
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo isActive('nomenclatures.php'); ?>" href="nomenclatures.php">
-                <span class="material-icons">list_alt</span>Nomenclatures
+                <span class="material-icons">list_alt</span>Nomenclatur
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link <?php echo isActive(['export_equipements.php', 'export_articles.php', 'export_nomenclatures.php']); ?>" href="export_equipements.php">
                 <span class="material-icons">file_download</span>Exportation
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('gestion_doublons_nomenclature.php'); ?>" href="gestion_doublons_nomenclature.php">
+                <span class="material-icons">warning</span>
+                Doublons
+                <?php if ($nbDoublons > 0): ?>
+                    <span class="badge bg-danger ms-2"><?= $nbDoublons ?></span>
+                <?php endif; ?>
             </a>
         </li>
     </ul>

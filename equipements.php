@@ -138,13 +138,13 @@ $catTop = $categories[array_search($catMax, $catData)];
                                     <tr>
                                         <td><input type="checkbox" class="equip-checkbox" value="<?= $eq['id'] ?>"></td>
                                         <td data-id="<?= $eq['id'] ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
-                                        <td><?= htmlspecialchars($eq['designation_equipement']) ?></td>
-                                        <td><?= htmlspecialchars($eq['repere_equipement']) ?></td>
-                                        <td><?= htmlspecialchars($eq['fabricant']) ?></td>
-                                        <td><?= htmlspecialchars($eq['type_objet']) ?></td>
-                                        <td><?= htmlspecialchars($eq['numero_serie_fabricant']) ?></td>
-                                        <td><?= htmlspecialchars($eq['categorie_equipement']) ?></td>
-                                        <td><?= htmlspecialchars($eq['date_creation']) ?></td>
+                                        <td><?= htmlspecialchars($eq['designation_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['repere_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['type_objet'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['numero_serie_fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['categorie_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($eq['date_creation'] ?? '') ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
