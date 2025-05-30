@@ -113,13 +113,13 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             <!-- Graphiques -->
             <div class="card mb-4 shadow-sm" style="border-radius:16px;">
                 <div class="card-body">
-                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des équipements par catégorie</h5>
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des équipements par famille</h5>
                     <canvas id="equipChart" height="80"></canvas>
                 </div>
             </div>
             <div class="card mb-4 shadow-sm" style="border-radius:16px;">
                 <div class="card-body">
-                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par famille</h5>
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par métiers (catégories)</h5>
                     <canvas id="articleChart" height="80"></canvas>
                 </div>
             </div>

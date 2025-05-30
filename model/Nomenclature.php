@@ -141,36 +141,6 @@ class Nomenclature
         ]);
     }
 
-    public static function getPage($offset, $limit)
-    {
-        $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM nomenclatures ORDER BY id DESC LIMIT :offset, :limit");
-        $stmt->bindValue(':offset', (int)$offset, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    public static function getPageFiltered($offset, $limit, $filters = [])
-    {
-        $pdo = Database::getConnection();
-        $where = [];
-        $params = [];
-        foreach ($filters as $col => $val) {
-            if ($val !== '') {
-                $where[] = "$col LIKE ?";
-                $params[] = "%$val%";
-            }
-        }
-        $sql = "SELECT * FROM nomenclatures";
-        if ($where) $sql .= " WHERE " . implode(' AND ', $where);
-        $sql .= " ORDER BY id DESC LIMIT ?, ?";
-        $params[] = (int)$offset;
-        $params[] = (int)$limit;
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     public static function countFiltered($filters = [])
     {
