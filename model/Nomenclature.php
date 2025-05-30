@@ -159,4 +159,64 @@ class Nomenclature
         $stmt->execute($params);
         return $stmt->fetchColumn();
     }
+
+    // Nombre d'articles distincts liés à au moins un équipement
+    public static function countArticlesLies()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_article) FROM nomenclatures WHERE code_article IS NOT NULL AND code_article != '' AND code_equipement IS NOT NULL AND code_equipement != ''");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Nombre d'équipements distincts ayant au moins une pièce de rechange (un article lié)
+    public static function countEquipementsAvecPiece()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_equipement) FROM nomenclatures WHERE code_equipement IS NOT NULL AND code_equipement != '' AND code_article IS NOT NULL AND code_article != ''");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Vérifie si un équipement a une pièce de rechange
+    public static function equipementHasPiece($code_equipement)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE code_equipement = ? AND code_article IS NOT NULL AND code_article != '' LIMIT 1");
+        $stmt->execute([$code_equipement]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    // Vérifie si un article est lié à un équipement
+    public static function articleIsLied($code_article)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE code_article = ? AND code_equipement IS NOT NULL AND code_equipement != '' LIMIT 1");
+        $stmt->execute([$code_article]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    // Nombre d'équipements existants ayant au moins une pièce de rechange
+    public static function countEquipementsAvecPieceReelle()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("
+            SELECT COUNT(DISTINCT e.code_equipement)
+            FROM equipements e
+            INNER JOIN nomenclatures n ON n.code_equipement = e.code_equipement
+            WHERE n.code_article IS NOT NULL AND n.code_article != ''
+        ");
+        return (int)$stmt->fetchColumn();
+    }
+
+    // Nombre d'articles existants liés à au moins un équipement
+    public static function countArticlesLiesReels()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("
+            SELECT COUNT(DISTINCT a.code_article)
+            FROM articles a
+            INNER JOIN nomenclatures n ON n.code_article = a.code_article
+            WHERE n.code_equipement IS NOT NULL AND n.code_equipement != ''
+        ");
+        return (int)$stmt->fetchColumn();
+    }
 }

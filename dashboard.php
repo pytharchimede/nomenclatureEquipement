@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 // Vous pouvez ajouter ici la logique PHP pour récupérer les alertes ou statistiques si besoin
 require_once 'model/Equipement.php';
 require_once 'model/Article.php';
@@ -6,13 +9,13 @@ require_once 'model/Nomenclature.php';
 
 $totalEquipements = count(Equipement::getAll());
 $totalArticles = count(Article::getAll());
-$totalNomenclatures = Nomenclature::countAll(); // À créer si besoin
+$totalNomenclatures = Nomenclature::countAll();
 
-$articlesLies = Nomenclature::countDistinctArticles(); // À créer
-$equipAvecPiece = Nomenclature::countDistinctEquipements(); // À créer
+$equipAvecPiece = Nomenclature::countEquipementsAvecPieceReelle();
+$articlesLies = Nomenclature::countArticlesLiesReels();
 
-$articlesNonLies = $totalArticles - $articlesLies;
 $equipSansPiece = $totalEquipements - $equipAvecPiece;
+$articlesNonLies = $totalArticles - $articlesLies;
 
 $pourcentArticlesLies = $totalArticles > 0 ? round($articlesLies / $totalArticles * 100, 1) : 0;
 $pourcentEquipAvecPiece = $totalEquipements > 0 ? round($equipAvecPiece / $totalEquipements * 100, 1) : 0;
