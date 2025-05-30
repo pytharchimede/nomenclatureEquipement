@@ -197,7 +197,26 @@ $uniteData = array_values($unites);
                                 </tr>
                             </thead>
                             <tbody id="nomenclatureTableBody">
-                                <!-- Les lignes seront injectées ici en JS -->
+                                <?php foreach ($nomenclatures as $nom): ?>
+                                    <tr>
+                                        <td><input type="checkbox" class="nomenclature-checkbox" value="<?= $nom['id'] ?>"></td>
+                                        <td><?= htmlspecialchars($nom['code_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['code_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['repere_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['designation_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['type'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['numero_serie_fabricant'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['designation_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['numero_poste'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['quantite'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['unite'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['poste_technique'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['metier'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['date_creation'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($nom['source'] ?? '') ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
