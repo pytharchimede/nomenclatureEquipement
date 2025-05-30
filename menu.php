@@ -72,5 +72,17 @@ $nbDoublons = count($dups);
                 <?php endif; ?>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('familles.php'); ?>" href="familles.php">
+                <span class="material-icons">category</span>
+                Familles
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('import_quantitatif.php'); ?>" href="import_quantitatif.php">
+                <span class="material-icons">upload_file</span>
+                Quantitatif
+            </a>
+        </li>
     </ul>
 </nav>
