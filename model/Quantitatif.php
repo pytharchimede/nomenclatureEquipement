@@ -23,4 +23,12 @@ class Quantitatif
         $stmt = $pdo->query("SELECT * FROM quantitatif ORDER BY famille, repere");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public static function getByFamille($famille)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM quantitatif WHERE famille = ? ORDER BY repere");
+        $stmt->execute([$famille]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

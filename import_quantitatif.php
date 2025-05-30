@@ -90,12 +90,40 @@ $quantitatif = Quantitatif::getAll();
                     Seules les feuilles contenant toutes les entêtes attendues sont importées.<br>
                     Le fichier doit contenir une feuille par famille, chaque feuille avec les colonnes attendues.
                 </div>
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <input type="text" id="filterFamille" class="form-control" placeholder="Filtrer par famille">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="filterRepere" class="form-control" placeholder="Filtrer par repère">
+                    </div>
+                    <div class="col-md-3">
+                        <input type="text" id="filterUnite" class="form-control" placeholder="Filtrer par unité">
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <div class="d-inline-flex">
+                            <button id="exportQuantitatif" class="btn btn-success me-2">
+                                <span class="material-icons" style="vertical-align:middle;">download</span>
+                                Export (CSV)
+                            </button>
+                            <button id="exportQuantitatifExcel" class="btn btn-primary">
+                                <span class="material-icons" style="vertical-align:middle;">table_view</span>
+                                Export (Excel)
+                            </button>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-bordered table-quantitatif">
                         <thead class="table-light">
                             <tr>
                                 <th>Famille</th>
-                                <th>Repère</th>
+                                <th>
+                                    Repère
+                                    <button id="normalizeRepere" type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Normaliser les repères">
+                                        <span class="material-icons" style="font-size:1em;vertical-align:middle;">auto_fix_high</span>
+                                    </button>
+                                </th>
                                 <th>Unité</th>
                                 <th>Quantité</th>
                             </tr>
@@ -214,7 +242,96 @@ $quantitatif = Quantitatif::getAll();
             xhr.open('POST', 'request/import_quantitatif_ajax.php', true);
             xhr.send(formData);
         });
+
+        document.getElementById('normalizeRepere').addEventListener('click', function() {
+            let rows = document.querySelectorAll('.table-quantitatif tbody tr');
+            let updates = [];
+            rows.forEach(row => {
+                let tds = row.querySelectorAll('td');
+                if (tds.length < 2) return;
+                let famille = tds[0].textContent;
+                let repere = tds[1].textContent;
+                let repereNormalise = repere.replace(/\s+/g, '');
+                if (repere !== repereNormalise && repereNormalise !== '') {
+                    tds[1].textContent = repereNormalise;
+                    updates.push({
+                        famille: famille,
+                        repere: repere,
+                        repereNormalise: repereNormalise
+                    });
+                }
+            });
+            if (updates.length > 0) {
+                fetch('request/normalize_reperes.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            updates: updates
+                        })
+                    })
+                    .then(r => r.json())
+                    .then(resp => {
+                        if (resp.success) {
+                            alert('Normalisation terminée et enregistrée en base.');
+                        } else {
+                            alert('Erreur lors de la mise à jour en base : ' + resp.message);
+                        }
+                    })
+                    .catch(() => alert('Erreur réseau lors de la normalisation.'));
+            }
+        });
+
+        function filterTable() {
+            let famille = document.getElementById('filterFamille').value.toLowerCase();
+            let repere = document.getElementById('filterRepere').value.toLowerCase();
+            let unite = document.getElementById('filterUnite').value.toLowerCase();
+            let rows = document.querySelectorAll('.table-quantitatif tbody tr');
+            rows.forEach(row => {
+                let tds = row.querySelectorAll('td');
+                if (tds.length < 4) return; // ignore "aucune donnée"
+                let show = true;
+                if (famille && !tds[0].textContent.toLowerCase().includes(famille)) show = false;
+                if (repere && !tds[1].textContent.toLowerCase().includes(repere)) show = false;
+                if (unite && !tds[2].textContent.toLowerCase().includes(unite)) show = false;
+                row.style.display = show ? '' : 'none';
+            });
+        }
+        ['filterFamille', 'filterRepere', 'filterUnite'].forEach(id => {
+            document.getElementById(id).addEventListener('input', filterTable);
+        });
+
+        // Export CSV
+        document.getElementById('exportQuantitatif').addEventListener('click', function() {
+            let rows = document.querySelectorAll('.table-quantitatif tr');
+            let csv = [];
+            rows.forEach(row => {
+                if (row.style.display === 'none') return;
+                let cols = Array.from(row.querySelectorAll('th,td')).map(td =>
+                    '"' + td.textContent.replace(/"/g, '""') + '"'
+                );
+                csv.push(cols.join(';'));
+            });
+            let blob = new Blob([csv.join('\r\n')], {
+                type: 'text/csv'
+            });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'quantitatif_export.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Export Excel (XLSX)
+        document.getElementById('exportQuantitatifExcel').addEventListener('click', function() {
+            window.open('request/export_quantitatif_excel.php', '_blank');
+        });
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 </body>
 
 </html>
