@@ -313,7 +313,13 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                 const alertEquip = document.querySelector('#alert-equip div');
                 if (alertEquip) {
                     if (data.equipSansPiece > 0) {
-                        alertEquip.textContent = `${data.equipSansPiece} équipement(s) sans pièces de rechange détecté(s) !`;
+                        alertEquip.innerHTML = `
+                    ${data.equipSansPiece} équipement(s) sans pièces de rechange détecté(s) !
+                    <a href="request/export_equipements_sans_piece.php" class="btn btn-sm btn-danger ms-3">
+                        <span class="material-icons" style="font-size:18px;vertical-align:middle;">file_download</span>
+                        Exporter la liste
+                    </a>
+                `;
                     } else {
                         alertEquip.textContent = "Tous les équipements ont des pièces de rechange.";
                     }
@@ -322,7 +328,13 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                 const alertArticle = document.querySelector('#alert-article div');
                 if (alertArticle) {
                     if (data.articlesNonLies > 0) {
-                        alertArticle.textContent = `${data.articlesNonLies} article(s) non lié(s) à des équipements.`;
+                        alertArticle.innerHTML = `
+                    ${data.articlesNonLies} article(s) non lié(s) à des équipements.
+                    <a href="request/export_articles_non_lies.php" class="btn btn-sm btn-info ms-3">
+                        <span class="material-icons" style="font-size:18px;vertical-align:middle;">file_download</span>
+                        Exporter la liste
+                    </a>
+                `;
                     } else {
                         alertArticle.textContent = "Tous les articles sont liés à des équipements.";
                     }

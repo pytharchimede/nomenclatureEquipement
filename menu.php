@@ -59,7 +59,7 @@ $nbDoublons = count($dups);
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo isActive(['export_equipements.php', 'export_articles.php', 'export_nomenclatures.php']); ?>" href="export_equipements.php">
+            <a class="nav-link <?php echo isActive('exportations.php'); ?>" href="exportations.php">
                 <span class="material-icons">file_download</span>Exportation
             </a>
         </li>
