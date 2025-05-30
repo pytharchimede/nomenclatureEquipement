@@ -119,8 +119,14 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             </div>
             <div class="card mb-4 shadow-sm" style="border-radius:16px;">
                 <div class="card-body">
-                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par métiers (catégories)</h5>
-                    <canvas id="articleChart" height="80"></canvas>
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par groupe</h5>
+                    <canvas id="groupeArticleChart" height="80"></canvas>
+                </div>
+            </div>
+            <div class="card mb-4 shadow-sm" style="border-radius:16px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par type</h5>
+                    <canvas id="typeArticleChart" height="80"></canvas>
                 </div>
             </div>
             <!-- Liens d'exportation -->
@@ -145,7 +151,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
         }
 
         // Données de test simulées via "API"
-        fetch('request/dashboard_stats.php')
+        fetch('request/dashboard_stats_quantitatif.php')
             .then(response => response.json())
             .then(data => {
                 const ctx = document.getElementById('equipChart').getContext('2d');
@@ -154,7 +160,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     data: {
                         labels: data.labels,
                         datasets: [{
-                            label: 'Nombre d\'équipements',
+                            label: "Nombre d'équipements",
                             data: data.values,
                             backgroundColor: [
                                 '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
@@ -172,50 +178,6 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         scales: {
                             y: {
                                 beginAtZero: true
-                            }
-                        }
-                    }
-                });
-
-                // Graphique pour la répartition des articles par famille
-                const ctxArticle = document.getElementById('articleChart').getContext('2d');
-                new Chart(ctxArticle, {
-                    type: 'pie',
-                    data: {
-                        labels: data.articleLabels,
-                        datasets: [{
-                            label: 'Répartition des articles',
-                            data: data.articleValues,
-                            backgroundColor: [
-                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
-                            ],
-                            borderWidth: 2,
-                            hoverOffset: 4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    color: '#333',
-                                    font: {
-                                        weight: 'bold'
-                                    }
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(tooltipItem) {
-                                        let label = tooltipItem.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        label += tooltipItem.raw;
-                                        return label;
-                                    }
-                                }
                             }
                         }
                     }
@@ -253,11 +215,45 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                 });
             });
 
-        // Graphique articles par famille
-        fetch('request/dashboard_articles_stats.php')
+        // Répartition par groupe_article
+        fetch('request/dashboard_articles_groupes.php')
             .then(response => response.json())
             .then(data => {
-                const ctx = document.getElementById('articleChart').getContext('2d');
+                const ctx = document.getElementById('groupeArticleChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: "Nombre d'articles",
+                            data: data.values,
+                            backgroundColor: [
+                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
+                            ],
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            });
+
+        // Répartition par type_article
+        fetch('request/dashboard_articles_types.php')
+            .then(response => response.json())
+            .then(data => {
+                const ctx = document.getElementById('typeArticleChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'bar',
                     data: {

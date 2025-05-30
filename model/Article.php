@@ -94,4 +94,18 @@ class Article
         $stmt = $pdo->query("SELECT COUNT(*) FROM articles WHERE date_creation >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
         return (int)$stmt->fetchColumn();
     }
+
+    public static function countByTypeArticle()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT type_article, COUNT(*) as nb FROM articles GROUP BY type_article ORDER BY type_article");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function countByGroupeArticle()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT groupe_articles, COUNT(*) as nb FROM articles GROUP BY groupe_articles ORDER BY groupe_articles");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

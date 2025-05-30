@@ -31,4 +31,11 @@ class Quantitatif
         $stmt->execute([$famille]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public static function countEquipementsByFamille()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT famille, COUNT(DISTINCT repere) as nb FROM quantitatif GROUP BY famille ORDER BY famille");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
