@@ -38,4 +38,13 @@ class Quantitatif
         $stmt = $pdo->query("SELECT famille, COUNT(DISTINCT repere) as nb FROM quantitatif GROUP BY famille ORDER BY famille");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public static function getFamilleByRepere($repere)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT famille FROM quantitatif WHERE repere = ? LIMIT 1");
+        $stmt->execute([$repere]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['famille'] : 'Non défini';
+    }
 }

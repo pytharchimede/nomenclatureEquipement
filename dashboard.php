@@ -43,10 +43,29 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
         <?php include 'menu.php'; ?>
         <!-- Main Content -->
         <div class="flex-grow-1 content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
-                <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Tableau de bord</h2>
-                <a href="#" class="btn btn-outline-primary"><span class="material-icons">logout</span>Déconnexion</a>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                <div class="d-flex align-items-center">
+                    <span class="menu-toggle material-icons d-lg-none me-2" onclick="toggleSidebar()">menu</span>
+                    <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Tableau de bord</h2>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="request/export_equipements.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Équipements
+                    </a>
+                    <a href="request/export_articles.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Articles
+                    </a>
+                    <a href="request/export_nomenclatures.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Nomenclatures
+                    </a>
+                    <a href="request/export_equipements_non_affectes.php" class="btn btn-warning">
+                        <span class="material-icons">file_download</span>
+                        Exporter équipements non affectés (Excel)
+                    </a>
+                    <a href="#" class="btn btn-outline-primary ms-2">
+                        <span class="material-icons">logout</span>Déconnexion
+                    </a>
+                </div>
             </div>
             <!-- Alertes -->
             <div class="row mb-4">
@@ -129,12 +148,6 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <canvas id="typeArticleChart" height="80"></canvas>
                 </div>
             </div>
-            <!-- Liens d'exportation -->
-            <div class="d-flex gap-3">
-                <a href="export_equipements.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Équipements</a>
-                <a href="export_articles.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Articles</a>
-                <a href="export_nomenclatures.php" class="btn btn-primary"><span class="material-icons">file_download</span>Exporter Nomenclatures</a>
-            </div>
             <div class="small text-muted">
                 +<?= $nbAjoutsEquip ?> équipements ajoutés sur 30 jours
             </div>
@@ -158,12 +171,12 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
-                        labels: data.labels,
+                        labels: data.labels.concat(['Non affectés']),
                         datasets: [{
                             label: "Nombre d'équipements",
-                            data: data.values,
+                            data: data.values.concat([data.nonAffectes]),
                             backgroundColor: [
-                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b'
+                                '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b', '#bdbdbd'
                             ],
                             borderRadius: 8
                         }]
@@ -182,6 +195,12 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         }
                     }
                 });
+
+                // Affichage du nombre non affectés à côté du graphique ou dans une carte
+                const nonAffectesDiv = document.getElementById('nonAffectesEquip');
+                if (nonAffectesDiv) {
+                    nonAffectesDiv.textContent = data.nonAffectes + " équipement(s) sans famille";
+                }
             })
             .catch(() => {
                 // fallback si l'API ne répond pas

@@ -1,16 +1,32 @@
 <?php
 
 require_once 'model/Equipement.php';
+require_once 'model/Quantitatif.php';
 // Récupération des équipements
 $equipements = Equipement::getAll();
 
-// Données de test pour les mini-graphes et cards
+// Récupération des familles et du nombre d'équipements par famille
+$statsFamilles = [];
+$nonAffectes = 0;
+foreach ($equipements as $eq) {
+    $repere = preg_replace('/\s+/', '', $eq['repere_equipement'] ?? '');
+    $famille = Quantitatif::getFamilleByRepere($repere);
+    if ($famille && $famille !== 'Non défini') {
+        if (!isset($statsFamilles[$famille])) $statsFamilles[$famille] = 0;
+        $statsFamilles[$famille]++;
+    } else {
+        $nonAffectes++;
+    }
+}
 $total = count($equipements);
-$categories = ['Pompes', 'Vannes', 'Tableaux', 'Moteurs', 'Autres'];
-$catData = [12, 8, 5, 3, 2]; // À remplacer par vos vraies stats
-$catAssoc = array_combine($categories, $catData);
-$catMax = max($catData);
-$catTop = $categories[array_search($catMax, $catData)];
+$topFamille = '';
+$maxFamille = 0;
+if ($statsFamilles) {
+    $maxFamille = max($statsFamilles);
+    $topFamille = array_search($maxFamille, $statsFamilles);
+}
+$familleLabels = array_keys($statsFamilles);
+$familleData = array_values($statsFamilles);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -60,8 +76,8 @@ $catTop = $categories[array_search($catMax, $catData)];
                     <div class="mini-card">
                         <span class="material-icons" style="color:#43a047;">category</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catTop ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Catégorie la + présente</div>
+                            <div style="font-size:1.3rem;font-weight:700;"><?= htmlspecialchars($topFamille) ?></div>
+                            <div class="text-muted" style="font-size:0.95rem;">Famille la + présente</div>
                         </div>
                     </div>
                 </div>
@@ -69,17 +85,17 @@ $catTop = $categories[array_search($catMax, $catData)];
                     <div class="mini-card">
                         <canvas id="miniPie" class="mini-graph"></canvas>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catMax ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Max dans une catégorie</div>
+                            <div style="font-size:1.3rem;font-weight:700;"><?= $maxFamille ?></div>
+                            <div class="text-muted" style="font-size:0.95rem;">Max dans une famille</div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3 col-6">
                     <div class="mini-card">
-                        <canvas id="miniBar" class="mini-graph"></canvas>
+                        <span class="material-icons" style="color:#e53935;">help_outline</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catData[0] ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Pompes</div>
+                            <div style="font-size:1.3rem;font-weight:700;"><?= $nonAffectes ?></div>
+                            <div class="text-muted" style="font-size:0.95rem;">Non affectés à une famille</div>
                         </div>
                     </div>
                 </div>
@@ -273,9 +289,9 @@ $catTop = $categories[array_search($catMax, $catData)];
         new Chart(document.getElementById('miniPie').getContext('2d'), {
             type: 'pie',
             data: {
-                labels: <?= json_encode($categories) ?>,
+                labels: <?= json_encode($familleLabels) ?>,
                 datasets: [{
-                    data: <?= json_encode($catData) ?>,
+                    data: <?= json_encode($familleData) ?>,
                     backgroundColor: [
                         '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
                     ]
@@ -295,11 +311,64 @@ $catTop = $categories[array_search($catMax, $catData)];
         new Chart(document.getElementById('miniBar').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: <?= json_encode($categories) ?>,
+                labels: <?= json_encode($familleLabels) ?>,
                 datasets: [{
-                    data: <?= json_encode($catData) ?>,
+                    data: <?= json_encode($familleData) ?>,
                     backgroundColor: [
                         '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
+                    ],
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                responsive: false,
+                scales: {
+                    y: {
+                        display: false
+                    },
+                    x: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        // Mini Pie Chart par famille
+        new Chart(document.getElementById('miniPieFamille').getContext('2d'), {
+            type: 'pie',
+            data: {
+                labels: <?= json_encode($familleLabels) ?>,
+                datasets: [{
+                    data: <?= json_encode($familleData) ?>,
+                    backgroundColor: [
+                        '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b', '#6d4c41', '#ff7043'
+                    ]
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                responsive: false
+            }
+        });
+
+        // Mini Bar Chart par famille
+        new Chart(document.getElementById('miniBarFamille').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode($familleLabels) ?>,
+                datasets: [{
+                    data: <?= json_encode($familleData) ?>,
+                    backgroundColor: [
+                        '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa', '#00838f', '#c2185b', '#6d4c41', '#ff7043'
                     ],
                     borderRadius: 6
                 }]
