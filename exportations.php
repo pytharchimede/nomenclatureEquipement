@@ -25,6 +25,9 @@
                     <span class="menu-toggle material-icons d-lg-none me-2" onclick="toggleSidebar()">menu</span>
                     <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Exportations</h2>
                 </div>
+                <a href="logout.php" class="btn btn-outline-primary ms-auto">
+                    <span class="material-icons">logout</span>Déconnexion
+                </a>
             </div>
             <div class="card shadow-sm p-4">
                 <div class="row g-4">

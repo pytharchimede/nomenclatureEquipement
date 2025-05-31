@@ -1,0 +1,51 @@
+
+        .user-card {
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(60, 72, 88, 0.10);
+            margin-bottom: 1.5rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .user-card:hover {
+            box-shadow: 0 8px 24px rgba(60, 72, 88, 0.18);
+        }
+
+        .user-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #e3eafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #1976d2;
+            margin-right: 1.2rem;
+        }
+
+        .user-actions .btn {
+            margin-right: 0.4rem;
+        }
+
+        .badge-groupe {
+            background: #1976d2;
+            color: #fff;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            padding: 0.3em 0.7em;
+        }
+
+        .badge-inactif {
+            background: #fce8e6;
+            color: #d93025;
+            font-size: 0.95rem;
+            border-radius: 6px;
+            padding: 0.3em 0.7em;
+        }
+
+        .no-user {
+            text-align: center;
+            color: #888;
+            font-size: 1.1rem;
+            margin-top: 2.5rem;
+        }

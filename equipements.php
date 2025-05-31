@@ -59,6 +59,9 @@ $familleData = array_values($statsFamilles);
                     <a href="request/export_equipements.php?type=pdf" class="btn btn-outline-danger"><span class="material-icons">picture_as_pdf</span>PDF</a>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipModal"><span class="material-icons">add</span>Ajouter</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal"><span class="material-icons">upload_file</span>Importer Excel</button>
+                    <a href="logout.php" class="btn btn-outline-primary ms-2">
+                        <span class="material-icons">logout</span>Déconnexion
+                    </a>
                 </div>
             </div>
             <!-- Mini Cards et Graphes -->

@@ -2,6 +2,11 @@
 require_once 'model/Nomenclature.php';
 $nomenclatures = Nomenclature::getAll();
 
+
+session_start();
+require_once 'includes/auth.php';
+requireDroit('nomenclature', 'lire'); // Exemple : accès à la page nomenclatures
+
 // Détection des doublons (code_equipement + code_article)
 $dups = [];
 $seen = [];
@@ -58,53 +63,7 @@ $uniteData = array_values($unites);
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
-    <style>
-        .nomenclature-checkbox {
-            accent-color: #1976d2;
-            width: 1.2em;
-            height: 1.2em;
-            border-radius: 6px;
-            box-shadow: 0 1px 2px #1976d233;
-            transition: box-shadow 0.2s;
-            cursor: pointer;
-            border: 2px solid #1976d2;
-        }
-
-        .nomenclature-checkbox:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px #90caf9;
-        }
-
-        .nomenclature-checkbox:checked {
-            background-color: #1976d2;
-            border-color: #1976d2;
-        }
-
-        #dropZoneNomenclature.dragover {
-            background: #e3f2fd;
-            border-color: #1976d2;
-        }
-
-        .mini-card {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px #1976d21a;
-            padding: 1rem 1.2rem;
-        }
-
-        .mini-card .material-icons {
-            font-size: 2.2rem;
-            color: #1976d2;
-        }
-
-        .mini-graph {
-            width: 40px !important;
-            height: 40px !important;
-        }
-    </style>
+    <link href="css/style_nomenclature.css" rel="stylesheet">
 </head>
 
 <body>
@@ -115,18 +74,25 @@ $uniteData = array_values($unites);
                 <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
                 <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Nomenclatures</h2>
                 <div class="d-flex gap-2">
-                    <a href="request/export_nomenclatures.php?type=excel" class="btn btn-outline-success" id="exportExcelBtn">
-                        <span class="material-icons">file_download</span>Excel
+                    <?php if (hasDroit('nomenclature', 'lire')): ?>
+                        <a href="request/export_nomenclatures.php?type=excel" class="btn btn-outline-success" id="exportExcelBtn">
+                            <span class="material-icons">file_download</span>Excel
+                        </a>
+                        <a href="request/export_nomenclatures.php?type=pdf" class="btn btn-outline-danger" id="exportPdfBtn">
+                            <span class="material-icons">picture_as_pdf</span>PDF
+                        </a>
+                    <?php endif; ?>
+                    <?php if (hasDroit('nomenclature', 'creer')): ?>
+                        <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importNomenclatureModal">
+                            <span class="material-icons">upload_file</span>Importer Excel
+                        </button>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addNomenclatureModal">
+                            <span class="material-icons">add</span>Ajouter
+                        </button>
+                    <?php endif; ?>
+                    <a href="logout.php" class="btn btn-outline-primary ms-2">
+                        <span class="material-icons">logout</span>Déconnexion
                     </a>
-                    <a href="request/export_nomenclatures.php?type=pdf" class="btn btn-outline-danger" id="exportPdfBtn">
-                        <span class="material-icons">picture_as_pdf</span>PDF
-                    </a>
-                    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importNomenclatureModal">
-                        <span class="material-icons">upload_file</span>Importer Excel
-                    </button>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addNomenclatureModal">
-                        <span class="material-icons">add</span>Ajouter
-                    </button>
                 </div>
             </div>
             <!-- Mini Cards -->
@@ -187,12 +153,16 @@ $uniteData = array_values($unites);
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title mb-0" style="color:#1976d2;">Liste des nomenclatures</h5>
                         <div>
-                            <button id="exportFilteredNomenclatureBtn" class="btn btn-outline-primary me-2" style="display:none;">
-                                <span class="material-icons">file_download</span>Exporter la sélection
-                            </button>
-                            <button id="deleteSelectedNomenclatureBtn" class="btn btn-outline-danger" style="display:none;">
-                                <span class="material-icons">delete</span>Supprimer la sélection
-                            </button>
+                            <?php if (hasDroit('nomenclature', 'lire')): ?>
+                                <button id="exportFilteredNomenclatureBtn" class="btn btn-outline-primary me-2" style="display:none;">
+                                    <span class="material-icons">file_download</span>Exporter la sélection
+                                </button>
+                            <?php endif; ?>
+                            <?php if (hasDroit('nomenclature', 'supprimer')): ?>
+                                <button id="deleteSelectedNomenclatureBtn" class="btn btn-outline-danger" style="display:none;">
+                                    <span class="material-icons">delete</span>Supprimer la sélection
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="table-responsive">

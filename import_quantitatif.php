@@ -52,6 +52,9 @@ $quantitatif = Quantitatif::getAll();
                             Importer Excel
                             <input type="file" name="quantitatif" id="quantitatif" accept=".xlsx" required style="display:none;">
                         </label>
+                        <a href="logout.php" class="btn btn-outline-primary ms-auto">
+                            <span class="material-icons">logout</span>Déconnexion
+                        </a>
                     </form>
                 </div>
                 <div id="progressContainer" style="display:none;">
