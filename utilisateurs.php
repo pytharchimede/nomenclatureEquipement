@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 require_once 'model/Utilisateur.php';
 require_once 'model/GroupeUtilisateur.php';

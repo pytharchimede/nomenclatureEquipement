@@ -47,77 +47,59 @@ require_once __DIR__ . '/includes/auth.php';
                 <span class="material-icons">home</span>Dashboard
             </a>
         </li>
-        <?php if (hasDroit('equipement', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('equipements.php'); ?>" href="equipements.php">
-                    <span class="material-icons">build</span>Équipements
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('article', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('articles.php'); ?>" href="articles.php">
-                    <span class="material-icons">widgets</span>Articles
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('nomenclature', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('nomenclatures.php'); ?>" href="nomenclatures.php">
-                    <span class="material-icons">list_alt</span>Nomenclatur
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('nomenclature', 'exporter')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('exportations.php'); ?>" href="exportations.php">
-                    <span class="material-icons">file_download</span>Exportation
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('nomenclature', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('gestion_doublons_nomenclature.php'); ?>" href="gestion_doublons_nomenclature.php">
-                    <span class="material-icons">warning</span>
-                    Doublons
-                    <?php if ($nbDoublons > 0): ?>
-                        <span class="badge bg-danger ms-2"><?= $nbDoublons ?></span>
-                    <?php endif; ?>
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('famille', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('familles.php'); ?>" href="familles.php">
-                    <span class="material-icons">category</span>
-                    Familles
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('quantitatif', 'importer')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('import_quantitatif.php'); ?>" href="import_quantitatif.php">
-                    <span class="material-icons">upload_file</span>
-                    Quantitatif
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('utilisateur', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('utilisateurs.php'); ?>" href="utilisateurs.php">
-                    <span class="material-icons">people</span>
-                    Utilisateurs
-                </a>
-            </li>
-        <?php endif; ?>
-        <?php if (hasDroit('groupe', 'lire')): ?>
-            <li class="nav-item">
-                <a class="nav-link <?php echo isActive('groupes.php'); ?>" href="groupes.php">
-                    <span class="material-icons">groups</span>
-                    Groupes
-                </a>
-            </li>
-        <?php endif; ?>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('equipements.php'); ?>" href="equipements.php">
+                <span class="material-icons">build</span>Équipements
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('articles.php'); ?>" href="articles.php">
+                <span class="material-icons">widgets</span>Articles
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('nomenclatures.php'); ?>" href="nomenclatures.php">
+                <span class="material-icons">list_alt</span>Nomenclatur
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('exportations.php'); ?>" href="exportations.php">
+                <span class="material-icons">file_download</span>Exportation
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('gestion_doublons_nomenclature.php'); ?>" href="gestion_doublons_nomenclature.php">
+                <span class="material-icons">warning</span>
+                Doublons
+                <?php if ($nbDoublons > 0): ?>
+                    <span class="badge bg-danger ms-2"><?= $nbDoublons ?></span>
+                <?php endif; ?>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('familles.php'); ?>" href="familles.php">
+                <span class="material-icons">category</span>
+                Familles
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('import_quantitatif.php'); ?>" href="import_quantitatif.php">
+                <span class="material-icons">upload_file</span>
+                Quantitatif
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('utilisateurs.php'); ?>" href="utilisateurs.php">
+                <span class="material-icons">people</span>
+                Utilisateurs
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('groupes.php'); ?>" href="groupes.php">
+                <span class="material-icons">groups</span>
+                Groupes
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link <?php echo isActive('profil.php'); ?>" href="profil.php">
                 <span class="material-icons">account_circle</span>

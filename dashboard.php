@@ -55,36 +55,26 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Tableau de bord</h2>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
-                    <?php if (hasDroit('equipement', 'exporter')): ?>
-                        <a href="request/export_equipements.php" class="btn btn-primary">
-                            <span class="material-icons">file_download</span>Exporter Équipements
-                        </a>
-                    <?php endif; ?>
+                    <a href="request/export_equipements.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Équipements
+                    </a>
 
-                    <?php if (hasDroit('article', 'exporter')): ?>
-                        <a href="request/export_articles.php" class="btn btn-primary">
-                            <span class="material-icons">file_download</span>Exporter Articles
-                        </a>
-                    <?php endif; ?>
+                    <a href="request/export_articles.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Articles
+                    </a>
 
-                    <?php if (hasDroit('nomenclature', 'exporter')): ?>
-                        <a href="request/export_nomenclatures.php" class="btn btn-primary">
-                            <span class="material-icons">file_download</span>Exporter Nomenclatures
-                        </a>
-                    <?php endif; ?>
+                    <a href="request/export_nomenclatures.php" class="btn btn-primary">
+                        <span class="material-icons">file_download</span>Exporter Nomenclatures
+                    </a>
 
-                    <?php if (hasDroit('equipement', 'exporter')): ?>
-                        <a href="request/export_equipements_non_affectes.php" class="btn btn-warning">
-                            <span class="material-icons">file_download</span>
-                            Exporter équipements non affectés (Excel)
-                        </a>
-                    <?php endif; ?>
+                    <a href="request/export_equipements_non_affectes.php" class="btn btn-warning">
+                        <span class="material-icons">file_download</span>
+                        Exporter équipements non affectés (Excel)
+                    </a>
 
-                    <?php if (hasDroit('quantitatif', 'lire')): ?>
-                        <a href="import_quantitatif.php" class="btn btn-secondary">
-                            <span class="material-icons">analytics</span>Quantitatif
-                        </a>
-                    <?php endif; ?>
+                    <a href="import_quantitatif.php" class="btn btn-secondary">
+                        <span class="material-icons">analytics</span>Quantitatif
+                    </a>
 
                     <a href="logout.php" class="btn btn-outline-primary ms-2">
                         <span class="material-icons">logout</span>Déconnexion
@@ -93,104 +83,86 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             </div>
             <!-- Alertes -->
             <div class="row mb-4">
-                <?php if (hasDroit('equipement', 'lire')): ?>
-                    <div class="col-md-6">
-                        <div class="alert alert-warning d-flex align-items-center" role="alert" id="alert-equip">
-                            <span class="material-icons me-2">warning</span>
-                            <div><!-- Contenu dynamique --></div>
-                        </div>
+                <div class="col-md-6">
+                    <div class="alert alert-warning d-flex align-items-center" role="alert" id="alert-equip">
+                        <span class="material-icons me-2">warning</span>
+                        <div><!-- Contenu dynamique --></div>
                     </div>
-                <?php endif; ?>
-                <?php if (hasDroit('article', 'lire')): ?>
-                    <div class="col-md-6">
-                        <div class="alert alert-info d-flex align-items-center" role="alert" id="alert-article">
-                            <span class="material-icons me-2">info</span>
-                            <div><!-- Contenu dynamique --></div>
-                        </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info d-flex align-items-center" role="alert" id="alert-article">
+                        <span class="material-icons me-2">info</span>
+                        <div><!-- Contenu dynamique --></div>
                     </div>
-                <?php endif; ?>
+                </div>
             </div>
             <!-- Compteurs -->
             <div class="row mb-4">
-                <?php if (hasDroit('equipement', 'lire')): ?>
-                    <div class="col-md-2">
-                        <div class="card text-center shadow-sm">
-                            <div class="card-body">
-                                <div class="h1 text-primary"><?= $totalEquipements ?></div>
-                                <div>Équipements</div>
-                            </div>
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-primary"><?= $totalEquipements ?></div>
+                            <div>Équipements</div>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
 
-                <?php if (hasDroit('article', 'lire')): ?>
-                    <div class="col-md-2">
-                        <div class="card text-center shadow-sm">
-                            <div class="card-body">
-                                <div class="h1 text-success"><?= $totalArticles ?></div>
-                                <div>Articles</div>
-                            </div>
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-success"><?= $totalArticles ?></div>
+                            <div>Articles</div>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
 
-                <?php if (hasDroit('nomenclature', 'lire')): ?>
-                    <div class="col-md-2">
-                        <div class="card text-center shadow-sm">
-                            <div class="card-body">
-                                <div class="h1 text-info"><?= $totalNomenclatures ?></div>
-                                <div>Nomenclatures</div>
-                            </div>
+                <div class="col-md-2">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h1 text-info"><?= $totalNomenclatures ?></div>
+                            <div>Nomenclatures</div>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
 
-                <?php if (hasDroit('article', 'lire')): ?>
-                    <div class="col-md-3">
-                        <div class="card text-center shadow-sm">
-                            <div class="card-body">
-                                <div class="h2"><?= $pourcentArticlesLies ?>%</div>
-                                <div>Articles liés à un équipement</div>
-                            </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h2"><?= $pourcentArticlesLies ?>%</div>
+                            <div>Articles liés à un équipement</div>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
 
-                <?php if (hasDroit('equipement', 'lire')): ?>
-                    <div class="col-md-3">
-                        <div class="card text-center shadow-sm">
-                            <div class="card-body">
-                                <div class="h2"><?= $pourcentEquipAvecPiece ?>%</div>
-                                <div>Équipements avec pièce</div>
-                            </div>
+                <div class="col-md-3">
+                    <div class="card text-center shadow-sm">
+                        <div class="card-body">
+                            <div class="h2"><?= $pourcentEquipAvecPiece ?>%</div>
+                            <div>Équipements avec pièce</div>
                         </div>
                     </div>
-                <?php endif; ?>
+                </div>
             </div>
             <!-- Graphiques -->
-            <?php if (hasDroit('equipement', 'lire')): ?>
-                <div class="card mb-4 shadow-sm" style="border-radius:16px;">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des équipements par famille</h5>
-                        <canvas id="equipChart" height="80"></canvas>
-                    </div>
+            <div class="card mb-4 shadow-sm" style="border-radius:16px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des équipements par famille</h5>
+                    <canvas id="equipChart" height="80"></canvas>
                 </div>
-            <?php endif; ?>
+            </div>
 
-            <?php if (hasDroit('article', 'lire')): ?>
-                <div class="card mb-4 shadow-sm" style="border-radius:16px;">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par groupe</h5>
-                        <canvas id="groupeArticleChart" height="80"></canvas>
-                    </div>
+            <div class="card mb-4 shadow-sm" style="border-radius:16px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par groupe</h5>
+                    <canvas id="groupeArticleChart" height="80"></canvas>
                 </div>
-                <div class="card mb-4 shadow-sm" style="border-radius:16px;">
-                    <div class="card-body">
-                        <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par type</h5>
-                        <canvas id="typeArticleChart" height="80"></canvas>
-                    </div>
+            </div>
+            <div class="card mb-4 shadow-sm" style="border-radius:16px;">
+                <div class="card-body">
+                    <h5 class="card-title mb-3" style="color:#1976d2;">Répartition des articles par type</h5>
+                    <canvas id="typeArticleChart" height="80"></canvas>
                 </div>
-            <?php endif; ?>
+            </div>
             <div class="small text-muted">
                 +<?= $nbAjoutsEquip ?> équipements ajoutés sur 30 jours
             </div>

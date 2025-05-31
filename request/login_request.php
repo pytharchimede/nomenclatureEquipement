@@ -1,4 +1,11 @@
 <?php
+// Force un dossier de session local si le dossier par défaut n'existe pas
+$sessionPath = __DIR__ . '/../sessions';
+if (!is_dir($sessionPath)) {
+    mkdir($sessionPath, 0777, true);
+}
+ini_set('session.save_path', $sessionPath);
+
 session_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/../model/Utilisateur.php';

@@ -1,6 +1,10 @@
 <?php
+$sessionPath = __DIR__ . '/sessions';
+if (!is_dir($sessionPath)) mkdir($sessionPath, 0777, true);
+ini_set('session.save_path', $sessionPath);
 
 session_start();
+
 require_once 'model/Utilisateur.php';
 
 // Supposons que l'ID utilisateur est stocké en session

@@ -5,7 +5,7 @@ $nomenclatures = Nomenclature::getAll();
 
 session_start();
 require_once 'includes/auth.php';
-requireDroit('nomenclature', 'lire'); // Exemple : accès à la page nomenclatures
+
 
 // Détection des doublons (code_equipement + code_article)
 $dups = [];
