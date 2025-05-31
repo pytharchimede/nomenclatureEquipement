@@ -1,17 +1,7 @@
 <?php
 session_start();
 require_once 'includes/auth.php';
-// Autorise l'accès si l'utilisateur a au moins un droit de lecture
-if (
-    !hasDroit('equipement', 'lire') &&
-    !hasDroit('nomenclature', 'lire') &&
-    !hasDroit('article', 'lire') &&
-    !hasDroit('quantitatif', 'lire')
-) {
-    header('HTTP/1.1 403 Forbidden');
-    echo "<div style='padding:2em;text-align:center;color:#d93025;font-size:1.3em;'>Accès refusé</div>";
-    exit;
-}
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
