@@ -84,18 +84,34 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             <!-- Alertes -->
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <div class="alert alert-warning d-flex align-items-center" role="alert" id="alert-equip">
-                        <span class="material-icons me-2">warning</span>
-                        <div><!-- Contenu dynamique --></div>
-                    </div>
+                    <?php if ($equipSansPiece > 0): ?>
+                        <div class="alert alert-warning d-flex align-items-center" role="alert" id="alert-equip">
+                            <span class="material-icons me-2">warning</span>
+                            <div><?= $equipSansPiece ?> équipement(s) n'ont pas de pièce de rechange définie.</div>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-success d-flex align-items-center" role="alert" id="alert-equip">
+                            <span class="material-icons me-2 text-success">check_circle</span>
+                            <div>Tous les équipements ont une pièce de rechange !</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
+
                 <div class="col-md-6">
-                    <div class="alert alert-info d-flex align-items-center" role="alert" id="alert-article">
-                        <span class="material-icons me-2">info</span>
-                        <div><!-- Contenu dynamique --></div>
-                    </div>
+                    <?php if ($articlesNonLies > 0): ?>
+                        <div class="alert alert-info d-flex align-items-center" role="alert" id="alert-article">
+                            <span class="material-icons me-2">info</span>
+                            <div><?= $articlesNonLies ?> article(s) ne sont pas liés à un équipement.</div>
+                        </div>
+                    <?php else: ?>
+                        <div class="alert alert-success d-flex align-items-center" role="alert" id="alert-article">
+                            <span class="material-icons me-2 text-success">check_circle</span>
+                            <div>Tous les articles sont liés à des équipements !</div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
+
             <!-- Compteurs -->
             <div class="row mb-4">
                 <div class="col-md-2">
