@@ -106,6 +106,12 @@ require_once __DIR__ . '/includes/auth.php';
                 Mon profil
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('rgm_synthese.php'); ?>" href="rgm_synthese.php">
+                <span class="material-icons">table_view</span>
+                Synthèse RGM
+            </a>
+        </li>
         <li class="nav-item mt-3">
             <a class="nav-link text-danger fw-bold" href="logout.php" style="background:#fff0f0;">
                 <span class="material-icons">logout</span>
