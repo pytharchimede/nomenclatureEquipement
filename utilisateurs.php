@@ -4,6 +4,7 @@ session_start();
 require_once 'model/Utilisateur.php';
 require_once 'model/GroupeUtilisateur.php';
 require_once 'model/DroitUtilisateur.php';
+require_once 'includes/auth.php';
 
 // Récupération des utilisateurs, groupes et droits
 $utilisateurs = Utilisateur::getAll();

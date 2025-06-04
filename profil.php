@@ -6,6 +6,8 @@ ini_set('session.save_path', $sessionPath);
 session_start();
 
 require_once 'model/Utilisateur.php';
+require_once 'includes/auth.php';
+
 
 // Supposons que l'ID utilisateur est stocké en session
 $user_logged =  $_SESSION['user'] ?? null;

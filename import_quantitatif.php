@@ -2,6 +2,8 @@
 require_once 'model/Database.php';
 require_once 'model/Quantitatif.php';
 require_once 'model/Famille.php';
+require_once 'includes/auth.php';
+
 
 $quantitatif = Quantitatif::getAll();
 ?>

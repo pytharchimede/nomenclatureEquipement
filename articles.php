@@ -1,5 +1,8 @@
 <?php
+
 require_once 'model/Article.php';
+require_once 'includes/auth.php';
+
 // Récupération des articles
 $articles = Article::getAll();
 

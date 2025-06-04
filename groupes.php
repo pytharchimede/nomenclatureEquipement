@@ -3,6 +3,7 @@
 session_start();
 require_once 'model/GroupeUtilisateur.php';
 require_once 'model/DroitUtilisateur.php';
+require_once 'includes/auth.php';
 
 // Récupération des groupes et de leurs droits
 $groupes = GroupeUtilisateur::getAll();

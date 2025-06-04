@@ -1,5 +1,6 @@
 <?php
 
+require_once 'includes/auth.php';
 require_once 'model/Equipement.php';
 require_once 'model/Quantitatif.php';
 // Récupération des équipements

@@ -1,5 +1,7 @@
 <?php
 // Pas de logique PHP ici, uniquement l'affichage des liens d'export
+require_once 'includes/auth.php';
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">

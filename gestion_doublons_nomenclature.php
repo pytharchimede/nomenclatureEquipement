@@ -1,5 +1,7 @@
 <?php
 require_once 'model/Nomenclature.php';
+require_once 'includes/auth.php';
+
 $nomenclatures = Nomenclature::getAll();
 
 // Regroupe les doublons

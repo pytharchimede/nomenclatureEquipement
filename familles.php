@@ -1,4 +1,6 @@
 <?php
+require_once 'includes/auth.php';
+
 // Pas de logique pour l’instant, juste la structure et le menu
 ?>
 <!DOCTYPE html>
