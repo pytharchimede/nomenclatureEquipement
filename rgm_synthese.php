@@ -1,9 +1,18 @@
 <?php
-require_once 'model/RgmSynthese.php';
+
 session_start();
+
+require_once 'model/RgmSynthese.php';
+require_once 'model/Nomenclature.php';
 require_once 'includes/auth.php';
 
+// Synchronisation régulière à chaque chargement de page
+//Nomenclature::syncFromRgmSynthese();
+
 $rgmData = RgmSynthese::getAll();
+
+// Utilisation de la classe pour la map des existants
+$existMap = Nomenclature::getExistingRepereArticleMap();
 
 // Statistiques pour mini-cards
 $total = count($rgmData);
@@ -97,6 +106,16 @@ $uniteData = array_values($unites);
                     </div>
                 </div>
             </div>
+            <!-- Bouton Synchroniser RGM -->
+            <button id="syncRgmBtn" class="btn btn-outline-success mb-3">
+                <span class="material-icons">sync</span>Synchroniser RGM → Nomenclature
+            </button>
+            <div id="syncRgmProgress" class="mt-2" style="display:none;">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="syncRgmBar" style="width:0%">0%</div>
+                </div>
+                <div id="syncRgmText" class="mt-1"></div>
+            </div>
             <!-- Tableau Synthèse RGM -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
@@ -123,12 +142,14 @@ $uniteData = array_values($unites);
                                     <th>Unité</th>
                                     <th>Date import</th>
                                     <th>Source</th>
+                                    <th>Déjà en nomenclature</th> <!-- Nouvelle colonne -->
                                 </tr>
                                 <tr id="filter-row-rgm">
                                     <th></th>
                                     <?php for ($i = 1; $i <= 7; $i++): ?>
                                         <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer" data-col="<?= $i ?>"></th>
                                     <?php endfor; ?>
+                                    <th></th> <!-- Pour la nouvelle colonne -->
                                     <th>
                                         <button type="button" id="resetRgmFilters" class="btn btn-sm btn-outline-secondary" title="Réinitialiser les filtres">
                                             <span class="material-icons" style="font-size:1.1em;">close</span>
@@ -138,6 +159,10 @@ $uniteData = array_values($unites);
                             </thead>
                             <tbody id="rgmTableBody">
                                 <?php foreach ($rgmData as $row): ?>
+                                    <?php
+                                    $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
+                                    $isPresent = isset($existMap[$key]);
+                                    ?>
                                     <tr>
                                         <td><input type="checkbox" class="rgm-checkbox" value="<?= $row['id'] ?>"></td>
                                         <td><?= htmlspecialchars($row['repere_equipement'] ?? '') ?></td>
@@ -147,6 +172,7 @@ $uniteData = array_values($unites);
                                         <td><?= htmlspecialchars($row['unite'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($row['date_import'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($row['source'] ?? '') ?></td>
+                                        <td class="text-center"><?= $isPresent ? '<span style="color:green;font-size:1.3em;">✔️</span>' : '' ?></td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -193,6 +219,120 @@ $uniteData = array_values($unites);
                         <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
                     </div>
                 </div>
+            </div>
+            <!-- Tableau Synthèse RGM -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0" style="color:#1976d2;">Liste des synthèses RGM</h5>
+                        <div>
+                            <button id="exportFilteredRgmBtn" class="btn btn-outline-primary me-2" style="display:none;">
+                                <span class="material-icons">file_download</span>Exporter la sélection
+                            </button>
+                            <button id="deleteSelectedRgmBtn" class="btn btn-outline-danger" style="display:none;">
+                                <span class="material-icons">delete</span>Supprimer la sélection
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="selectAllRgm"></th>
+                                    <th>Repère équipement</th>
+                                    <th>Code article</th>
+                                    <th>Désignation article</th>
+                                    <th>Quantité</th>
+                                    <th>Unité</th>
+                                    <th>Date import</th>
+                                    <th>Source</th>
+                                    <th>Déjà en nomenclature</th> <!-- Nouvelle colonne -->
+                                </tr>
+                                <tr id="filter-row-rgm">
+                                    <th></th>
+                                    <?php for ($i = 1; $i <= 7; $i++): ?>
+                                        <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer" data-col="<?= $i ?>"></th>
+                                    <?php endfor; ?>
+                                    <th></th> <!-- Pour la nouvelle colonne -->
+                                    <th>
+                                        <button type="button" id="resetRgmFilters" class="btn btn-sm btn-outline-secondary" title="Réinitialiser les filtres">
+                                            <span class="material-icons" style="font-size:1.1em;">close</span>
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="rgmTableBody">
+                                <?php foreach ($rgmData as $row): ?>
+                                    <?php
+                                    $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
+                                    $isPresent = isset($existMap[$key]);
+                                    ?>
+                                    <tr>
+                                        <td><input type="checkbox" class="rgm-checkbox" value="<?= $row['id'] ?>"></td>
+                                        <td><?= htmlspecialchars($row['repere_equipement'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['code_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['designation_article'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['quantite'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['unite'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['date_import'] ?? '') ?></td>
+                                        <td><?= htmlspecialchars($row['source'] ?? '') ?></td>
+                                        <td class="text-center"><?= $isPresent ? '<span style="color:green;font-size:1.3em;">✔️</span>' : '' ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-center my-3" id="paginationRgm"></div>
+                </div>
+            </div>
+            <!-- Modal Importation Synthèse RGM -->
+            <div class="modal fade" id="importRgmModal" tabindex="-1" aria-labelledby="importRgmModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <form class="modal-content" id="importRgmForm" enctype="multipart/form-data" method="post" action="request/rgm_import.php">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="importRgmModalLabel">Importer une synthèse RGM (CSV/Excel)</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="dropzone border border-primary rounded p-3 text-center mb-2" id="dropzoneRgm">
+                                <span class="material-icons" style="font-size:2.5em;color:#1976d2;">cloud_upload</span><br>
+                                Glissez-déposez votre fichier ici ou cliquez pour sélectionner
+                            </div>
+                            <input type="file" name="rgm_file" id="rgm_file" class="form-control d-none" accept=".xlsx,.xls,.csv" required>
+                            <div id="importRgmMsg" class="mt-2"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-primary" id="importBtnRgm" type="submit">
+                                <span class="spinner-border spinner-border-sm d-none" id="importSpinnerRgm"></span>
+                                Importer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <!-- Modal export en cours -->
+            <div class="modal fade" id="exportLoadingModalRgm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content text-center p-4">
+                        <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                        <div id="exportProgressTextRgm" style="font-size:1.2rem;">Préparation de l’export, veuillez patienter...</div>
+                        <div class="progress mt-3" style="height:18px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBarRgm" style="width:0%">0%</div>
+                        </div>
+                        <button id="closeExportModalBtnRgm" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
+                        <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
+                    </div>
+                </div>
+            </div>
+            <!-- Bouton Synchroniser RGM -->
+            <button id="syncRgmBtn" class="btn btn-outline-success mb-3">
+                <span class="material-icons">sync</span>Synchroniser RGM → Nomenclature
+            </button>
+            <div id="syncRgmProgress" class="mt-2" style="display:none;">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="syncRgmBar" style="width:0%">0%</div>
+                </div>
+                <div id="syncRgmText" class="mt-1"></div>
             </div>
         </div>
     </div>
@@ -535,6 +675,50 @@ $uniteData = array_values($unites);
                     dropzone.innerHTML = `<span class="material-icons" style="font-size:2.5em;color:#1976d2;">cloud_done</span><br>${fileInput.files[0].name}`;
                 }
             });
+
+            // Synchronisation RGM → Nomenclature
+            const syncBtn = document.getElementById('syncRgmBtn');
+            const syncProgress = document.getElementById('syncRgmProgress');
+            const syncBar = document.getElementById('syncRgmBar');
+            const syncText = document.getElementById('syncRgmText');
+
+            if (syncBtn) {
+                syncBtn.addEventListener('click', function() {
+                    const progressDiv = document.getElementById('syncRgmProgress');
+                    const bar = document.getElementById('syncRgmBar');
+                    const text = document.getElementById('syncRgmText');
+                    progressDiv.style.display = '';
+                    bar.style.width = '0%';
+                    bar.textContent = '0%';
+                    text.textContent = 'Synchronisation en cours...';
+
+                    // Animation fictive de la jauge
+                    let percent = 0;
+                    const interval = setInterval(() => {
+                        percent += Math.random() * 10 + 5;
+                        if (percent > 90) percent = 90;
+                        bar.style.width = percent + "%";
+                        bar.textContent = Math.round(percent) + "%";
+                    }, 200);
+
+                    fetch('request/sync_rgm.php')
+                        .then(r => r.json())
+                        .then(res => {
+                            clearInterval(interval);
+                            bar.style.width = "100%";
+                            bar.textContent = "100%";
+                            if (res.success) {
+                                text.innerHTML = `<span class="text-success">Synchronisation terminée : <b>${res.inserted}</b> lignes ajoutées.</span>`;
+                            } else {
+                                text.innerHTML = `<span class="text-danger">Erreur lors de la synchronisation.</span>`;
+                            }
+                        })
+                        .catch(() => {
+                            clearInterval(interval);
+                            text.innerHTML = `<span class="text-danger">Erreur réseau.</span>`;
+                        });
+                });
+            }
         });
     </script>
 </body>

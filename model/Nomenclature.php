@@ -219,4 +219,95 @@ class Nomenclature
         ");
         return (int)$stmt->fetchColumn();
     }
+
+    public static function syncFromRgmSynthese()
+    {
+        $pdo = Database::getConnection();
+
+        // 1. Charger tous les repères équipements existants
+        $equipements = [];
+        foreach ($pdo->query("SELECT repere_equipement, code_equipement FROM equipements") as $row) {
+            $equipements[strtolower(trim($row['repere_equipement'] ?? ''))] = $row['code_equipement'];
+        }
+
+        // 2. Charger tous les articles existants
+        $articles = [];
+        foreach ($pdo->query("SELECT code_article FROM articles") as $row) {
+            $articles[strtolower(trim($row['code_article'] ?? ''))] = true;
+        }
+
+        // 3. Charger toutes les nomenclatures existantes
+        $nomenclatures = [];
+        foreach ($pdo->query("SELECT repere_equipement, code_article FROM nomenclatures") as $row) {
+            $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
+            $nomenclatures[$key] = true;
+        }
+
+        // 4. Parcourir les synthèses
+        $syntheses = $pdo->query("SELECT * FROM rgm_synthese")->fetchAll(PDO::FETCH_ASSOC);
+        $inserted = 0;
+
+        foreach ($syntheses as $row) {
+            $repere = strtolower(trim($row['repere_equipement'] ?? ''));
+            $article = strtolower(trim($row['code_article'] ?? ''));
+            $key = $repere . '|' . $article;
+
+            // 1. Vérifier ou créer l'équipement
+            if (empty($equipements[$repere])) {
+                $code_equipement = 'RGM-' . strtoupper(trim($row['repere_equipement'] ?? ''));
+                // Vérifier unicité
+                if (in_array($code_equipement, $equipements)) {
+                    $code_equipement .= '-' . uniqid();
+                }
+                $stmt = $pdo->prepare("INSERT INTO equipements (code_equipement, repere_equipement) VALUES (?, ?)");
+                $stmt->execute([$code_equipement, $row['repere_equipement']]);
+                $equipements[$repere] = $code_equipement;
+            } else {
+                $code_equipement = $equipements[$repere];
+            }
+
+            // 2. Vérifier ou créer l'article
+            if (!isset($articles[$article]) && !empty($row['code_article'])) {
+                $stmt = $pdo->prepare("INSERT INTO articles (code_article, designation_article, date_creation) VALUES (?, ?, NOW())");
+                $stmt->execute([$row['code_article'], $row['designation_article']]);
+                $articles[$article] = true;
+            }
+
+            // 3. Vérifier si la nomenclature existe déjà
+            if (isset($nomenclatures[$key])) {
+                continue;
+            }
+
+            // 4. Insérer dans nomenclatures
+            if ($code_equipement && !empty($row['code_article'])) {
+                $stmt = $pdo->prepare("INSERT INTO nomenclatures (code_equipement, code_article, repere_equipement, designation_article, quantite, unite, date_creation, source) VALUES (?, ?, ?, ?, ?, ?, NOW(), 'RGM')");
+                $ok = $stmt->execute([
+                    $code_equipement,
+                    $row['code_article'],
+                    $row['repere_equipement'],
+                    $row['designation_article'],
+                    $row['quantite'],
+                    $row['unite']
+                ]);
+                if (!$ok) {
+                    error_log("Erreur d'insertion pour {$row['repere_equipement']} / {$row['code_article']}");
+                }
+                $nomenclatures[$key] = true;
+                $inserted++;
+            }
+        }
+        return $inserted;
+    }
+
+    public static function getExistingRepereArticleMap()
+    {
+        $pdo = Database::getConnection();
+        $rows = $pdo->query("SELECT repere_equipement, code_article FROM nomenclatures")->fetchAll(PDO::FETCH_ASSOC);
+        $map = [];
+        foreach ($rows as $row) {
+            $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
+            $map[$key] = true;
+        }
+        return $map;
+    }
 }
