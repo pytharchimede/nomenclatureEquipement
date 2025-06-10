@@ -10,11 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Récupère les données du formulaire
-$id = $_POST['id'] ?? '';
+$repere = trim($_POST['repere_equipement'] ?? '');
+$ancien_repere = trim($_POST['ancien_repere_equipement'] ?? $repere); // à passer dans le formulaire si on autorise le changement de repère
+
 $data = [
     'code_equipement' => trim($_POST['code_equipement'] ?? ''),
     'designation_equipement' => trim($_POST['designation_equipement'] ?? ''),
-    'repere_equipement' => trim($_POST['repere_equipement'] ?? ''),
+    'repere_equipement' => $repere,
     'fabricant' => trim($_POST['fabricant'] ?? ''),
     'type_objet' => trim($_POST['type_objet'] ?? ''),
     'designation_type' => trim($_POST['designation_type'] ?? ''),
@@ -29,20 +31,29 @@ $data = [
 ];
 
 // Vérification des champs obligatoires
-if (empty($id) || empty($data['code_equipement'])) {
-    echo json_encode(['success' => false, 'message' => 'ID et code équipement obligatoires.']);
+if (empty($repere) || empty($data['code_equipement'])) {
+    echo json_encode(['success' => false, 'message' => 'Repère et code équipement obligatoires.']);
     exit;
 }
 
-// Vérification doublon (autre que l'équipement en cours)
-$exist = Equipement::getByCode($data['code_equipement']);
-if ($exist && $exist['id'] != $id) {
+// Vérification doublon code_equipement (autre que l'équipement en cours)
+$existCode = Equipement::getByCode($data['code_equipement']);
+if ($existCode && $existCode['repere_equipement'] !== $ancien_repere) {
     echo json_encode(['success' => false, 'message' => 'Un autre équipement possède déjà ce code (doublon détecté).']);
     exit;
 }
 
+// Vérification doublon repere_equipement (autre que l'équipement en cours)
+if ($repere !== $ancien_repere) {
+    $existRepere = Equipement::getByRepere($repere);
+    if ($existRepere) {
+        echo json_encode(['success' => false, 'message' => 'Un autre équipement possède déjà ce repère (doublon détecté).']);
+        exit;
+    }
+}
+
 // Mise à jour via la classe Equipement
-if (Equipement::update($id, $data)) {
+if (Equipement::update($ancien_repere, $data)) {
     echo json_encode(['success' => true, 'message' => 'Équipement modifié avec succès !']);
 } else {
     echo json_encode(['success' => false, 'message' => 'Erreur lors de la modification.']);

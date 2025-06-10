@@ -9,12 +9,13 @@ session_start();
 require_once 'includes/auth.php';
 
 
-// Détection des doublons (code_equipement + code_article)
+// Détection des doublons (repere_equipement + code_article)
 $dups = [];
 $seen = [];
 foreach ($nomenclatures as $nom) {
-    $key = ($nom['code_equipement'] ?? '') . '|' . ($nom['code_article'] ?? '');
-    if (!$nom['code_equipement'] || !$nom['code_article']) continue;
+    // Le repère est la clé métier, donc on ne regarde plus le code_equipement
+    $key = ($nom['repere_equipement'] ?? '') . '|' . ($nom['code_article'] ?? '');
+    if (!$nom['repere_equipement'] || !$nom['code_article']) continue;
     if (isset($seen[$key])) {
         $dups[$key][] = $nom;
     } else {
@@ -138,7 +139,7 @@ $uniteData = array_values($unites);
                     <div>
                         <span class="material-icons me-2" style="vertical-align:middle;">warning</span>
                         <b>Doublons détectés :</b>
-                        <?= count($dups) ?> doublon(s) trouvé(s) (même code équipement et code article).
+                        <?= count($dups) ?> doublon(s) trouvé(s) (même <b>repère équipement</b> et code article).
                     </div>
                     <a href="gestion_doublons_nomenclature.php" class="btn btn-danger btn-sm">
                         Gérer les doublons

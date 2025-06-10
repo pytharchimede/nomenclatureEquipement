@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../model/Database.php';
+require_once __DIR__ . '/Equipement.php'; // Ajout pour synchronisation repère/code
 
 class Nomenclature
 {
@@ -20,8 +21,42 @@ class Nomenclature
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    // Ajout : recherche par repere + code_article (clé métier)
+    public static function getByRepereArticle($repere, $code_article)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM nomenclatures WHERE repere_equipement = ? AND code_article = ?");
+        $stmt->execute([$repere, $code_article]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // Synchronisation repere/code avant insertion ou update
+    private static function syncRepereCode(&$data)
+    {
+        if (empty($data['code_equipement']) && !empty($data['repere_equipement'])) {
+            $eq = Equipement::getByRepere($data['repere_equipement']);
+            if ($eq) $data['code_equipement'] = $eq['code_equipement'];
+        }
+        if (empty($data['repere_equipement']) && !empty($data['code_equipement'])) {
+            $eq = Equipement::getByCode($data['code_equipement']);
+            if ($eq) $data['repere_equipement'] = $eq['repere_equipement'];
+        }
+        // Vérification de cohérence si les deux sont fournis
+        if (!empty($data['code_equipement']) && !empty($data['repere_equipement'])) {
+            $eq = Equipement::getByCode($data['code_equipement']);
+            if (!$eq || $eq['repere_equipement'] !== $data['repere_equipement']) {
+                throw new Exception("Le code équipement et le repère ne correspondent pas.");
+            }
+        }
+    }
+
     public static function create($data)
     {
+        self::syncRepereCode($data);
+        // Contrôle de doublon métier
+        if (self::existsByRepereArticle($data['repere_equipement'], $data['code_article'])) {
+            throw new Exception("Une nomenclature existe déjà pour ce repère et cet article.");
+        }
         $pdo = Database::getConnection();
         $sql = "INSERT INTO nomenclatures (code_equipement, code_article, repere_equipement, designation_equipement, fabricant, type, numero_serie_fabricant, designation_article, numero_poste, quantite, unite, poste_technique, metier, date_creation, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
@@ -46,7 +81,14 @@ class Nomenclature
 
     public static function update($id, $data)
     {
+        self::syncRepereCode($data);
+        // Contrôle de doublon métier (hors nomenclature courante)
         $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT id FROM nomenclatures WHERE repere_equipement = ? AND code_article = ? AND id != ?");
+        $stmt->execute([$data['repere_equipement'], $data['code_article'], $id]);
+        if ($stmt->fetch()) {
+            throw new Exception("Une nomenclature existe déjà pour ce repère et cet article.");
+        }
         $sql = "UPDATE nomenclatures SET code_equipement=?, code_article=?, repere_equipement=?, designation_equipement=?, fabricant=?, type=?, numero_serie_fabricant=?, designation_article=?, numero_poste=?, quantite=?, unite=?, poste_technique=?, metier=?, date_creation=?, source=? WHERE id=?";
         $stmt = $pdo->prepare($sql);
         return $stmt->execute([
@@ -67,6 +109,15 @@ class Nomenclature
             $data['source'],
             $id
         ]);
+    }
+
+    // Ajout : contrôle de doublon métier (repere + code_article)
+    public static function existsByRepereArticle($repere, $code_article)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM nomenclatures WHERE repere_equipement = ? AND code_article = ?");
+        $stmt->execute([$repere, $code_article]);
+        return $stmt->fetchColumn() > 0;
     }
 
     public static function delete($id)

@@ -64,23 +64,23 @@ try {
 
     foreach ($rows as $i => $row) {
         $ligneMsg = "Ligne " . ($i + 2) . ": ";
-        $code_equipement = trim($row[$colMap['Code Equipement']] ?? '');
-        if ($code_equipement === '') {
-            $log[] = ['message' => $ligneMsg . "Code équipement vide, ignorée.", 'enCours' => false];
+        $repere_equipement = trim($row[$colMap['Repère équipement']] ?? '');
+        if ($repere_equipement === '') {
+            $log[] = ['message' => $ligneMsg . "Repère équipement vide, ignorée.", 'enCours' => false];
             continue;
         }
-        // Vérifie si l'équipement existe déjà via la classe Equipement
-        if (Equipement::getByCode($code_equipement)) {
-            $log[] = ['message' => $ligneMsg . "Doublon détecté ($code_equipement), ignorée.", 'enCours' => false];
+        // Vérifie si l'équipement existe déjà via la classe Equipement (par repère)
+        if (Equipement::getByRepere($repere_equipement)) {
+            $log[] = ['message' => $ligneMsg . "Doublon détecté ($repere_equipement), ignorée.", 'enCours' => false];
             $duplicates++;
             continue;
         }
 
         // Prépare les autres champs
         $data = [
-            'code_equipement' => $code_equipement,
+            'code_equipement' => trim($row[$colMap['Code Equipement']] ?? ''),
             'designation_equipement' => $row[$colMap['Désignation équipement']] ?? '',
-            'repere_equipement' => $row[$colMap['Repère équipement']] ?? '',
+            'repere_equipement' => $repere_equipement,
             'fabricant' => $row[$colMap['Fabricant']] ?? '',
             'type_objet' => $row[$colMap['Type d\'objet']] ?? '',
             'designation_type' => $row[$colMap['Désignat. type']] ?? '',
@@ -107,10 +107,10 @@ try {
 
         // Insertion via la classe Equipement
         if (Equipement::create($data)) {
-            $log[] = ['message' => $ligneMsg . "Ajouté ($code_equipement)", 'enCours' => false];
+            $log[] = ['message' => $ligneMsg . "Ajouté ($repere_equipement)", 'enCours' => false];
             $inserted++;
         } else {
-            $log[] = ['message' => $ligneMsg . "Erreur lors de l'ajout ($code_equipement)", 'enCours' => false];
+            $log[] = ['message' => $ligneMsg . "Erreur lors de l'ajout ($repere_equipement)", 'enCours' => false];
             $errors++;
         }
     }

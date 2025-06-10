@@ -12,11 +12,11 @@ class Equipement
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function getById($id)
+    public static function getByRepere($repere)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM equipements WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt = $pdo->prepare("SELECT * FROM equipements WHERE repere_equipement = ?");
+        $stmt->execute([$repere]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -51,13 +51,12 @@ class Equipement
         ]);
     }
 
-    public static function update($id, $data)
+    public static function update($repere, $data)
     {
         $pdo = Database::getConnection();
         $sql = "UPDATE equipements SET
             code_equipement = :code_equipement,
             designation_equipement = :designation_equipement,
-            repere_equipement = :repere_equipement,
             fabricant = :fabricant,
             type_objet = :type_objet,
             designation_type = :designation_type,
@@ -69,27 +68,26 @@ class Equipement
             categorie_equipement = :categorie_equipement,
             centre_de_couts = :centre_de_couts,
             date_creation = :date_creation
-            WHERE id = :id";
+            WHERE repere_equipement = :repere_equipement";
+        $data['repere_equipement'] = $repere;
         $stmt = $pdo->prepare($sql);
-        $data['id'] = $id;
         return $stmt->execute($data);
     }
 
-    public static function delete($id)
+    public static function delete($repere)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("DELETE FROM equipements WHERE id = ?");
-        return $stmt->execute([$id]);
+        $stmt = $pdo->prepare("DELETE FROM equipements WHERE repere_equipement = ?");
+        return $stmt->execute([$repere]);
     }
 
-    public static function deleteByIds($ids)
+    public static function deleteByReperes($reperes)
     {
-        if (empty($ids) || !is_array($ids)) return false;
+        if (empty($reperes) || !is_array($reperes)) return false;
         $pdo = Database::getConnection();
-        // Création des placeholders (?, ?, ?, ...)
-        $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $stmt = $pdo->prepare("DELETE FROM equipements WHERE id IN ($placeholders)");
-        return $stmt->execute($ids);
+        $placeholders = implode(',', array_fill(0, count($reperes), '?'));
+        $stmt = $pdo->prepare("DELETE FROM equipements WHERE repere_equipement IN ($placeholders)");
+        return $stmt->execute($reperes);
     }
 
     public static function countAddedLast30Days()
@@ -99,19 +97,27 @@ class Equipement
         return $stmt->fetchColumn();
     }
 
-    public static function exists($code_equipement)
+    public static function exists($repere)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM equipements WHERE code_equipement = ?");
-        $stmt->execute([$code_equipement]);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM equipements WHERE repere_equipement = ?");
+        $stmt->execute([$repere]);
         return $stmt->fetchColumn() > 0;
     }
 
+    // Ajout d'un équipement minimal avec uniquement le repère (et éventuellement le code)
     public static function add($data)
     {
         $pdo = Database::getConnection();
-        $sql = "INSERT INTO equipements (code_equipement) VALUES (?)";
+        // Génère un code_equipement si absent (par exemple basé sur le repère)
+        if (empty($data['code_equipement']) && !empty($data['repere_equipement'])) {
+            $data['code_equipement'] = 'EQP-' . strtoupper(preg_replace('/\W+/', '', $data['repere_equipement']));
+        }
+        $sql = "INSERT INTO equipements (code_equipement, repere_equipement) VALUES (?, ?)";
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([$data['code_equipement']]);
+        return $stmt->execute([
+            $data['code_equipement'] ?? null,
+            $data['repere_equipement'] ?? null
+        ]);
     }
 }

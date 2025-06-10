@@ -156,8 +156,8 @@ $familleData = array_values($statsFamilles);
                             <tbody>
                                 <?php foreach ($equipements as $eq): ?>
                                     <tr>
-                                        <td><input type="checkbox" class="equip-checkbox" value="<?= $eq['id'] ?>"></td>
-                                        <td data-id="<?= $eq['id'] ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
+                                        <td><input type="checkbox" class="equip-checkbox" value="<?= htmlspecialchars($eq['repere_equipement']) ?>"></td>
+                                        <td data-repere="<?= htmlspecialchars($eq['repere_equipement']) ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
                                         <td><?= htmlspecialchars($eq['designation_equipement'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($eq['repere_equipement'] ?? '') ?></td>
                                         <td><?= htmlspecialchars($eq['fabricant'] ?? '') ?></td>
@@ -638,7 +638,7 @@ $familleData = array_values($statsFamilles);
                         <input type="${type}" name="${f.name}" class="form-control ${underline}" value="${type==='date' && value ? value.substr(0,10) : value}">
                     </div>`;
                 });
-                editModal.querySelector('.modal-body').innerHTML = html + `<input type="hidden" name="id" value="${equipement.id}">`;
+                editModal.querySelector('.modal-body').innerHTML = html + `<input type="hidden" name="repere_equipement" value="${equipement.repere_equipement}">`;
 
                 // Ajoute la gestion AJAX du formulaire de modification
                 const editForm = editModal.querySelector('form');
@@ -698,10 +698,9 @@ $familleData = array_values($statsFamilles);
                     // ... récupération des données et ouverture du modal ...
                     const tds = this.querySelectorAll('td');
                     const equipement = {
-                        id: tds[0].dataset.id ?? '',
+                        repere_equipement: tds[2].textContent.trim(),
                         code_equipement: tds[0].textContent.trim(),
                         designation_equipement: tds[1].textContent.trim(),
-                        repere_equipement: tds[2].textContent.trim(),
                         fabricant: tds[3].textContent.trim(),
                         type_objet: tds[4].textContent.trim(),
                         numero_serie_fabricant: tds[5].textContent.trim(),
@@ -952,20 +951,20 @@ $familleData = array_values($statsFamilles);
                     if (checked.length === 0) return;
                     if (!confirm(`Voulez-vous vraiment supprimer ${checked.length} équipement(s) ? Cette action est irréversible.`)) return;
 
-                    // Récupère les IDs à supprimer
-                    const ids = checked.map(cb => cb.value);
+                    // Récupère les repères à supprimer
+                    const reperes = checked.map(cb => cb.value);
 
-                    // Envoi AJAX (ou formulaire POST) vers un script PHP de suppression
+                    // Envoi AJAX vers un script PHP de suppression
                     fetch('request/equipement_delete.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                ids
+                                reperes
                             })
                         })
-                        .then(r => r.json()) // <-- parenthèses ajoutées ici
+                        .then(r => r.json())
                         .then(res => {
                             if (res.success) {
                                 // Retire les lignes supprimées du DOM

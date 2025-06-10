@@ -216,7 +216,7 @@ $rowNum = 2;
 foreach ($equipements as $eq) {
     $sheet->setCellValue('A' . $rowNum, $eq['code_equipement']);
     $sheet->setCellValue('B' . $rowNum, $eq['designation_equipement']);
-    $sheet->setCellValue('C' . $rowNum, $eq['repere_equipement']);
+    $sheet->setCellValue('C' . $rowNum, $eq['repere_equipement']); // repère bien exporté
     $sheet->setCellValue('D' . $rowNum, $eq['fabricant']);
     $sheet->setCellValue('E' . $rowNum, $eq['type_objet']);
     $sheet->setCellValue('F' . $rowNum, $eq['designation_type']);

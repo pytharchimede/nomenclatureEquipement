@@ -25,13 +25,13 @@ $data = [
     'date_creation' => trim($_POST['date_creation'] ?? '')
 ];
 
-// Vérification doublon
-if (empty($data['code_equipement'])) {
-    echo json_encode(['success' => false, 'message' => 'Le code équipement est obligatoire.']);
+// Vérification doublon et champ obligatoire sur le repère
+if (empty($data['repere_equipement'])) {
+    echo json_encode(['success' => false, 'message' => 'Le repère équipement est obligatoire.']);
     exit;
 }
-if (Equipement::getByCode($data['code_equipement'])) {
-    echo json_encode(['success' => false, 'message' => 'Cet équipement existe déjà (doublon détecté).']);
+if (Equipement::getByRepere($data['repere_equipement'])) {
+    echo json_encode(['success' => false, 'message' => 'Cet équipement existe déjà (doublon détecté sur le repère).']);
     exit;
 }
 

@@ -8,9 +8,9 @@ header('Content-Type: application/json');
 
 $data = $_POST;
 
-// Vérifie le doublon (code_equipement + code_article)
-if (Nomenclature::exists($data['code_equipement'], $data['code_article'])) {
-    echo json_encode(['success' => false, 'message' => "Cette nomenclature existe déjà (code équipement + code article)."]);
+// Contrôle de doublon (repere_equipement + code_article)
+if (Nomenclature::existsByRepereArticle($data['repere_equipement'], $data['code_article'])) {
+    echo json_encode(['success' => false, 'message' => "Cette nomenclature existe déjà (repère équipement + code article)."]);
     exit;
 }
 
@@ -20,10 +20,10 @@ if (!empty($data['date_creation'])) {
     $data['date_creation'] = $date ? $date->format('Y-m-d') : null;
 }
 
-// Vérifie que le code équipement existe, sinon le crée via la classe Equipement
-if (!Equipement::exists($data['code_equipement'])) {
+// Vérifie que le repère existe, sinon crée l'équipement minimal
+if (!empty($data['repere_equipement']) && !Equipement::getByRepere($data['repere_equipement'])) {
     // Création minimale, à adapter si besoin
-    Equipement::add(['code_equipement' => $data['code_equipement']]);
+    Equipement::add(['repere_equipement' => $data['repere_equipement']]);
 }
 
 // Vérifie que le code article existe, sinon le crée via la classe Article
@@ -50,8 +50,13 @@ $params = [
     'source'                  => $data['source'] ?? null
 ];
 
-if (Nomenclature::add($params)) {
-    echo json_encode(['success' => true, 'message' => "Nomenclature ajoutée avec succès."]);
-} else {
-    echo json_encode(['success' => false, 'message' => "Erreur lors de l'ajout."]);
+// Utilise la méthode create qui gère la synchronisation repère/code et le contrôle métier
+try {
+    if (Nomenclature::create($params)) {
+        echo json_encode(['success' => true, 'message' => "Nomenclature ajoutée avec succès."]);
+    } else {
+        echo json_encode(['success' => false, 'message' => "Erreur lors de l'ajout."]);
+    }
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

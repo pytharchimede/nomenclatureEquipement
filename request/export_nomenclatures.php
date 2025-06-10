@@ -11,9 +11,9 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 $type = $_GET['type'] ?? 'excel';
 
 $columns = [
+    'Repère équipement',      // <-- repère en premier
     'Code équipement',
     'Code article',
-    'Repère équipement',
     'Désignation équipement',
     'Fabricant',
     'Type',
@@ -28,9 +28,9 @@ $columns = [
     'Source'
 ];
 $fields = [
+    'repere_equipement',      // <-- repère en premier
     'code_equipement',
     'code_article',
-    'repere_equipement',
     'designation_equipement',
     'fabricant',
     'type',

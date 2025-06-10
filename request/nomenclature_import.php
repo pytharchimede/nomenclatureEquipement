@@ -59,21 +59,21 @@ foreach ($rows as $row) {
         'details' => $data
     ];
 
-    // Cas 1 & 2 : gestion des absences de code_equipement ou code_article
-    if (empty($data['code_equipement']) || empty($data['code_article'])) {
-        $equipementExiste = !empty($data['code_equipement']) && Equipement::exists($data['code_equipement']);
+    // Cas 1 & 2 : gestion des absences de repere_equipement ou code_article
+    if (empty($data['repere_equipement']) || empty($data['code_article'])) {
+        $equipementExiste = !empty($data['repere_equipement']) && Equipement::getByRepere($data['repere_equipement']);
         $articleExiste = !empty($data['code_article']) && Article::exists($data['code_article']);
 
         // Si les deux n'existent pas, ignorer la ligne
-        if (empty($data['code_equipement']) && empty($data['code_article'])) {
-            $ligneInfo['message'] = "Ligne ignorée : code équipement et code article manquants";
+        if (empty($data['repere_equipement']) && empty($data['code_article'])) {
+            $ligneInfo['message'] = "Ligne ignorée : repère équipement et code article manquants";
             $errors[] = $ligneInfo;
             continue;
         }
 
-        // Si code_equipement existe dans nomenclature mais pas dans Equipement, l'ajouter
-        if (!empty($data['code_equipement']) && !Equipement::exists($data['code_equipement'])) {
-            Equipement::add(['code_equipement' => $data['code_equipement']]);
+        // Si repere_equipement existe dans nomenclature mais pas dans Equipement, l'ajouter
+        if (!empty($data['repere_equipement']) && !Equipement::getByRepere($data['repere_equipement'])) {
+            Equipement::add(['repere_equipement' => $data['repere_equipement']]);
             $ligneInfo['message'] = "Ajouté uniquement dans Equipement (nomenclature ignorée)";
             $errors[] = $ligneInfo;
             continue;
@@ -88,7 +88,7 @@ foreach ($rows as $row) {
         }
 
         // Sinon, ignorer la ligne
-        $ligneInfo['message'] = "Ligne ignorée : code équipement ou code article manquant";
+        $ligneInfo['message'] = "Ligne ignorée : repère équipement ou code article manquant";
         $errors[] = $ligneInfo;
         continue;
     }
@@ -106,15 +106,15 @@ foreach ($rows as $row) {
         }
     }
 
-    // Vérifie doublon (code_equipement + code_article)
-    if (Nomenclature::exists($data['code_equipement'], $data['code_article'])) {
-        $duplicates[] = $data['code_equipement'] . ' / ' . $data['code_article'];
+    // Vérifie doublon (repere_equipement + code_article)
+    if (Nomenclature::existsByRepereArticle($data['repere_equipement'], $data['code_article'])) {
+        $duplicates[] = $data['repere_equipement'] . ' / ' . $data['code_article'];
         continue;
     }
 
     // Ajoute l'équipement s'il n'existe pas
-    if (!Equipement::exists($data['code_equipement'])) {
-        Equipement::add(['code_equipement' => $data['code_equipement']]);
+    if (!Equipement::getByRepere($data['repere_equipement'])) {
+        Equipement::add(['repere_equipement' => $data['repere_equipement']]);
     }
     // Ajoute l'article s'il n'existe pas
     if (!Article::exists($data['code_article'])) {
