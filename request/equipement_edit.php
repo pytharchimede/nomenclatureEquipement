@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Récupère les données du formulaire
 $repere = trim($_POST['repere_equipement'] ?? '');
-$ancien_repere = trim($_POST['ancien_repere_equipement'] ?? $repere); // à passer dans le formulaire si on autorise le changement de repère
+$ancien_repere = trim($_POST['repere_original'] ?? $repere); // <-- Correction ici
 
 $data = [
     'code_equipement' => trim($_POST['code_equipement'] ?? ''),
