@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Import optimisé pour les gros volumes (23 000+ lignes)
  * Utilise le repère comme clé primaire métier
@@ -31,13 +32,13 @@ try {
     // Lecture par chunks pour économiser la mémoire
     $spreadsheet = IOFactory::load($fileTmpPath);
     $sheet = $spreadsheet->getActiveSheet();
-    
+
     // Lecture de l'entête
     $header = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1', null, true, true, true)[1];
-    
+
     // Nettoyage de l'entête
     $header = array_map('trim', $header);
-    
+
     // Associe lettre colonne => nom colonne
     $colMap = [];
     foreach ($header as $colLetter => $colName) {
@@ -60,7 +61,7 @@ try {
         'Centre de coûts',
         'Créé le'
     ];
-    
+
     foreach ($expectedCols as $col) {
         if (!isset($colMap[$col])) {
             echo json_encode([
@@ -87,25 +88,28 @@ try {
         // Lecture et traitement par chunks
         for ($startRow = 2; $startRow <= $totalRows + 1; $startRow += $batchSize) {
             $endRow = min($startRow + $batchSize - 1, $totalRows + 1);
-            
+
             // Lecture du chunk
             $chunkData = $sheet->rangeToArray(
                 'A' . $startRow . ':' . $sheet->getHighestColumn() . $endRow,
-                null, true, true, true
+                null,
+                true,
+                true,
+                true
             );
 
             foreach ($chunkData as $rowIndex => $row) {
                 $actualRowNumber = $startRow + $rowIndex - 1;
                 $ligneMsg = "Ligne $actualRowNumber: ";
-                
+
                 $repere_equipement = trim($row[$colMap['Repère équipement']] ?? '');
-                
+
                 if ($repere_equipement === '') {
                     $log[] = ['message' => $ligneMsg . "Repère équipement vide, ignorée.", 'enCours' => false];
                     $errors++;
                     continue;
                 }
-                
+
                 // Vérification des doublons avec la base existante
                 if (Equipement::getByRepere($repere_equipement)) {
                     $log[] = ['message' => $ligneMsg . "Doublon détecté ($repere_equipement), ignorée.", 'enCours' => false];
@@ -145,47 +149,25 @@ try {
                     $errors++;
                 }
             }
-            
+
             // Libération mémoire
             unset($chunkData);
         }
-        
+
         $pdo->commit();
-        
     } catch (Exception $e) {
         $pdo->rollBack();
         throw $e;
-    }
-            'date_creation' => $row[$colMap['Créé le']] ?? ''
-        ];
-
-        // Conversion date
-        if ($data['date_creation']) {
-            if (is_numeric($data['date_creation'])) {
-                $data['date_creation'] = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($data['date_creation'])->format('Y-m-d');
-            } else {
-                $data['date_creation'] = date('Y-m-d', strtotime($data['date_creation']));
-            }
-        } else {
-            $data['date_creation'] = null;
-        }
-
-        // Insertion via la classe Equipement
-        if (Equipement::create($data)) {
-            $log[] = ['message' => $ligneMsg . "Ajouté ($repere_equipement)", 'enCours' => false];
-            $inserted++;
-        } else {
-            $log[] = ['message' => $ligneMsg . "Erreur lors de l'ajout ($repere_equipement)", 'enCours' => false];
-            $errors++;
-        }
     }
 
     echo json_encode([
         'success' => true,
         'message' => "Import terminé : $inserted ajout(s), $duplicates doublon(s), $errors erreur(s).",
-        'log' => $log
+        'imported' => $inserted,
+        'duplicates' => $duplicates,
+        'errors' => $errors,
+        'execution_time' => (microtime(true) - $startTime) . 's'
     ]);
-    exit;
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
