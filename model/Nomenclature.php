@@ -147,7 +147,7 @@ class Nomenclature
     public static function countDistinctEquipements()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_equipement) FROM nomenclatures WHERE code_equipement IS NOT NULL AND code_equipement != ''");
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT repere_equipement) FROM nomenclatures WHERE repere_equipement IS NOT NULL AND repere_equipement != ''");
         return (int)$stmt->fetchColumn();
     }
 
@@ -215,7 +215,7 @@ class Nomenclature
     public static function countArticlesLies()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_article) FROM nomenclatures WHERE code_article IS NOT NULL AND code_article != '' AND code_equipement IS NOT NULL AND code_equipement != ''");
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_article) FROM nomenclatures WHERE code_article IS NOT NULL AND code_article != '' AND repere_equipement IS NOT NULL AND repere_equipement != ''");
         return (int)$stmt->fetchColumn();
     }
 
@@ -223,12 +223,21 @@ class Nomenclature
     public static function countEquipementsAvecPiece()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT COUNT(DISTINCT code_equipement) FROM nomenclatures WHERE code_equipement IS NOT NULL AND code_equipement != '' AND code_article IS NOT NULL AND code_article != ''");
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT repere_equipement) FROM nomenclatures WHERE repere_equipement IS NOT NULL AND repere_equipement != '' AND code_article IS NOT NULL AND code_article != ''");
         return (int)$stmt->fetchColumn();
     }
 
-    // Vérifie si un équipement a une pièce de rechange
-    public static function equipementHasPiece($code_equipement)
+    // Vérifie si un équipement a une pièce de rechange (par repère)
+    public static function equipementHasPiece($repere_equipement)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE repere_equipement = ? AND code_article IS NOT NULL AND code_article != '' LIMIT 1");
+        $stmt->execute([$repere_equipement]);
+        return (bool)$stmt->fetchColumn();
+    }
+
+    // Vérifie si un équipement a une pièce de rechange (par code - pour compatibilité)
+    public static function equipementHasPieceByCode($code_equipement)
     {
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE code_equipement = ? AND code_article IS NOT NULL AND code_article != '' LIMIT 1");
@@ -240,7 +249,7 @@ class Nomenclature
     public static function articleIsLied($code_article)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE code_article = ? AND code_equipement IS NOT NULL AND code_equipement != '' LIMIT 1");
+        $stmt = $pdo->prepare("SELECT 1 FROM nomenclatures WHERE code_article = ? AND repere_equipement IS NOT NULL AND repere_equipement != '' LIMIT 1");
         $stmt->execute([$code_article]);
         return (bool)$stmt->fetchColumn();
     }
@@ -250,9 +259,9 @@ class Nomenclature
     {
         $pdo = Database::getConnection();
         $stmt = $pdo->query("
-            SELECT COUNT(DISTINCT e.code_equipement)
+            SELECT COUNT(DISTINCT e.repere_equipement)
             FROM equipements e
-            INNER JOIN nomenclatures n ON n.code_equipement = e.code_equipement
+            INNER JOIN nomenclatures n ON n.repere_equipement = e.repere_equipement
             WHERE n.code_article IS NOT NULL AND n.code_article != ''
         ");
         return (int)$stmt->fetchColumn();
@@ -266,7 +275,7 @@ class Nomenclature
             SELECT COUNT(DISTINCT a.code_article)
             FROM articles a
             INNER JOIN nomenclatures n ON n.code_article = a.code_article
-            WHERE n.code_equipement IS NOT NULL AND n.code_equipement != ''
+            WHERE n.repere_equipement IS NOT NULL AND n.repere_equipement != ''
         ");
         return (int)$stmt->fetchColumn();
     }

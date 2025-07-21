@@ -13,7 +13,8 @@ $equipSansPiece = [];
 
 // Pour chaque équipement, vérifie s'il n'a pas de pièce de rechange
 foreach ($equipements as $eq) {
-    if (!Nomenclature::equipementHasPiece($eq['code_equipement'])) {
+    // Utilisation du repère comme clé primaire métier
+    if (!Nomenclature::equipementHasPiece($eq['repere_equipement'])) {
         $equipSansPiece[] = $eq;
     }
 }

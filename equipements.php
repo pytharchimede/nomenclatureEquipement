@@ -1,25 +1,55 @@
 <?php
 
+/**
+ * Page de gestion des équipements avec pagination optimisée
+ * Utilise le repère comme clé primaire métier
+ */
+
 require_once 'includes/auth.php';
 require_once 'model/Equipement.php';
 require_once 'model/Quantitatif.php';
-// Récupération des équipements
-$equipements = Equipement::getAll();
 
-// Récupération des familles et du nombre d'équipements par famille
+// Pour les statistiques, on récupère un échantillon ou utilise des requêtes optimisées
+$totalEquipements = 0;
+$pdo = Database::getConnection();
+$stmt = $pdo->query("SELECT COUNT(*) FROM equipements");
+$totalEquipements = $stmt->fetchColumn();
+
+// Récupération des statistiques par famille (optimisé pour les gros volumes)
 $statsFamilles = [];
 $nonAffectes = 0;
-foreach ($equipements as $eq) {
-    $repere = preg_replace('/\s+/', '', $eq['repere_equipement'] ?? '');
-    $famille = Quantitatif::getFamilleByRepere($repere);
-    if ($famille && $famille !== 'Non défini') {
-        if (!isset($statsFamilles[$famille])) $statsFamilles[$famille] = 0;
-        $statsFamilles[$famille]++;
-    } else {
-        $nonAffectes++;
+
+// Si le volume est raisonnable, on fait le calcul complet
+if ($totalEquipements <= 5000) {
+    $equipements = Equipement::getAll();
+    foreach ($equipements as $eq) {
+        $repere = preg_replace('/\s+/', '', $eq['repere_equipement'] ?? '');
+        $famille = Quantitatif::getFamilleByRepere($repere);
+        if ($famille && $famille !== 'Non défini') {
+            if (!isset($statsFamilles[$famille])) $statsFamilles[$famille] = 0;
+            $statsFamilles[$famille]++;
+        } else {
+            $nonAffectes++;
+        }
+    }
+} else {
+    // Pour les gros volumes, on fait un échantillonnage
+    $stmt = $pdo->query("SELECT repere_equipement FROM equipements ORDER BY RAND() LIMIT 1000");
+    $echantillon = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($echantillon as $repere) {
+        $repere = preg_replace('/\s+/', '', $repere ?? '');
+        $famille = Quantitatif::getFamilleByRepere($repere);
+        if ($famille && $famille !== 'Non défini') {
+            if (!isset($statsFamilles[$famille])) $statsFamilles[$famille] = 0;
+            $statsFamilles[$famille]++;
+        } else {
+            $nonAffectes++;
+        }
     }
 }
-$total = count($equipements);
+
+// Calcul des statistiques
+$total = $totalEquipements;
 $topFamille = '';
 $maxFamille = 0;
 if ($statsFamilles) {
@@ -28,6 +58,11 @@ if ($statsFamilles) {
 }
 $familleLabels = array_keys($statsFamilles);
 $familleData = array_values($statsFamilles);
+
+// Récupération des valeurs distinctes pour les filtres
+$fabricants = Equipement::getDistinctValues('fabricant');
+$typesObjet = Equipement::getDistinctValues('type_objet');
+$categories = Equipement::getDistinctValues('categorie_equipement');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -44,6 +79,52 @@ $familleData = array_values($statsFamilles);
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
     <link href="css/style_equipements.css" rel="stylesheet">
+    <style>
+        /* Styles pour les filtres style Excel */
+        .mini-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            height: 80px;
+        }
+
+        .mini-graph {
+            width: 40px !important;
+            height: 40px !important;
+        }
+
+        .form-label.small {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .btn-sm .material-icons {
+            font-size: 16px;
+        }
+
+        #drop-area {
+            transition: all 0.3s ease;
+        }
+
+        #drop-area:hover {
+            border-color: #1976d2 !important;
+            background-color: #f0f7ff !important;
+        }
+
+        .table-responsive {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        .sticky-top {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 
 <body>
@@ -104,25 +185,82 @@ $familleData = array_values($statsFamilles);
                     </div>
                 </div>
             </div>
+            <!-- Filtres de recherche (style Excel) -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Recherche globale</label>
+                            <input type="text" id="search-input" class="form-control form-control-sm" placeholder="Repère, désignation, fabricant..." />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Fabricant</label>
+                            <select id="fabricant-filter" class="form-select form-select-sm">
+                                <option value="">Tous</option>
+                                <?php foreach ($fabricants as $fabricant): ?>
+                                    <option value="<?= htmlspecialchars($fabricant) ?>"><?= htmlspecialchars($fabricant) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Type d'objet</label>
+                            <select id="type-filter" class="form-select form-select-sm">
+                                <option value="">Tous</option>
+                                <?php foreach ($typesObjet as $type): ?>
+                                    <option value="<?= htmlspecialchars($type) ?>"><?= htmlspecialchars($type) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Catégorie</label>
+                            <select id="categorie-filter" class="form-select form-select-sm">
+                                <option value="">Toutes</option>
+                                <?php foreach ($categories as $cat): ?>
+                                    <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted mb-1">&nbsp;</label>
+                            <button id="reset-filters" class="btn btn-outline-secondary btn-sm w-100">
+                                <span class="material-icons" style="font-size:16px;">clear</span>
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Actions</label>
+                            <div class="d-flex gap-1">
+                                <button id="exportFilteredBtn" class="btn btn-outline-primary btn-sm" style="display:none;">
+                                    <span class="material-icons" style="font-size:16px;">file_download</span>
+                                </button>
+                                <button id="deleteSelectedBtn" class="btn btn-outline-danger btn-sm" style="display:none;">
+                                    <span class="material-icons" style="font-size:16px;">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tableau des équipements -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title mb-0" style="color:#1976d2;">Liste des équipements</h5>
-                        <div>
-                            <button id="exportFilteredBtn" class="btn btn-outline-primary me-2" style="display:none;">
-                                <span class="material-icons">file_download</span>Exporter la sélection
-                            </button>
-                            <button id="deleteSelectedBtn" class="btn btn-outline-danger" style="display:none;">
-                                <span class="material-icons">delete</span>Supprimer la sélection
-                            </button>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="pagination-info" class="text-muted small">
+                                Chargement...
+                            </div>
+                            <div id="loading-indicator" style="display: none;">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span class="small">Chargement...</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                        <table id="equipements-table" class="table table-hover align-middle">
+                            <thead class="sticky-top bg-white">
                                 <tr>
-                                    <th><input type="checkbox" id="selectAllEquip"></th>
+                                    <th><input type="checkbox" id="select-all-equipements"></th>
                                     <th>Code</th>
                                     <th>Désignation</th>
                                     <th>Repère</th>
@@ -132,41 +270,9 @@ $familleData = array_values($statsFamilles);
                                     <th>Catégorie</th>
                                     <th>Date création</th>
                                 </tr>
-                                <tr id="filter-row">
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer"></th>
-                                    <th>
-                                        <select class="form-select form-select-sm">
-                                            <option value="">Tous</option>
-                                            <?php
-                                            $cats = array_unique(array_column($equipements, 'categorie_equipement'));
-                                            foreach ($cats as $cat) {
-                                                echo '<option value="' . htmlspecialchars($cat) . '">' . htmlspecialchars($cat) . '</option>';
-                                            }
-                                            ?>
-                                        </select>
-                                    </th>
-                                    <th><input type="date" class="form-control form-control-sm"></th>
-                                </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($equipements as $eq): ?>
-                                    <tr>
-                                        <td><input type="checkbox" class="equip-checkbox" value="<?= htmlspecialchars($eq['repere_equipement']) ?>"></td>
-                                        <td data-repere="<?= htmlspecialchars($eq['repere_equipement']) ?>"><?= htmlspecialchars($eq['code_equipement']) ?></td>
-                                        <td><?= htmlspecialchars($eq['designation_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['repere_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['fabricant'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['type_objet'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['numero_serie_fabricant'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['categorie_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($eq['date_creation'] ?? '') ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <!-- Les données seront chargées via JavaScript avec pagination -->
                             </tbody>
                         </table>
                     </div>
@@ -284,22 +390,66 @@ $familleData = array_values($statsFamilles);
                     </div>
                 </div>
             </div>
-            <!-- Bouton Exporter la sélection -->
-            <button id="exportFilteredBtn" class="btn btn-outline-primary">
-                <span class="material-icons">file_download</span>Exporter la sélection
-            </button>
-            <button id="deleteSelectedBtn" class="btn btn-outline-danger" style="display:none;">
-                <span class="material-icons">delete</span>Supprimer la sélection
-            </button>
         </div>
+
+        <!-- Conteneur pour les alertes -->
+        <div id="alerts-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+    </div>
     </div>
 
     <!-- Chart.js -->
     <script src="plugins/js/chart.js"></script>
     <!-- Bootstrap JS -->
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
-    <script src="plugins/js/bootstrap.bundle.min.js"></script>
-    <script src="js/function_equipements.js"></script>
+    <!-- JavaScript optimisé pour les équipements avec pagination -->
+    <script src="js/function_equipements_updated.js"></script>
+
+    <!-- Initialisation des graphiques -->
+    <script>
+        // Données pour les graphiques depuis PHP
+        const familleLabels = <?= json_encode($familleLabels) ?>;
+        const familleData = <?= json_encode($familleData) ?>;
+
+        // Création du mini graphique en secteurs
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('miniPie');
+            if (ctx && familleLabels.length > 0) {
+                // Couleurs pour le graphique
+                const colors = [
+                    '#1976d2', '#43a047', '#fb8c00', '#e53935', '#8e24aa',
+                    '#00acc1', '#fdd835', '#f4511e', '#7cb342', '#546e7a'
+                ];
+
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: familleLabels.slice(0, 5), // Top 5 familles
+                        datasets: [{
+                            data: familleData.slice(0, 5),
+                            backgroundColor: colors.slice(0, familleLabels.length),
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.label + ': ' + context.parsed;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>
