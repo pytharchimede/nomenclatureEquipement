@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API pour la pagination des nomenclatures avec filtres optimisés
  * Compatible avec de gros volumes (26 531+ lignes)
@@ -13,13 +14,13 @@ try {
     $page = max(1, intval($_GET['page'] ?? 1));
     $limit = max(10, min(200, intval($_GET['limit'] ?? 100))); // Max 200 par page
     $offset = ($page - 1) * $limit;
-    
+
     $pdo = Database::getConnection();
-    
+
     // Construction des filtres WHERE
     $whereConditions = [];
     $params = [];
-    
+
     // Recherche globale
     if (!empty($_GET['search'])) {
         $search = '%' . $_GET['search'] . '%';
@@ -40,20 +41,28 @@ try {
             $params[] = $search;
         }
     }
-    
+
     // Filtres spécifiques
     $filterFields = [
-        'code_equipement', 'code_article', 'repere_equipement', 'fabricant',
-        'type', 'designation_article', 'unite', 'poste_technique', 'metier', 'source'
+        'code_equipement',
+        'code_article',
+        'repere_equipement',
+        'fabricant',
+        'type',
+        'designation_article',
+        'unite',
+        'poste_technique',
+        'metier',
+        'source'
     ];
-    
+
     foreach ($filterFields as $field) {
         if (!empty($_GET[$field])) {
             $whereConditions[] = "$field LIKE ?";
             $params[] = '%' . $_GET[$field] . '%';
         }
     }
-    
+
     // Filtres exacts
     $exactFields = ['numero_poste', 'quantite'];
     foreach ($exactFields as $field) {
@@ -62,21 +71,21 @@ try {
             $params[] = $_GET[$field];
         }
     }
-    
+
     // Filtre par date
     if (!empty($_GET['date_creation'])) {
         $whereConditions[] = "DATE(date_creation) = ?";
         $params[] = $_GET['date_creation'];
     }
-    
+
     $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
-    
+
     // Requête pour compter le total
     $countQuery = "SELECT COUNT(*) FROM nomenclatures $whereClause";
     $stmt = $pdo->prepare($countQuery);
     $stmt->execute($params);
     $total = $stmt->fetchColumn();
-    
+
     // Requête pour récupérer les données paginées
     $dataQuery = "
         SELECT 
@@ -99,20 +108,17 @@ try {
         FROM nomenclatures 
         $whereClause 
         ORDER BY repere_equipement, code_article, numero_poste
-        LIMIT ? OFFSET ?
+        LIMIT $limit OFFSET $offset
     ";
-    
-    $params[] = $limit;
-    $params[] = $offset;
-    
+
     $stmt = $pdo->prepare($dataQuery);
     $stmt->execute($params);
     $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Calcul de la pagination
     $totalPages = ceil($total / $limit);
     $hasMore = $page < $totalPages;
-    
+
     // Réponse JSON
     echo json_encode([
         'success' => true,
@@ -125,7 +131,6 @@ try {
             'hasMore' => $hasMore
         ]
     ]);
-    
 } catch (Exception $e) {
     error_log("Erreur pagination nomenclatures: " . $e->getMessage());
     echo json_encode([
@@ -134,4 +139,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>

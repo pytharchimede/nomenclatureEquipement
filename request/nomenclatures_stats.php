@@ -1,4 +1,5 @@
 <?php
+
 /**
  * API pour les statistiques des nomenclatures
  * Calculs optimisés pour de gros volumes
@@ -10,7 +11,7 @@ header('Content-Type: application/json');
 
 try {
     $pdo = Database::getConnection();
-    
+
     // Statistiques par famille (désignation article)
     $familleQuery = "
         SELECT 
@@ -25,10 +26,10 @@ try {
     ";
     $stmt = $pdo->query($familleQuery);
     $familles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     $topFamille = $familles[0]['designation_article'] ?? '';
     $maxFamille = $familles[0]['count'] ?? 0;
-    
+
     // Statistiques par unité
     $uniteQuery = "
         SELECT 
@@ -43,10 +44,10 @@ try {
     ";
     $stmt = $pdo->query($uniteQuery);
     $unites = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     $topUnite = $unites[0]['unite'] ?? '';
     $maxUnite = $unites[0]['count'] ?? 0;
-    
+
     // Statistiques par fabricant
     $fabricantQuery = "
         SELECT 
@@ -61,7 +62,7 @@ try {
     ";
     $stmt = $pdo->query($fabricantQuery);
     $fabricants = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Statistiques par métier
     $metierQuery = "
         SELECT 
@@ -76,7 +77,7 @@ try {
     ";
     $stmt = $pdo->query($metierQuery);
     $metiers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Statistiques par source
     $sourceQuery = "
         SELECT 
@@ -90,38 +91,46 @@ try {
     ";
     $stmt = $pdo->query($sourceQuery);
     $sources = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Nombre total de nomenclatures
     $totalQuery = "SELECT COUNT(*) FROM nomenclatures";
     $stmt = $pdo->query($totalQuery);
     $total = $stmt->fetchColumn();
-    
+
     // Nomenclatures sans article (potentiellement problématiques)
     $sansArticleQuery = "SELECT COUNT(*) FROM nomenclatures WHERE code_article IS NULL OR code_article = ''";
     $stmt = $pdo->query($sansArticleQuery);
     $sansArticle = $stmt->fetchColumn();
-    
+
     // Nomenclatures sans équipement (potentiellement problématiques)
     $sansEquipementQuery = "SELECT COUNT(*) FROM nomenclatures WHERE repere_equipement IS NULL OR repere_equipement = ''";
     $stmt = $pdo->query($sansEquipementQuery);
     $sansEquipement = $stmt->fetchColumn();
-    
+
     echo json_encode([
         'success' => true,
-        'total' => $total,
-        'top_famille' => $topFamille,
-        'max_famille' => $maxFamille,
-        'top_unite' => $topUnite,
-        'max_unite' => $maxUnite,
-        'sans_article' => $sansArticle,
-        'sans_equipement' => $sansEquipement,
-        'familles' => $familles,
-        'unites' => $unites,
-        'fabricants' => $fabricants,
-        'metiers' => $metiers,
-        'sources' => $sources
+        'stats' => [
+            'total' => $total,
+            'topFamille' => [
+                'nom' => $topFamille,
+                'count' => $maxFamille
+            ],
+            'topUnite' => [
+                'nom' => $topUnite,
+                'count' => $maxUnite
+            ],
+            'sansArticle' => $sansArticle,
+            'sansEquipement' => $sansEquipement,
+            'doublons' => [] // À implémenter si nécessaire
+        ],
+        'data' => [
+            'familles' => $familles,
+            'unites' => $unites,
+            'fabricants' => $fabricants,
+            'metiers' => $metiers,
+            'sources' => $sources
+        ]
     ]);
-    
 } catch (Exception $e) {
     error_log("Erreur statistiques nomenclatures: " . $e->getMessage());
     echo json_encode([
@@ -130,4 +139,3 @@ try {
         'error' => $e->getMessage()
     ]);
 }
-?>
