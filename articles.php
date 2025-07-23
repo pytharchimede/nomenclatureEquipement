@@ -110,12 +110,12 @@ $unites = Article::getDistinctValues('uq_base');
                 <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
                 <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Articles</h2>
                 <div class="d-flex gap-2">
-                    <a href="request/export_articles.php?type=excel" class="btn btn-outline-success" id="exportExcelBtn">
+                    <button class="btn btn-outline-success" id="export-excel-btn" onclick="handleExcelExport()">
                         <span class="material-icons">file_download</span>Excel
-                    </a>
-                    <a href="request/export_articles.php?type=pdf" class="btn btn-outline-danger" id="exportPdfBtn">
+                    </button>
+                    <button class="btn btn-outline-danger" id="export-pdf-btn" onclick="handlePdfExport()">
                         <span class="material-icons">picture_as_pdf</span>PDF
-                    </a>
+                    </button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addArticleModal"><span class="material-icons">add</span>Ajouter</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importArticleModal"><span class="material-icons">upload_file</span>Importer Excel</button>
                     <a href="logout.php" class="btn btn-outline-primary ms-2">

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Export Articles</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Test Export Articles</h2>
+        <p>Les boutons ci-dessous devraient télécharger les fichiers en arrière-plan avec un popup de chargement :</p>
+        
+        <button class="btn btn-success" onclick="testExcelExport()">Test Export Excel</button>
+        <button class="btn btn-danger" onclick="testPdfExport()">Test Export PDF</button>
+        
+        <!-- Modal de chargement d'export identique à celui d'articles.php -->
+        <div class="modal fade" id="exportLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content text-center p-4">
+                    <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                    <div id="exportProgressText" style="font-size:1.2rem;">Préparation de l'export, veuillez patienter...</div>
+                    <div class="progress mt-3" style="height:18px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBar" style="width:0%">0%</div>
+                    </div>
+                    <button id="closeExportModalBtn" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
+                    <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales pour simulation
+        let currentFilters = {};
+
+        function showExportLoader() {
+            const modal = new bootstrap.Modal(
+                document.getElementById("exportLoadingModal")
+            );
+            modal.show();
+
+            let progress = 0;
+            const progressBar = document.getElementById("exportProgressBar");
+            const progressText = document.getElementById("exportProgressText");
+            const closeBtn = document.getElementById("closeExportModalBtn");
+
+            closeBtn.style.display = "none";
+            progressBar.style.width = "0%";
+            progressBar.textContent = "0%";
+            progressText.textContent = "Préparation de l'export, veuillez patienter...";
+
+            // Animation de la barre de progression
+            const interval = setInterval(() => {
+                progress += Math.floor(Math.random() * 10) + 5;
+                if (progress > 100) progress = 100;
+
+                progressBar.style.width = progress + "%";
+                progressBar.textContent = progress + "%";
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    progressText.textContent = "Téléchargement en cours...";
+                }
+            }, 400);
+
+            // Affiche le bouton "Fermer" après 10 secondes
+            setTimeout(() => {
+                closeBtn.style.display = "";
+            }, 10000);
+
+            closeBtn.onclick = function () {
+                modal.hide();
+            };
+        }
+
+        function testExcelExport() {
+            showExportLoader();
+            
+            // Utiliser une iframe invisible pour le téléchargement
+            let iframe = document.getElementById('downloadFrame');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'downloadFrame';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
+            iframe.src = 'test_simple_export.php?type=excel';
+        }
+
+        function testPdfExport() {
+            showExportLoader();
+            
+            // Utiliser une iframe invisible pour le téléchargement
+            let iframe = document.getElementById('downloadFrame');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'downloadFrame';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
+            iframe.src = 'test_simple_export.php?type=pdf';
+        }
+    </script>
+</body>
+</html>

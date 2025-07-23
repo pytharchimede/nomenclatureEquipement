@@ -555,5 +555,179 @@ function initArticlesPage() {
   }
 }
 
+// ===============================
+// Gestion des exports
+// ===============================
+
+/**
+ * Affichage du loader d'export
+ */
+function showExportLoader() {
+  const modal = new bootstrap.Modal(
+    document.getElementById("exportLoadingModal")
+  );
+  modal.show();
+
+  let progress = 0;
+  const progressBar = document.getElementById("exportProgressBar");
+  const progressText = document.getElementById("exportProgressText");
+  const closeBtn = document.getElementById("closeExportModalBtn");
+
+  closeBtn.style.display = "none";
+  progressBar.style.width = "0%";
+  progressBar.textContent = "0%";
+  progressText.textContent = "Préparation de l'export, veuillez patienter...";
+
+  // Animation de la barre de progression
+  const interval = setInterval(() => {
+    progress += Math.floor(Math.random() * 10) + 5;
+    if (progress > 100) progress = 100;
+
+    progressBar.style.width = progress + "%";
+    progressBar.textContent = progress + "%";
+
+    if (progress >= 100) {
+      clearInterval(interval);
+      progressText.textContent = "Téléchargement en cours...";
+    }
+  }, 400);
+
+  // Affiche le bouton "Fermer" après 10 secondes
+  setTimeout(() => {
+    closeBtn.style.display = "";
+  }, 10000);
+
+  closeBtn.onclick = function () {
+    modal.hide();
+  };
+}
+/**
+ * Gestion de l'export Excel avec filtres
+ */
+function handleExcelExport() {
+  showExportLoader();
+
+  // Construction de l'URL avec les filtres actuels
+  const params = new URLSearchParams(currentFilters);
+  params.append("type", "excel");
+
+  // Utiliser une iframe invisible pour le téléchargement
+  let iframe = document.getElementById("downloadFrame");
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.id = "downloadFrame";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+  }
+  iframe.src = `request/export_articles.php?${params}`;
+}
+
+/**
+ * Gestion de l'export PDF avec filtres
+ */
+function handlePdfExport() {
+  showExportLoader();
+
+  // Construction de l'URL avec les filtres actuels
+  const params = new URLSearchParams(currentFilters);
+  params.append("type", "pdf");
+
+  // Utiliser une iframe invisible pour le téléchargement
+  let iframe = document.getElementById("downloadFrame");
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.id = "downloadFrame";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+  }
+  iframe.src = `request/export_articles.php?${params}`;
+}
+
+/**
+ * Export de la sélection filtrée avec choix du format
+ */
+function handleFilteredExport() {
+  const checkboxes = document.querySelectorAll(".article-checkbox:checked");
+
+  if (checkboxes.length === 0) {
+    showAlert("Aucun article sélectionné pour l'export", "warning");
+    return;
+  }
+
+  // Afficher un modal de choix du format
+  const modalHtml = `
+    <div class="modal fade" id="exportFormatModal" tabindex="-1">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Choisir le format d'export</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p>Exporter ${checkboxes.length} articles sélectionnés :</p>
+            <div class="d-grid gap-2">
+              <button class="btn btn-success" onclick="exportSelected('excel')">
+                <span class="material-icons">file_download</span> Excel
+              </button>
+              <button class="btn btn-danger" onclick="exportSelected('pdf')">
+                <span class="material-icons">picture_as_pdf</span> PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Ajouter le modal au DOM s'il n'existe pas
+  if (!document.getElementById("exportFormatModal")) {
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+  }
+
+  const modal = new bootstrap.Modal(
+    document.getElementById("exportFormatModal")
+  );
+  modal.show();
+}
+
+/**
+ * Exporte la sélection dans le format choisi
+ */
+function exportSelected(format) {
+  const checkboxes = document.querySelectorAll(".article-checkbox:checked");
+  const codes = Array.from(checkboxes).map((cb) => cb.value);
+
+  // Créer un formulaire pour envoyer les codes sélectionnés
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "request/export_articles.php";
+  form.style.display = "none";
+
+  // Ajouter les codes sélectionnés
+  const codeInput = document.createElement("input");
+  codeInput.type = "hidden";
+  codeInput.name = "selected_codes";
+  codeInput.value = JSON.stringify(codes);
+  form.appendChild(codeInput);
+
+  // Type d'export
+  const typeInput = document.createElement("input");
+  typeInput.type = "hidden";
+  typeInput.name = "type";
+  typeInput.value = format;
+  form.appendChild(typeInput);
+
+  document.body.appendChild(form);
+  showExportLoader();
+  form.submit();
+  document.body.removeChild(form);
+
+  // Fermer le modal
+  const modal = bootstrap.Modal.getInstance(
+    document.getElementById("exportFormatModal")
+  );
+  if (modal) modal.hide();
+}
+
 // Initialisation automatique au chargement de la page
 document.addEventListener("DOMContentLoaded", initArticlesPage);
