@@ -213,7 +213,7 @@ function initInfiniteScroll() {
  * Gestion de l'import Excel avec drag & drop et progression
  */
 async function handleAdvancedArticleImport() {
-  const fileInput = document.querySelector("#excelFileInput");
+  const fileInput = document.querySelector("#excel_file");
   const file = fileInput.files[0];
 
   if (!file) {
@@ -224,16 +224,14 @@ async function handleAdvancedArticleImport() {
   const formData = new FormData();
   formData.append("excel_file", file);
 
-  const progressBarContainer = document.querySelector(
-    "#importProgressBarContainer"
-  );
-  const progressBar = document.querySelector("#importProgressBar");
-  const importResult = document.querySelector("#importResult");
-  const startBtn = document.querySelector("#startImportBtn");
+  const progressContainer = document.querySelector("#importProgress");
+  const progressBar = document.querySelector("#importProgress .progress-bar");
+  const importResult = document.querySelector("#importLog");
+  const startBtn = document.querySelector("#importBtn");
 
   try {
     // Affichage de la barre de progression
-    progressBarContainer.style.display = "block";
+    progressContainer.classList.remove("d-none");
     startBtn.disabled = true;
     importResult.innerHTML = '<div class="text-info">Import en cours...</div>';
 
@@ -277,7 +275,7 @@ async function handleAdvancedArticleImport() {
         // Fermer le modal après 2 secondes
         setTimeout(() => {
           const modal = bootstrap.Modal.getInstance(
-            document.getElementById("importModal")
+            document.getElementById("importArticleModal")
           );
           if (modal) modal.hide();
         }, 2000);
@@ -509,6 +507,52 @@ function initArticlesPage() {
       updateSelectionButtons();
     }
   });
+
+  // Gestion de l'importation
+  const importForm = document.querySelector("#importArticleForm");
+  if (importForm) {
+    importForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      handleAdvancedArticleImport();
+    });
+  }
+
+  // Gestion du drag & drop pour l'importation
+  const dropZone = document.querySelector("#dropZone");
+  const fileInput = document.querySelector("#excel_file");
+
+  if (dropZone && fileInput) {
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        const fileName = e.dataTransfer.files[0].name;
+        const textDiv = dropZone.querySelector(".mt-2");
+        if (textDiv) textDiv.textContent = fileName;
+      }
+    });
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        const fileName = e.target.files[0].name;
+        const textDiv = dropZone.querySelector(".mt-2");
+        if (textDiv) textDiv.textContent = fileName;
+      }
+    });
+  }
 }
 
 // Initialisation automatique au chargement de la page

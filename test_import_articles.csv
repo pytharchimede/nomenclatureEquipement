@@ -1,0 +1,3 @@
+Code Article,Désignation Article,Type d'article,UQ base,Fabricant,N° pce fabricant,Grpe articles,Document,Description,Créé le,Créé par
+TEST001,Article de test 1,Pièce,PCS,TestFabricant,REF001,TestGroupe,DOC001,Description test,2024-01-01,Admin
+TEST002,Article de test 2,Composant,KG,TestFabricant2,REF002,TestGroupe2,DOC002,Description test 2,2024-01-02,Admin
