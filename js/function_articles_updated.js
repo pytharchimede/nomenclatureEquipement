@@ -626,6 +626,8 @@ function startProgressiveExport(type) {
     `request/export_articles_progressive.php?${params}`
   );
 
+  let exportCompleted = false;
+
   eventSource.onmessage = function (event) {
     try {
       const data = JSON.parse(event.data);
@@ -645,6 +647,8 @@ function startProgressiveExport(type) {
       );
 
       if (data.completed && data.downloadUrl) {
+        exportCompleted = true;
+
         // Déclencher le téléchargement
         const link = document.createElement("a");
         link.href = data.downloadUrl;
@@ -675,7 +679,17 @@ function startProgressiveExport(type) {
     eventSource.close();
   };
 
-  // Timeout de sécurité
+  // Timeout de sécurité - si pas de réponse après 10 secondes, afficher le bouton fermer
+  setTimeout(() => {
+    if (!exportCompleted && eventSource.readyState !== EventSource.CLOSED) {
+      // Si l'export n'est pas terminé mais prend trop de temps, permettre de fermer
+      if (loader.showCloseButton) {
+        loader.showCloseButton();
+      }
+    }
+  }, 10000);
+
+  // Timeout final de sécurité
   setTimeout(() => {
     if (eventSource.readyState !== EventSource.CLOSED) {
       eventSource.close();
@@ -689,14 +703,52 @@ function startProgressiveExport(type) {
  * Gestion de l'export Excel avec suivi temps réel
  */
 function handleExcelExport() {
-  startProgressiveExport("excel");
+  // Essayer d'abord l'export progressif, avec fallback sur l'export simple
+  if (typeof EventSource !== "undefined") {
+    startProgressiveExport("excel");
+  } else {
+    // Fallback pour navigateurs qui ne supportent pas EventSource
+    const loader = showExportLoader();
+
+    // Utiliser une iframe invisible pour le téléchargement
+    let iframe = document.getElementById("downloadFrame");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "downloadFrame";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    const params = new URLSearchParams(currentFilters);
+    params.append("type", "excel");
+    iframe.src = `request/export_articles.php?${params}`;
+  }
 }
 
 /**
  * Gestion de l'export PDF avec suivi temps réel
  */
 function handlePdfExport() {
-  startProgressiveExport("pdf");
+  // Essayer d'abord l'export progressif, avec fallback sur l'export simple
+  if (typeof EventSource !== "undefined") {
+    startProgressiveExport("pdf");
+  } else {
+    // Fallback pour navigateurs qui ne supportent pas EventSource
+    const loader = showExportLoader();
+
+    // Utiliser une iframe invisible pour le téléchargement
+    let iframe = document.getElementById("downloadFrame");
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "downloadFrame";
+      iframe.style.display = "none";
+      document.body.appendChild(iframe);
+    }
+
+    const params = new URLSearchParams(currentFilters);
+    params.append("type", "pdf");
+    iframe.src = `request/export_articles.php?${params}`;
+  }
 }
 
 /**
