@@ -1,11 +1,11 @@
 <?php
 set_time_limit(600); // 10 minutes pour traitement des gros fichiers
 
-require_once '../model/Database.php';
-require_once '../model/Nomenclature.php';
-require_once '../model/Equipement.php';
-require_once '../model/Article.php';
-require '../vendor/autoload.php';
+require_once __DIR__ . '/../model/Database.php';
+require_once __DIR__ . '/../model/Nomenclature.php';
+require_once __DIR__ . '/../model/Equipement.php';
+require_once __DIR__ . '/../model/Article.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -135,7 +135,7 @@ try {
 
                 if (!empty($existingNomenclatures)) {
                     // Stocker le doublon dans la table spécialisée
-                    $this->stockerDoublonImport($data, $filename, $lineNumber, $existingNomenclatures, $pdo);
+                    stockerDoublonImport($data, $filename, $lineNumber, $existingNomenclatures, $pdo);
 
                     $details['duplicates'][] = [
                         'line' => $lineNumber,
