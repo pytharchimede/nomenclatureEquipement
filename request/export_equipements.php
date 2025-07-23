@@ -68,59 +68,109 @@ $columns = [
 
 if ($type === 'pdf') {
     require_once('../vendor/autoload.php');
-    // Limite à 1000 lignes pour éviter les soucis mémoire
-    $maxPdfRows = 1000;
+
+    // Limite pour le PDF (pour éviter les gros fichiers)
+    $maxPdfRows = 5000;
     if (count($equipements) > $maxPdfRows) {
         $equipements = array_slice($equipements, 0, $maxPdfRows);
+        $truncated = true;
+    } else {
+        $truncated = false;
     }
 
     // Création du PDF
     $pdf = new \TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->SetCreator('Nomenclature Equipement');
     $pdf->SetAuthor('Nomenclature Equipement');
-    $pdf->SetTitle('Liste des équipements');
+
+    // Titre dynamique selon le type d'export
+    $title = 'Liste des équipements';
+    if (!empty($_POST['selected_reperes'])) {
+        $title = 'Équipements sélectionnés (' . count($equipements) . ')';
+    } elseif (!empty($filters)) {
+        $title = 'Équipements filtrés (' . count($equipements) . ')';
+    } else {
+        $title = 'Tous les équipements (' . count($equipements) . ')';
+    }
+
+    $pdf->SetTitle($title);
     $pdf->SetMargins(10, 15, 10);
     $pdf->SetAutoPageBreak(TRUE, 15);
     $pdf->AddPage();
 
     // Styles
-    $styleHeader = 'background-color:#1976d2;color:#fff;font-weight:bold;text-align:center;';
+    $styleHeader = 'background-color:#1976d2;color:#fff;font-weight:bold;text-align:center;font-size:10px;';
     $styleTotal = 'font-weight:bold;color:#388E3C;';
+    $styleInfo = 'color:#666;font-size:9px;';
+
+    // En-tête avec informations sur l'export
+    $html = '<h2 style="color:#1976d2;">' . $title . '</h2>';
+
+    // Informations sur les filtres appliqués
+    if (!empty($filters)) {
+        $html .= '<div style="' . $styleInfo . 'margin-bottom:10px;">';
+        $html .= '<strong>Filtres appliqués :</strong><br>';
+        foreach ($filters as $key => $value) {
+            $filterName = match ($key) {
+                'search' => 'Recherche',
+                'fabricant' => 'Fabricant',
+                'type_objet' => 'Type d\'objet',
+                'categorie_equipement' => 'Catégorie',
+                default => $key
+            };
+            $html .= '• ' . $filterName . ' : "' . htmlspecialchars($value) . '"<br>';
+        }
+        $html .= '</div>';
+    }
+
+    if ($truncated) {
+        $html .= '<div style="color:#f44336;font-weight:bold;margin-bottom:10px;">⚠️ Export limité aux ' . $maxPdfRows . ' premiers résultats</div>';
+    }
+
+    $html .= '<div style="' . $styleInfo . 'margin-bottom:10px;">Export généré le ' . date('d/m/Y à H:i') . '</div>';
+
+    // Colonnes à afficher (simplifiées pour le PDF)
+    $pdfColumns = [
+        'Code',
+        'Repère',
+        'Désignation',
+        'Fabricant',
+        'Type',
+        'N° Série',
+        'Catégorie',
+        'Date'
+    ];
 
     // Table HTML
-    $html = '<h2 style="color:#1976d2;">Liste des équipements</h2>';
-    $html .= '<table border="1" cellpadding="3" cellspacing="0" style="font-size:11pt;width:100%">';
+    $html .= '<table border="1" cellpadding="2" cellspacing="0" style="font-size:8pt;width:100%">';
     $html .= '<thead><tr>';
-    foreach ($columns as $col) {
+    foreach ($pdfColumns as $col) {
         $html .= '<th style="' . $styleHeader . '">' . htmlspecialchars($col) . '</th>';
     }
     $html .= '</tr></thead><tbody>';
 
     foreach ($equipements as $eq) {
         $html .= '<tr>';
-        $html .= '<td>' . htmlspecialchars($eq['code_equipement']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['designation_equipement']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['repere_equipement']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['fabricant']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['type_objet']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['designation_type']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['numero_serie_fabricant']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['numero_piece_fabricant']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['poste_technique']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['designation_poste_technique']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['poste_travail_principal']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['categorie_equipement']) . '</td>';
-        $html .= '<td>' . htmlspecialchars($eq['centre_de_couts']) . '</td>';
-        $html .= '<td>' . (!empty($eq['date_creation']) ? date('d/m/Y', strtotime($eq['date_creation'])) : '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars($eq['code_equipement'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;font-weight:bold;">' . htmlspecialchars($eq['repere_equipement'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars(substr($eq['designation_equipement'] ?? '', 0, 30)) . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars($eq['fabricant'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars($eq['type_objet'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars($eq['numero_serie_fabricant'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . htmlspecialchars($eq['categorie_equipement'] ?? '') . '</td>';
+        $html .= '<td style="font-size:8px;">' . (!empty($eq['date_creation']) ? date('d/m/Y', strtotime($eq['date_creation'])) : '') . '</td>';
         $html .= '</tr>';
     }
 
     // Ligne de total
-    $html .= '<tr><td style="' . $styleTotal . '">Total équipements :</td><td colspan="' . (count($columns) - 1) . '" style="' . $styleTotal . '">' . count($equipements) . '</td></tr>';
     $html .= '</tbody></table>';
+    $html .= '<div style="' . $styleTotal . 'margin-top:10px;">Total : ' . count($equipements) . ' équipements</div>';
 
     $pdf->writeHTML($html, true, false, true, false, '');
-    $pdf->Output('equipements_export.pdf', 'D');
+
+    // Nom de fichier dynamique
+    $filename = 'equipements_export_' . date('Ymd_His') . '.pdf';
+    $pdf->Output($filename, 'D');
     exit;
 }
 

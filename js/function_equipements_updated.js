@@ -327,7 +327,7 @@ function handlePdfExport() {
 }
 
 /**
- * Export de la sélection filtrée
+ * Export de la sélection filtrée avec choix du format
  */
 function handleFilteredExport() {
   const checkboxes = document.querySelectorAll(".equip-checkbox:checked");
@@ -337,6 +337,47 @@ function handleFilteredExport() {
     return;
   }
 
+  // Afficher un modal de choix du format
+  const modalHtml = `
+    <div class="modal fade" id="exportFormatModal" tabindex="-1">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Choisir le format d'export</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <p>Exporter ${checkboxes.length} équipements sélectionnés :</p>
+            <div class="d-grid gap-2">
+              <button class="btn btn-success" onclick="exportSelected('excel')">
+                <span class="material-icons">file_download</span> Excel
+              </button>
+              <button class="btn btn-danger" onclick="exportSelected('pdf')">
+                <span class="material-icons">picture_as_pdf</span> PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Ajouter le modal au DOM s'il n'existe pas
+  if (!document.getElementById("exportFormatModal")) {
+    document.body.insertAdjacentHTML("beforeend", modalHtml);
+  }
+
+  const modal = new bootstrap.Modal(
+    document.getElementById("exportFormatModal")
+  );
+  modal.show();
+}
+
+/**
+ * Exporte la sélection dans le format choisi
+ */
+function exportSelected(format) {
+  const checkboxes = document.querySelectorAll(".equip-checkbox:checked");
   const reperes = Array.from(checkboxes).map((cb) => cb.value);
 
   // Créer un formulaire pour envoyer les repères sélectionnés
@@ -356,13 +397,19 @@ function handleFilteredExport() {
   const typeInput = document.createElement("input");
   typeInput.type = "hidden";
   typeInput.name = "type";
-  typeInput.value = "excel";
+  typeInput.value = format;
   form.appendChild(typeInput);
 
   document.body.appendChild(form);
   showExportLoader();
   form.submit();
   document.body.removeChild(form);
+
+  // Fermer le modal
+  const modal = bootstrap.Modal.getInstance(
+    document.getElementById("exportFormatModal")
+  );
+  if (modal) modal.hide();
 }
 
 /**
@@ -754,25 +801,21 @@ function initEquipementsPage() {
   });
 
   // Événements pour les boutons d'action
-  const exportExcelLinks = document.querySelectorAll(
-    'a[href*="export_equipements.php?type=excel"]'
-  );
-  exportExcelLinks.forEach((link) => {
-    link.addEventListener("click", (e) => {
+  const exportExcelBtn = document.querySelector("#export-excel-btn");
+  if (exportExcelBtn) {
+    exportExcelBtn.addEventListener("click", (e) => {
       e.preventDefault();
       handleExcelExport();
     });
-  });
+  }
 
-  const exportPdfLinks = document.querySelectorAll(
-    'a[href*="export_equipements.php?type=pdf"]'
-  );
-  exportPdfLinks.forEach((link) => {
-    link.addEventListener("click", (e) => {
+  const exportPdfBtn = document.querySelector("#export-pdf-btn");
+  if (exportPdfBtn) {
+    exportPdfBtn.addEventListener("click", (e) => {
       e.preventDefault();
       handlePdfExport();
     });
-  });
+  }
 
   const exportFilteredBtn = document.querySelector("#exportFilteredBtn");
   if (exportFilteredBtn) {

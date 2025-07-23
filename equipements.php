@@ -137,8 +137,8 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                 <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
                 <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Équipements</h2>
                 <div class="d-flex gap-2">
-                    <a href="request/export_equipements.php?type=excel" class="btn btn-outline-success"><span class="material-icons">file_download</span>Excel</a>
-                    <a href="request/export_equipements.php?type=pdf" class="btn btn-outline-danger"><span class="material-icons">picture_as_pdf</span>PDF</a>
+                    <button id="export-excel-btn" class="btn btn-outline-success"><span class="material-icons">file_download</span>Excel</button>
+                    <button id="export-pdf-btn" class="btn btn-outline-danger"><span class="material-icons">picture_as_pdf</span>PDF</button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipModal"><span class="material-icons">add</span>Ajouter</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal"><span class="material-icons">upload_file</span>Importer Excel</button>
                     <a href="logout.php" class="btn btn-outline-primary ms-2">
