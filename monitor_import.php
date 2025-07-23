@@ -15,18 +15,16 @@ while ($checkCount < $maxChecks) {
         $stmt = $pdo->query('SELECT COUNT(*) FROM nomenclatures');
         $total = $stmt->fetchColumn();
 
-        // Compter les doublons potentiels (même code_article + même repere_equipement + même source)
+        // Compter les doublons potentiels (même code_article + même repere_equipement)
         $stmt2 = $pdo->query("
             SELECT COUNT(*) FROM (
-                SELECT repere_equipement, code_article, source, COUNT(*) as count
+                SELECT repere_equipement, code_article, COUNT(*) as count
                 FROM nomenclatures 
                 WHERE repere_equipement IS NOT NULL 
                 AND repere_equipement != ''
                 AND code_article IS NOT NULL 
                 AND code_article != ''
-                AND source IS NOT NULL
-                AND source != ''
-                GROUP BY repere_equipement, code_article, source 
+                GROUP BY repere_equipement, code_article 
                 HAVING count > 1
             ) as duplicates_count
         ");
@@ -58,15 +56,13 @@ while ($checkCount < $maxChecks) {
             // Si on a des doublons, afficher quelques exemples
             if ($duplicateGroups > 0) {
                 $stmt4 = $pdo->query("
-                    SELECT repere_equipement, code_article, source, COUNT(*) as count
+                    SELECT repere_equipement, code_article, COUNT(*) as count
                     FROM nomenclatures 
                     WHERE repere_equipement IS NOT NULL 
                     AND repere_equipement != ''
                     AND code_article IS NOT NULL 
                     AND code_article != ''
-                    AND source IS NOT NULL
-                    AND source != ''
-                    GROUP BY repere_equipement, code_article, source 
+                    GROUP BY repere_equipement, code_article 
                     HAVING count > 1
                     ORDER BY count DESC
                     LIMIT 3
@@ -75,7 +71,7 @@ while ($checkCount < $maxChecks) {
 
                 echo "         Top doublons: ";
                 foreach ($topDuplicates as $dup) {
-                    echo $dup['repere_equipement'] . "|" . $dup['code_article'] . "|" . $dup['source'] . "(" . $dup['count'] . ") ";
+                    echo $dup['repere_equipement'] . "|" . $dup['code_article'] . "(" . $dup['count'] . ") ";
                 }
                 echo "\n";
             }

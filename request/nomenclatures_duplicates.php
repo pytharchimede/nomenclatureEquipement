@@ -10,12 +10,11 @@ try {
 
     switch ($action) {
         case 'detect':
-            // Détection des doublons basée sur repere_equipement + code_article + source
+            // Détection des doublons basée sur repere_equipement + code_article
             $query = "
                 SELECT 
                     repere_equipement,
                     code_article,
-                    source,
                     COUNT(*) as count,
                     GROUP_CONCAT(id) as ids,
                     MIN(id) as first_id,
@@ -25,11 +24,9 @@ try {
                 AND repere_equipement != ''
                 AND code_article IS NOT NULL 
                 AND code_article != ''
-                AND source IS NOT NULL
-                AND source != ''
-                GROUP BY repere_equipement, code_article, source 
+                GROUP BY repere_equipement, code_article 
                 HAVING count > 1
-                ORDER BY count DESC, repere_equipement, code_article, source
+                ORDER BY count DESC, repere_equipement, code_article
             ";
 
             $stmt = $pdo->query($query);

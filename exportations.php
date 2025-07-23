@@ -104,8 +104,11 @@ require_once 'includes/auth.php';
                                 <a href="request/export_nomenclatures.php" class="btn btn-outline-info">
                                     <span class="material-icons">file_download</span> Exporter la liste des nomenclatures
                                 </a>
+                                <a href="gestion_doublons_nomenclature.php" class="btn btn-outline-warning">
+                                    <span class="material-icons">content_copy</span> Gestion et export des doublons
+                                </a>
                                 <a href="request/export_nomenclatures_doublons.php" class="btn btn-outline-danger">
-                                    <span class="material-icons">file_download</span> Exporter les doublons dans nomenclature
+                                    <span class="material-icons">file_download</span> Export rapide des doublons
                                 </a>
                                 <a href="uploads/sample_files/" class="btn btn-outline-secondary">
                                     <span class="material-icons">file_download</span> Fichier exemple import nomenclature

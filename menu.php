@@ -2,13 +2,15 @@
 
 // Détecte la page active pour le menu
 $currentPage = basename($_SERVER['PHP_SELF']);
-function isActive($pages)
-{
-    global $currentPage;
-    if (is_array($pages)) {
-        return in_array($currentPage, $pages) ? 'active' : '';
+if (!function_exists('isActive')) {
+    function isActive($pages)
+    {
+        global $currentPage;
+        if (is_array($pages)) {
+            return in_array($currentPage, $pages) ? 'active' : '';
+        }
+        return $currentPage === $pages ? 'active' : '';
     }
-    return $currentPage === $pages ? 'active' : '';
 }
 
 // Détection des doublons nomenclature
