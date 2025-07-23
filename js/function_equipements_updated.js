@@ -63,6 +63,11 @@ async function loadEquipements(page = 1, append = false) {
     // Mise à jour des statistiques
     updateStatistics(result.pagination.total);
 
+    // Mise à jour des statistiques détaillées si c'est une nouvelle recherche
+    if (!append) {
+      updateDetailedStats();
+    }
+
     // Mise à jour du message de pagination
     updatePaginationInfo(result.pagination);
   } catch (error) {
@@ -296,19 +301,68 @@ function fillEditForm(equipement) {
 // ===============================
 
 /**
- * Gestion de l'export Excel
+ * Gestion de l'export Excel avec filtres
  */
 function handleExcelExport() {
   showExportLoader();
-  window.location.href = "request/export_equipements.php?type=excel";
+
+  // Construction de l'URL avec les filtres actuels
+  const params = new URLSearchParams(currentFilters);
+  params.append("type", "excel");
+
+  window.location.href = `request/export_equipements.php?${params}`;
 }
 
 /**
- * Gestion de l'export PDF
+ * Gestion de l'export PDF avec filtres
  */
 function handlePdfExport() {
   showExportLoader();
-  window.location.href = "request/export_equipements.php?type=pdf";
+
+  // Construction de l'URL avec les filtres actuels
+  const params = new URLSearchParams(currentFilters);
+  params.append("type", "pdf");
+
+  window.location.href = `request/export_equipements.php?${params}`;
+}
+
+/**
+ * Export de la sélection filtrée
+ */
+function handleFilteredExport() {
+  const checkboxes = document.querySelectorAll(".equip-checkbox:checked");
+
+  if (checkboxes.length === 0) {
+    showAlert("Aucun équipement sélectionné pour l'export", "warning");
+    return;
+  }
+
+  const reperes = Array.from(checkboxes).map((cb) => cb.value);
+
+  // Créer un formulaire pour envoyer les repères sélectionnés
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "request/export_equipements.php";
+  form.style.display = "none";
+
+  // Ajouter les repères sélectionnés
+  const repereInput = document.createElement("input");
+  repereInput.type = "hidden";
+  repereInput.name = "selected_reperes";
+  repereInput.value = JSON.stringify(reperes);
+  form.appendChild(repereInput);
+
+  // Type d'export
+  const typeInput = document.createElement("input");
+  typeInput.type = "hidden";
+  typeInput.name = "type";
+  typeInput.value = "excel";
+  form.appendChild(typeInput);
+
+  document.body.appendChild(form);
+  showExportLoader();
+  form.submit();
+  document.body.removeChild(form);
 }
 
 /**
@@ -526,6 +580,79 @@ function showAlert(message, type = "info") {
 }
 
 /**
+ * Met à jour les statistiques détaillées avec les filtres appliqués
+ */
+async function updateDetailedStats() {
+  try {
+    // Construction de l'URL avec les mêmes filtres que la recherche
+    const params = new URLSearchParams(currentFilters);
+
+    const response = await fetch(`request/equipements_stats.php?${params}`);
+    const result = await response.json();
+
+    if (result.success) {
+      const stats = result.stats;
+
+      // Mise à jour des cartes de statistiques
+      updateStatCard("total-equipements", stats.total, "Total équipements");
+      updateStatCard(
+        "top-famille",
+        stats.topFamille || "Aucune",
+        "Famille la + présente"
+      );
+      updateStatCard("max-famille", stats.maxFamille, "Max dans une famille");
+      updateStatCard(
+        "non-affectes",
+        stats.nonAffectes,
+        "Non affectés à une famille"
+      );
+
+      // Mise à jour du graphique en secteurs si disponible
+      if (window.miniPieChart && stats.familleLabels.length > 0) {
+        window.miniPieChart.data.labels = stats.familleLabels.slice(0, 5); // Top 5
+        window.miniPieChart.data.datasets[0].data = stats.familleData.slice(
+          0,
+          5
+        );
+        window.miniPieChart.update();
+      }
+    }
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des statistiques:", error);
+  }
+}
+
+/**
+ * Met à jour une carte de statistique
+ * @param {string} cardId - ID de la carte (utilise data-stat attribute)
+ * @param {string|number} value - Valeur à afficher
+ * @param {string} label - Label de la statistique
+ */
+function updateStatCard(cardId, value, label) {
+  // Recherche par data-stat ou structure de carte
+  let valueElement = document.querySelector(`[data-stat="${cardId}"]`);
+
+  if (!valueElement) {
+    // Fallback : recherche par structure de carte
+    const cards = document.querySelectorAll(".mini-card");
+    cards.forEach((card) => {
+      const labelElement = card.querySelector(".text-muted");
+      if (
+        labelElement &&
+        labelElement.textContent.includes(label.split(" ")[0])
+      ) {
+        valueElement = card.querySelector("div:first-child div:first-child");
+      }
+    });
+  }
+
+  if (valueElement) {
+    valueElement.textContent =
+      typeof value === "number" ? value.toLocaleString() : value;
+  }
+}
+
+/**
  * Met à jour les statistiques affichées
  * @param {number} total - Nombre total d'équipements
  */
@@ -627,14 +754,29 @@ function initEquipementsPage() {
   });
 
   // Événements pour les boutons d'action
-  const exportExcelBtn = document.querySelector("#export-excel-btn");
-  if (exportExcelBtn) {
-    exportExcelBtn.addEventListener("click", handleExcelExport);
-  }
+  const exportExcelLinks = document.querySelectorAll(
+    'a[href*="export_equipements.php?type=excel"]'
+  );
+  exportExcelLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      handleExcelExport();
+    });
+  });
 
-  const exportPdfBtn = document.querySelector("#export-pdf-btn");
-  if (exportPdfBtn) {
-    exportPdfBtn.addEventListener("click", handlePdfExport);
+  const exportPdfLinks = document.querySelectorAll(
+    'a[href*="export_equipements.php?type=pdf"]'
+  );
+  exportPdfLinks.forEach((link) => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
+      handlePdfExport();
+    });
+  });
+
+  const exportFilteredBtn = document.querySelector("#exportFilteredBtn");
+  if (exportFilteredBtn) {
+    exportFilteredBtn.addEventListener("click", handleFilteredExport);
   }
 
   const importInput = document.querySelector("#excelFileInput");

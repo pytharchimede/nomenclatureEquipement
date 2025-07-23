@@ -152,7 +152,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                     <div class="mini-card">
                         <span class="material-icons">build</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $total ?></div>
+                            <div data-stat="total-equipements" style="font-size:1.3rem;font-weight:700;"><?= $total ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Total équipements</div>
                         </div>
                     </div>
@@ -161,7 +161,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                     <div class="mini-card">
                         <span class="material-icons" style="color:#43a047;">category</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= htmlspecialchars($topFamille) ?></div>
+                            <div data-stat="top-famille" style="font-size:1.3rem;font-weight:700;"><?= htmlspecialchars($topFamille) ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Famille la + présente</div>
                         </div>
                     </div>
@@ -170,7 +170,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                     <div class="mini-card">
                         <canvas id="miniPie" class="mini-graph"></canvas>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $maxFamille ?></div>
+                            <div data-stat="max-famille" style="font-size:1.3rem;font-weight:700;"><?= $maxFamille ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Max dans une famille</div>
                         </div>
                     </div>
@@ -179,7 +179,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                     <div class="mini-card">
                         <span class="material-icons" style="color:#e53935;">help_outline</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $nonAffectes ?></div>
+                            <div data-stat="non-affectes" style="font-size:1.3rem;font-weight:700;"><?= $nonAffectes ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Non affectés à une famille</div>
                         </div>
                     </div>
@@ -401,6 +401,44 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
     <script src="plugins/js/chart.js"></script>
     <!-- Bootstrap JS -->
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Initialisation du graphique -->
+    <script>
+        // Données PHP pour JavaScript
+        const familleLabels = <?= json_encode($familleLabels) ?>;
+        const familleData = <?= json_encode($familleData) ?>;
+
+        // Création du mini graphique en secteurs
+        if (familleLabels.length > 0) {
+            const ctx = document.getElementById('miniPie');
+            if (ctx) {
+                window.miniPieChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: familleLabels.slice(0, 5), // Top 5 familles
+                        datasets: [{
+                            data: familleData.slice(0, 5),
+                            backgroundColor: [
+                                '#1976d2', '#43a047', '#ff9800',
+                                '#e53935', '#9c27b0'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+
     <!-- JavaScript optimisé pour les équipements avec pagination -->
     <script src="js/function_equipements_updated.js"></script>
 

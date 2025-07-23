@@ -1,16 +1,53 @@
 <?php
-require_once '../model/Database.php';
-require_once '../model/Equipement.php';
-require '../vendor/autoload.php';
+require_once __DIR__ . '/../model/Database.php';
+require_once __DIR__ . '/../model/Equipement.php';
+require __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
+// Configuration pour gros volumes
+set_time_limit(300); // 5 minutes
+ini_set('memory_limit', '512M');
 
 $type = $_GET['type'] ?? 'excel';
-$equipements = Equipement::getAll();
+
+// Récupération des filtres de la session ou paramètres URL
+$filters = [];
+if (!empty($_GET['search'])) $filters['search'] = $_GET['search'];
+if (!empty($_GET['fabricant'])) $filters['fabricant'] = $_GET['fabricant'];
+if (!empty($_GET['type_objet'])) $filters['type_objet'] = $_GET['type_objet'];
+if (!empty($_GET['categorie_equipement'])) $filters['categorie_equipement'] = $_GET['categorie_equipement'];
+
+// Récupération des équipements avec filtres si fournis
+if (!empty($_POST['selected_reperes'])) {
+    // Export de sélection spécifique
+    $selectedReperes = json_decode($_POST['selected_reperes'], true);
+    $equipements = [];
+
+    foreach ($selectedReperes as $repere) {
+        $equipement = Equipement::getByRepere($repere);
+        if ($equipement) {
+            $equipements[] = $equipement;
+        }
+    }
+} elseif (!empty($filters)) {
+    // Export filtré - récupération par pagination pour éviter les problèmes mémoire
+    $equipements = [];
+    $page = 1;
+    $limit = 1000;
+
+    do {
+        $result = Equipement::getPaginated($page, $limit, $filters);
+        $equipements = array_merge($equipements, $result['data']);
+        $page++;
+    } while ($result['hasMore'] && count($equipements) < 50000); // Limite de sécurité
+} else {
+    // Export complet - utilisation d'une méthode optimisée
+    $equipements = Equipement::getAll();
+}
 
 $columns = [
     'Code Equipement',
