@@ -8,8 +8,93 @@ class Article
     public static function getAll()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT * FROM articles");
+        $stmt = $pdo->query("SELECT * FROM articles ORDER BY code_article");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Récupère les articles avec pagination et filtres
+     * @param int $page Page actuelle
+     * @param int $limit Nombre d'éléments par page
+     * @param array $filters Filtres à appliquer
+     * @return array ['data' => [...], 'total' => int, 'hasMore' => bool]
+     */
+    public static function getPaginated($page = 1, $limit = 50, $filters = [])
+    {
+        $pdo = Database::getConnection();
+        $offset = ($page - 1) * $limit;
+
+        // Construction de la requête avec filtres
+        $where = [];
+        $params = [];
+
+        if (!empty($filters['search'])) {
+            $where[] = "(code_article LIKE ? OR designation_article LIKE ? OR fabricant LIKE ?)";
+            $searchTerm = '%' . $filters['search'] . '%';
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+
+        if (!empty($filters['fabricant'])) {
+            $where[] = "fabricant LIKE ?";
+            $params[] = '%' . $filters['fabricant'] . '%';
+        }
+
+        if (!empty($filters['type_article'])) {
+            $where[] = "type_article LIKE ?";
+            $params[] = '%' . $filters['type_article'] . '%';
+        }
+
+        if (!empty($filters['groupe_articles'])) {
+            $where[] = "groupe_articles = ?";
+            $params[] = $filters['groupe_articles'];
+        }
+
+        if (!empty($filters['uq_base'])) {
+            $where[] = "uq_base = ?";
+            $params[] = $filters['uq_base'];
+        }
+
+        $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        // Requête de comptage total
+        $countSql = "SELECT COUNT(*) FROM articles $whereClause";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute($params);
+        $total = (int)$countStmt->fetchColumn();
+
+        // Requête des données
+        $dataSql = "SELECT * FROM articles $whereClause ORDER BY code_article LIMIT $limit OFFSET $offset";
+
+        $dataStmt = $pdo->prepare($dataSql);
+        $dataStmt->execute($params);
+        $data = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'data' => $data,
+            'total' => $total,
+            'hasMore' => ($offset + count($data)) < $total,
+            'page' => $page,
+            'limit' => $limit
+        ];
+    }
+
+    /**
+     * Récupère les valeurs distinctes pour les filtres
+     * @param string $column
+     * @return array
+     */
+    public static function getDistinctValues($column)
+    {
+        $allowedColumns = ['fabricant', 'type_article', 'groupe_articles', 'uq_base'];
+        if (!in_array($column, $allowedColumns)) {
+            return [];
+        }
+
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT DISTINCT $column FROM articles WHERE $column IS NOT NULL AND $column != '' ORDER BY $column");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public static function getById($id)
