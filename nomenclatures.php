@@ -154,6 +154,9 @@ $hasDups = count($duplicates) > 0;
                     <button id="check-duplicates-btn" class="btn btn-outline-warning" onclick="loadDuplicates()" title="Détecter et gérer les doublons">
                         <span class="material-icons">find_in_page</span>Doublons
                     </button>
+                    <a href="validation_doublons_import.php" class="btn btn-outline-info" title="Valider les doublons d'importation">
+                        <span class="material-icons">rule</span>Validation
+                    </a>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importNomenclatureModal">
                         <span class="material-icons">upload_file</span>Importer Excel
                     </button>

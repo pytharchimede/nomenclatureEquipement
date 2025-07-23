@@ -131,12 +131,18 @@ try {
 
             // Vérification des doublons (repere_equipement + code_article)
             if (!empty($data['repere_equipement']) && !empty($data['code_article'])) {
-                if (Nomenclature::existsByRepereArticle($data['repere_equipement'], $data['code_article'])) {
+                $existingNomenclatures = Nomenclature::getByRepereArticle($data['repere_equipement'], $data['code_article']);
+
+                if (!empty($existingNomenclatures)) {
+                    // Stocker le doublon dans la table spécialisée
+                    $this->stockerDoublonImport($data, $filename, $lineNumber, $existingNomenclatures, $pdo);
+
                     $details['duplicates'][] = [
                         'line' => $lineNumber,
                         'repere_equipement' => $data['repere_equipement'],
                         'code_article' => $data['code_article'],
-                        'data' => $data
+                        'data' => $data,
+                        'conflits' => count($existingNomenclatures) . ' nomenclature(s) existante(s)'
                     ];
                     $stats['duplicates']++;
                     continue;
@@ -208,4 +214,88 @@ try {
         'message' => $e->getMessage(),
         'error' => $e->getMessage()
     ]);
+}
+
+/**
+ * Stocke un doublon détecté lors de l'import dans la table dédiée
+ */
+function stockerDoublonImport($data, $filename, $lineNumber, $existingNomenclatures, $pdo)
+{
+    try {
+        // Préparation des détails du conflit
+        $conflits = [];
+        $nomenclatureIds = [];
+
+        foreach ($existingNomenclatures as $existing) {
+            $conflits[] = [
+                'id' => $existing['id'],
+                'designation_equipement' => $existing['designation_equipement'],
+                'designation_article' => $existing['designation_article'],
+                'fabricant' => $existing['fabricant'],
+                'source' => $existing['source'],
+                'date_creation' => $existing['date_creation']
+            ];
+            $nomenclatureIds[] = $existing['id'];
+        }
+
+        // Détermination du type de doublon
+        $raisonRejet = 'doublon_repere_article';
+
+        // Vérification si c'est un doublon exact (tous les champs identiques)
+        foreach ($existingNomenclatures as $existing) {
+            $isDuplicate = true;
+            $fieldsToCheck = ['designation_equipement', 'fabricant', 'designation_article', 'quantite', 'unite'];
+
+            foreach ($fieldsToCheck as $field) {
+                if (trim($data[$field] ?? '') !== trim($existing[$field] ?? '')) {
+                    $isDuplicate = false;
+                    break;
+                }
+            }
+
+            if ($isDuplicate) {
+                $raisonRejet = 'doublon_exact';
+                break;
+            }
+        }
+
+        // Insertion dans la table des doublons
+        $insertQuery = "
+            INSERT INTO nomenclatures_doublons_import (
+                code_equipement, code_article, repere_equipement, designation_equipement,
+                fabricant, type, numero_serie_fabricant, designation_article, numero_poste,
+                quantite, unite, poste_technique, metier, source,
+                fichier_import, ligne_import, raison_rejet, details_conflit,
+                nomenclatures_conflits, statut
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'en_attente')
+        ";
+
+        $stmt = $pdo->prepare($insertQuery);
+        $stmt->execute([
+            $data['code_equipement'],
+            $data['code_article'],
+            $data['repere_equipement'],
+            $data['designation_equipement'],
+            $data['fabricant'],
+            $data['type'],
+            $data['numero_serie_fabricant'],
+            $data['designation_article'],
+            $data['numero_poste'],
+            $data['quantite'],
+            $data['unite'],
+            $data['poste_technique'],
+            $data['metier'],
+            $data['source'],
+            $filename,
+            $lineNumber,
+            $raisonRejet,
+            json_encode($conflits, JSON_UNESCAPED_UNICODE),
+            json_encode($nomenclatureIds)
+        ]);
+
+        return $pdo->lastInsertId();
+    } catch (Exception $e) {
+        error_log("Erreur stockage doublon import: " . $e->getMessage());
+        return false;
+    }
 }

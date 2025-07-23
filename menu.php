@@ -15,6 +15,11 @@ if (!function_exists('isActive')) {
 
 // Détection des doublons nomenclature
 require_once __DIR__ . '/model/Nomenclature.php';
+require_once __DIR__ . '/model/Database.php';
+
+// Connexion pour les compteurs
+$pdo = Database::getConnection();
+
 $nomenclatures = Nomenclature::getAll();
 $dups = [];
 $seen = [];
@@ -76,6 +81,24 @@ require_once __DIR__ . '/includes/auth.php';
                 <?php if ($nbDoublons > 0): ?>
                     <span class="badge bg-danger ms-2"><?= $nbDoublons ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('validation_doublons_import.php'); ?>" href="validation_doublons_import.php">
+                <span class="material-icons">rule</span>
+                Validation Import
+                <?php
+                // Comptage des doublons d'import en attente
+                try {
+                    $stmt = $pdo->query("SELECT COUNT(*) FROM nomenclatures_doublons_import WHERE statut = 'en_attente'");
+                    $nbDoublonsImport = $stmt->fetchColumn();
+                    if ($nbDoublonsImport > 0): ?>
+                        <span class="badge bg-warning ms-2"><?= $nbDoublonsImport ?></span>
+                <?php endif;
+                } catch (Exception $e) {
+                    // Silencieux si la table n'existe pas encore
+                }
+                ?>
             </a>
         </li>
         <li class="nav-item">

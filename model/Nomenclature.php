@@ -21,13 +21,13 @@ class Nomenclature
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    // Ajout : recherche par repere + code_article (clé métier)
+    // Ajout : recherche par repere + code_article (clé métier) - retourne toutes les occurrences
     public static function getByRepereArticle($repere, $code_article)
     {
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("SELECT * FROM nomenclatures WHERE repere_equipement = ? AND code_article = ?");
         $stmt->execute([$repere, $code_article]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC); // fetchAll pour récupérer tous les doublons
     }
 
     // Synchronisation repere/code avant insertion ou update
