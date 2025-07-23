@@ -67,6 +67,52 @@ $uniteData = array_values($unites);
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
     <link href="css/style_nomenclature.css" rel="stylesheet">
+    <style>
+        /* Styles pour les filtres style Excel et le système moderne */
+        .mini-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            height: 80px;
+        }
+
+        .mini-graph {
+            width: 40px !important;
+            height: 40px !important;
+        }
+
+        .form-label.small {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .btn-sm .material-icons {
+            font-size: 16px;
+        }
+
+        .table-responsive {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+
+        .sticky-top {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-input {
+            transition: all 0.2s ease;
+        }
+
+        .filter-input:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.25);
+        }
+    </style>
 </head>
 
 <body>
@@ -77,12 +123,15 @@ $uniteData = array_values($unites);
                 <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
                 <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Nomenclatures</h2>
                 <div class="d-flex gap-2">
-                    <a href="request/export_nomenclatures.php?type=excel" class="btn btn-outline-success" id="exportExcelBtn">
+                    <button id="export-excel-btn" class="btn btn-outline-success">
                         <span class="material-icons">file_download</span>Excel
-                    </a>
-                    <a href="request/export_nomenclatures.php?type=pdf" class="btn btn-outline-danger" id="exportPdfBtn">
+                    </button>
+                    <button id="export-pdf-btn" class="btn btn-outline-danger">
                         <span class="material-icons">picture_as_pdf</span>PDF
-                    </a>
+                    </button>
+                    <button id="export-filtered-excel-btn" class="btn btn-outline-info" title="Exporter les nomenclatures filtrées en Excel">
+                        <span class="material-icons">filter_alt</span>Excel Filtré
+                    </button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importNomenclatureModal">
                         <span class="material-icons">upload_file</span>Importer Excel
                     </button>
@@ -100,7 +149,7 @@ $uniteData = array_values($unites);
                     <div class="mini-card">
                         <span class="material-icons">list_alt</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $total ?></div>
+                            <div data-stat="total-nomenclatures" style="font-size:1.3rem;font-weight:700;"><?= $total ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Total nomenclatures</div>
                         </div>
                     </div>
@@ -109,7 +158,7 @@ $uniteData = array_values($unites);
                     <div class="mini-card">
                         <span class="material-icons" style="color:#43a047;">category</span>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catTop ?></div>
+                            <div data-stat="top-famille" style="font-size:1.3rem;font-weight:700;"><?= htmlspecialchars($catTop) ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Famille la + présente</div>
                         </div>
                     </div>
@@ -118,7 +167,7 @@ $uniteData = array_values($unites);
                     <div class="mini-card">
                         <canvas id="miniPieNomenclature" class="mini-graph"></canvas>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catMax ?></div>
+                            <div data-stat="max-famille" style="font-size:1.3rem;font-weight:700;"><?= $catMax ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Max dans une famille</div>
                         </div>
                     </div>
@@ -127,7 +176,7 @@ $uniteData = array_values($unites);
                     <div class="mini-card">
                         <canvas id="miniPieUniteNomenclature" class="mini-graph"></canvas>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $uniteLabels[0] ?? '' ?></div>
+                            <div data-stat="top-unite" style="font-size:1.3rem;font-weight:700;"><?= htmlspecialchars($uniteLabels[0] ?? '') ?></div>
                             <div class="text-muted" style="font-size:0.95rem;">Unité la + utilisée</div>
                         </div>
                     </div>
@@ -146,25 +195,94 @@ $uniteData = array_values($unites);
                     </a>
                 </div>
             <?php endif; ?>
+            <!-- Filtres de recherche (style Excel) -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted mb-1">Recherche globale</label>
+                            <input type="text" id="search-input" class="form-control form-control-sm filter-input" placeholder="Code, repère, désignation..." />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Code Équipement</label>
+                            <input type="text" id="code-equipement-filter" class="form-control form-control-sm filter-input" placeholder="Code équipement" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Code Article</label>
+                            <input type="text" id="code-article-filter" class="form-control form-control-sm filter-input" placeholder="Code article" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Repère Équipement</label>
+                            <input type="text" id="repere-equipement-filter" class="form-control form-control-sm filter-input" placeholder="Repère" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Fabricant</label>
+                            <input type="text" id="fabricant-filter" class="form-control form-control-sm filter-input" placeholder="Fabricant" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted mb-1">&nbsp;</label>
+                            <button id="reset-filters" class="btn btn-outline-secondary btn-sm w-100">
+                                <span class="material-icons" style="font-size:16px;">clear</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="row g-2 align-items-center mt-2">
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Type</label>
+                            <input type="text" id="type-filter" class="form-control form-control-sm filter-input" placeholder="Type" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Désignation Article</label>
+                            <input type="text" id="designation-article-filter" class="form-control form-control-sm filter-input" placeholder="Désignation" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Unité</label>
+                            <input type="text" id="unite-filter" class="form-control form-control-sm filter-input" placeholder="Unité" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Poste Technique</label>
+                            <input type="text" id="poste-technique-filter" class="form-control form-control-sm filter-input" placeholder="Poste technique" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Métier</label>
+                            <input type="text" id="metier-filter" class="form-control form-control-sm filter-input" placeholder="Métier" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Source</label>
+                            <input type="text" id="source-filter" class="form-control form-control-sm filter-input" placeholder="Source" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tableau des nomenclatures -->
             <div class="card shadow-sm mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title mb-0" style="color:#1976d2;">Liste des nomenclatures</h5>
-                        <div>
-                            <button id="exportFilteredNomenclatureBtn" class="btn btn-outline-primary me-2" style="display:none;">
-                                <span class="material-icons">file_download</span>Exporter la sélection
-                            </button>
-                            <button id="deleteSelectedNomenclatureBtn" class="btn btn-outline-danger" style="display:none;">
-                                <span class="material-icons">delete</span>Supprimer la sélection
-                            </button>
+                        <div class="d-flex align-items-center gap-3">
+                            <div id="pagination-info" class="text-muted small">
+                                Chargement...
+                            </div>
+                            <div id="loading-indicator" style="display: none;">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span class="small">Chargement...</span>
+                            </div>
+                            <div>
+                                <button id="exportFilteredBtn" class="btn btn-outline-primary btn-sm me-2" style="display:none;">
+                                    <span class="material-icons">file_download</span>Exporter la sélection
+                                </button>
+                                <button id="deleteSelectedBtn" class="btn btn-outline-danger btn-sm" style="display:none;">
+                                    <span class="material-icons">delete</span>Supprimer la sélection
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                        <table id="nomenclatures-table" class="table table-hover align-middle">
+                            <thead class="sticky-top bg-white">
                                 <tr>
-                                    <th><input type="checkbox" id="selectAllNomenclature"></th>
+                                    <th><input type="checkbox" id="select-all-nomenclatures"></th>
                                     <th>Code équipement</th>
                                     <th>Code article</th>
                                     <th>Repère équipement</th>
@@ -173,7 +291,7 @@ $uniteData = array_values($unites);
                                     <th>Type</th>
                                     <th>N° série fabricant</th>
                                     <th>Désignation article</th>
-                                    <th>N° poste</th>
+                                    <th>N° Poste</th>
                                     <th>Quantité</th>
                                     <th>Unité</th>
                                     <th>Poste technique</th>
@@ -181,44 +299,12 @@ $uniteData = array_values($unites);
                                     <th>Date création</th>
                                     <th>Source</th>
                                 </tr>
-                                <tr id="filter-row-nomenclature">
-                                    <th></th>
-                                    <?php for ($i = 1; $i <= 15; $i++): ?>
-                                        <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer" data-col="<?= $i ?>"></th>
-                                    <?php endfor; ?>
-                                    <th>
-                                        <button type="button" id="resetNomenclatureFilters" class="btn btn-sm btn-outline-secondary" title="Réinitialiser les filtres">
-                                            <span class="material-icons" style="font-size:1.1em;">close</span>
-                                        </button>
-                                    </th>
-                                </tr>
                             </thead>
-                            <tbody id="nomenclatureTableBody">
-                                <?php foreach ($nomenclatures as $nom): ?>
-                                    <tr>
-                                        <td><input type="checkbox" class="nomenclature-checkbox" value="<?= $nom['id'] ?>"></td>
-                                        <td><?= htmlspecialchars($nom['code_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['code_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['repere_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['designation_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['fabricant'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['type'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['numero_serie_fabricant'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['designation_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['numero_poste'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['quantite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['unite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['poste_technique'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['metier'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['date_creation'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($nom['source'] ?? '') ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                            <tbody>
+                                <!-- Les données seront chargées via JavaScript avec pagination -->
                             </tbody>
                         </table>
                     </div>
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-center my-3" id="paginationNomenclature"></div>
                 </div>
             </div>
             <!-- Modal Importation Nomenclatures -->
