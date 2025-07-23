@@ -301,16 +301,11 @@ function fillEditForm(equipement) {
 // ===============================
 
 /**
- * Gestion de l'export Excel avec filtres
+ * Gestion de l'export Excel avec suivi temps réel
  */
 function handleExcelExport() {
   showExportLoader();
-
-  // Construction de l'URL avec les filtres actuels
-  const params = new URLSearchParams(currentFilters);
-  params.append("type", "excel");
-
-  window.location.href = `request/export_equipements.php?${params}`;
+  startProgressiveExport("excel", "all");
 }
 
 /**
@@ -323,7 +318,100 @@ function handlePdfExport() {
   const params = new URLSearchParams(currentFilters);
   params.append("type", "pdf");
 
-  window.location.href = `request/export_equipements.php?${params}`;
+  // Utilisation de l'iframe pour éviter la redirection
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = `request/export_equipements.php?${params}`;
+  document.body.appendChild(iframe);
+
+  // Supprimer l'iframe après un délai
+  setTimeout(() => {
+    document.body.removeChild(iframe);
+  }, 5000);
+}
+
+/**
+ * Démarre l'export progressif avec Server-Sent Events
+ */
+function startProgressiveExport(type, exportType) {
+  const params = new URLSearchParams(currentFilters);
+  params.append("type", type);
+  params.append("export_type", exportType);
+
+  // Récupération des équipements sélectionnés si nécessaire
+  if (exportType === "selected") {
+    const checkboxes = document.querySelectorAll(".equip-checkbox:checked");
+    const selectedReperes = Array.from(checkboxes).map((cb) => cb.value);
+    if (selectedReperes.length === 0) {
+      showAlert("Aucun équipement sélectionné", "warning");
+      return;
+    }
+    params.append("selected_reperes", selectedReperes.join(","));
+  }
+
+  const url = `request/export_equipements_progressive.php?${params}`;
+
+  // Utilisation d'EventSource pour le suivi temps réel
+  if (typeof EventSource !== "undefined") {
+    const eventSource = new EventSource(url);
+
+    eventSource.onmessage = function (event) {
+      try {
+        const data = JSON.parse(event.data);
+        updateExportProgress(data);
+
+        if (data.step === "complete") {
+          eventSource.close();
+          // Démarrer le téléchargement
+          if (data.details && data.details.download_url) {
+            const downloadLink = document.createElement("a");
+            downloadLink.href = data.details.download_url;
+            downloadLink.download = data.details.filename;
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+          }
+        } else if (data.step === "error") {
+          eventSource.close();
+          showAlert("Erreur lors de l'export: " + data.message, "danger");
+        }
+      } catch (e) {
+        console.error("Erreur parsing SSE data:", e);
+      }
+    };
+
+    eventSource.onerror = function (event) {
+      console.error("Erreur EventSource:", event);
+      eventSource.close();
+
+      // Fallback: téléchargement direct
+      const iframe = document.createElement("iframe");
+      iframe.style.display = "none";
+      iframe.src = url.replace(
+        "export_equipements_progressive.php",
+        "export_equipements.php"
+      );
+      document.body.appendChild(iframe);
+
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 5000);
+    };
+  } else {
+    // Fallback pour les navigateurs sans EventSource
+    const iframe = document.createElement("iframe");
+    iframe.style.display = "none";
+    iframe.src = url.replace(
+      "export_equipements_progressive.php",
+      "export_equipements.php"
+    );
+    document.body.appendChild(iframe);
+
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 5000);
+  }
 }
 
 /**
@@ -374,42 +462,52 @@ function handleFilteredExport() {
 }
 
 /**
- * Exporte la sélection dans le format choisi
+ * Exporte la sélection dans le format choisi avec suivi temps réel
  */
 function exportSelected(format) {
   const checkboxes = document.querySelectorAll(".equip-checkbox:checked");
-  const reperes = Array.from(checkboxes).map((cb) => cb.value);
 
-  // Créer un formulaire pour envoyer les repères sélectionnés
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "request/export_equipements.php";
-  form.style.display = "none";
+  if (checkboxes.length === 0) {
+    showAlert("Aucun équipement sélectionné", "warning");
+    return;
+  }
 
-  // Ajouter les repères sélectionnés
-  const repereInput = document.createElement("input");
-  repereInput.type = "hidden";
-  repereInput.name = "selected_reperes";
-  repereInput.value = JSON.stringify(reperes);
-  form.appendChild(repereInput);
-
-  // Type d'export
-  const typeInput = document.createElement("input");
-  typeInput.type = "hidden";
-  typeInput.name = "type";
-  typeInput.value = format;
-  form.appendChild(typeInput);
-
-  document.body.appendChild(form);
-  showExportLoader();
-  form.submit();
-  document.body.removeChild(form);
-
-  // Fermer le modal
-  const modal = bootstrap.Modal.getInstance(
+  // Fermer le modal de choix de format
+  const formatModal = bootstrap.Modal.getInstance(
     document.getElementById("exportFormatModal")
   );
-  if (modal) modal.hide();
+  if (formatModal) formatModal.hide();
+
+  // Démarrer l'export avec le système temps réel
+  showExportLoader();
+
+  if (format === "excel") {
+    startProgressiveExport("excel", "selected");
+  } else {
+    // Pour PDF, utiliser l'ancien système car pas encore implémenté
+    const reperes = Array.from(checkboxes).map((cb) => cb.value);
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "request/export_equipements.php";
+    form.style.display = "none";
+
+    const repereInput = document.createElement("input");
+    repereInput.type = "hidden";
+    repereInput.name = "selected_reperes";
+    repereInput.value = JSON.stringify(reperes);
+    form.appendChild(repereInput);
+
+    const typeInput = document.createElement("input");
+    typeInput.type = "hidden";
+    typeInput.name = "type";
+    typeInput.value = format;
+    form.appendChild(typeInput);
+
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  }
 }
 
 /**
@@ -727,7 +825,7 @@ function updatePaginationInfo(pagination) {
 }
 
 /**
- * Gestion du loader d'export
+ * Gestion du loader d'export avec support temps réel
  */
 function showExportLoader() {
   const modal = new bootstrap.Modal(
@@ -735,7 +833,6 @@ function showExportLoader() {
   );
   modal.show();
 
-  let progress = 0;
   const progressBar = document.getElementById("exportProgressBar");
   const progressText = document.getElementById("exportProgressText");
   const closeBtn = document.getElementById("closeExportModalBtn");
@@ -745,28 +842,79 @@ function showExportLoader() {
   progressBar.textContent = "0%";
   progressText.textContent = "Préparation de l'export, veuillez patienter...";
 
-  // Animation de la barre de progression
-  const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 10) + 5;
-    if (progress > 100) progress = 100;
-
-    progressBar.style.width = progress + "%";
-    progressBar.textContent = progress + "%";
-
-    if (progress >= 100) {
-      clearInterval(interval);
-      progressText.textContent = "Téléchargement en cours...";
-    }
-  }, 400);
-
-  // Affiche le bouton "Fermer" après 10 secondes
-  setTimeout(() => {
+  // Affiche automatiquement le bouton "Fermer" après 5 secondes
+  let autoShowCloseTimeout = setTimeout(() => {
     closeBtn.style.display = "";
-  }, 10000);
+  }, 5000);
 
   closeBtn.onclick = function () {
+    if (autoShowCloseTimeout) {
+      clearTimeout(autoShowCloseTimeout);
+    }
     modal.hide();
   };
+}
+
+/**
+ * Met à jour le progrès de l'export en temps réel
+ */
+function updateExportProgress(data) {
+  const progressBar = document.getElementById("exportProgressBar");
+  const progressText = document.getElementById("exportProgressText");
+  const closeBtn = document.getElementById("closeExportModalBtn");
+
+  if (!progressBar || !progressText) return;
+
+  // Mise à jour de la barre de progression
+  if (data.percent !== null && data.percent !== undefined) {
+    progressBar.style.width = data.percent + "%";
+    progressBar.textContent = Math.round(data.percent) + "%";
+  }
+
+  // Mise à jour du texte
+  let message = data.message;
+  if (data.details && typeof data.details === "string") {
+    message += ` - ${data.details}`;
+  } else if (data.details && data.details.total_processed) {
+    message += ` (${data.details.total_processed} traités)`;
+  }
+
+  // Ajout du timestamp pour plus de transparence
+  if (data.timestamp) {
+    message += ` [${data.timestamp}]`;
+  }
+
+  progressText.textContent = message;
+
+  // Affichage du bouton fermer quand terminé
+  if (data.step === "complete" || data.step === "error") {
+    closeBtn.style.display = "";
+
+    if (data.step === "complete") {
+      progressText.innerHTML = `
+        <div class="text-success">
+          <strong>✓ Export terminé avec succès !</strong><br>
+          ${
+            data.details && data.details.total_processed
+              ? data.details.total_processed + " équipements exportés"
+              : ""
+          }
+          ${
+            data.details && data.details.filename
+              ? "<br>Fichier: " + data.details.filename
+              : ""
+          }
+        </div>
+      `;
+    } else if (data.step === "error") {
+      progressText.innerHTML = `
+        <div class="text-danger">
+          <strong>✗ Erreur lors de l'export</strong><br>
+          ${data.message}
+        </div>
+      `;
+    }
+  }
 }
 
 // ===============================

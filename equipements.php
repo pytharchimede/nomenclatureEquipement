@@ -139,6 +139,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                 <div class="d-flex gap-2">
                     <button id="export-excel-btn" class="btn btn-outline-success"><span class="material-icons">file_download</span>Excel</button>
                     <button id="export-pdf-btn" class="btn btn-outline-danger"><span class="material-icons">picture_as_pdf</span>PDF</button>
+                    <button id="export-filtered-excel-btn" class="btn btn-outline-info" title="Exporter les équipements filtrés en Excel"><span class="material-icons">filter_alt</span>Excel Filtré</button>
                     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipModal"><span class="material-icons">add</span>Ajouter</button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importModal"><span class="material-icons">upload_file</span>Importer Excel</button>
                     <a href="logout.php" class="btn btn-outline-primary ms-2">

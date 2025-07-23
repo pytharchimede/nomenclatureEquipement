@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Export Équipements Temps Réel</title>
+    <link href="plugins/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Test Export Équipements - Temps Réel</h2>
+        
+        <div class="mb-3">
+            <button id="test-export-excel" class="btn btn-success">
+                <span class="material-icons">file_download</span> Test Export Excel
+            </button>
+        </div>
+        
+        <div id="log-area" class="mt-4">
+            <h4>Logs en temps réel :</h4>
+            <div id="log-container" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; background: #f8f9fa;">
+                <!-- Les logs apparaîtront ici -->
+            </div>
+        </div>
+        
+        <!-- Modal d'export -->
+        <div class="modal fade" id="exportLoadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content text-center p-4">
+                    <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                    <div id="exportProgressText" style="font-size:1.2rem;">Préparation de l'export, veuillez patienter...</div>
+                    <div class="progress mt-3" style="height:18px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBar" style="width:0%">0%</div>
+                    </div>
+                    <button id="closeExportModalBtn" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
+                    <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="plugins/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let logContainer = document.getElementById('log-container');
+        
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `mb-1 text-${type}`;
+            logEntry.innerHTML = `<small>[${timestamp}]</small> ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function showExportLoader() {
+            const modal = new bootstrap.Modal(document.getElementById("exportLoadingModal"));
+            modal.show();
+            
+            const progressBar = document.getElementById("exportProgressBar");
+            const progressText = document.getElementById("exportProgressText");
+            const closeBtn = document.getElementById("closeExportModalBtn");
+            
+            closeBtn.style.display = "none";
+            progressBar.style.width = "0%";
+            progressBar.textContent = "0%";
+            progressText.textContent = "Préparation de l'export, veuillez patienter...";
+            
+            closeBtn.onclick = function () {
+                modal.hide();
+            };
+        }
+        
+        function updateExportProgress(data) {
+            const progressBar = document.getElementById("exportProgressBar");
+            const progressText = document.getElementById("exportProgressText");
+            const closeBtn = document.getElementById("closeExportModalBtn");
+            
+            addLog(`[${data.step}] ${data.message}${data.percent ? ' (' + Math.round(data.percent) + '%)' : ''}`, 
+                   data.step === 'error' ? 'danger' : 'success');
+            
+            if (data.percent !== null && data.percent !== undefined) {
+                progressBar.style.width = data.percent + "%";
+                progressBar.textContent = Math.round(data.percent) + "%";
+            }
+            
+            let message = data.message;
+            if (data.details && typeof data.details === 'string') {
+                message += ` - ${data.details}`;
+            }
+            
+            progressText.textContent = message;
+            
+            if (data.step === 'complete' || data.step === 'error') {
+                closeBtn.style.display = "";
+                
+                if (data.step === 'complete') {
+                    addLog('🎉 Export terminé avec succès !', 'success');
+                    if (data.details && data.details.download_url) {
+                        addLog(`📁 Fichier généré: ${data.details.filename}`, 'info');
+                    }
+                }
+            }
+        }
+        
+        function startTestExport() {
+            addLog('🚀 Début du test d\'export...', 'primary');
+            showExportLoader();
+            
+            const url = 'request/export_equipements_progressive.php?type=excel&export_type=all';
+            
+            if (typeof EventSource !== 'undefined') {
+                addLog('📡 Connexion EventSource établie', 'info');
+                const eventSource = new EventSource(url);
+                
+                eventSource.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        updateExportProgress(data);
+                        
+                        if (data.step === 'complete') {
+                            eventSource.close();
+                            addLog('🔌 Connexion EventSource fermée', 'info');
+                            
+                            if (data.details && data.details.download_url) {
+                                addLog('⬇️ Démarrage du téléchargement...', 'info');
+                                const downloadLink = document.createElement('a');
+                                downloadLink.href = data.details.download_url;
+                                downloadLink.download = data.details.filename;
+                                downloadLink.style.display = 'none';
+                                document.body.appendChild(downloadLink);
+                                downloadLink.click();
+                                document.body.removeChild(downloadLink);
+                            }
+                        } else if (data.step === 'error') {
+                            eventSource.close();
+                            addLog('❌ Erreur EventSource fermée', 'danger');
+                        }
+                    } catch (e) {
+                        addLog('⚠️ Erreur parsing JSON: ' + e.message, 'warning');
+                    }
+                };
+                
+                eventSource.onerror = function(event) {
+                    addLog('❌ Erreur EventSource', 'danger');
+                    eventSource.close();
+                };
+            } else {
+                addLog('⚠️ EventSource non supporté dans ce navigateur', 'warning');
+            }
+        }
+        
+        // Event listener
+        document.getElementById('test-export-excel').addEventListener('click', startTestExport);
+        
+        addLog('✅ Test d\'export équipements initialisé', 'success');
+    </script>
+</body>
+</html>
