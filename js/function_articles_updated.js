@@ -560,7 +560,7 @@ function initArticlesPage() {
 // ===============================
 
 /**
- * Affichage du loader d'export
+ * Affichage du loader d'export avec progression temps réel
  */
 function showExportLoader() {
   const modal = new bootstrap.Modal(
@@ -568,7 +568,6 @@ function showExportLoader() {
   );
   modal.show();
 
-  let progress = 0;
   const progressBar = document.getElementById("exportProgressBar");
   const progressText = document.getElementById("exportProgressText");
   const closeBtn = document.getElementById("closeExportModalBtn");
@@ -576,71 +575,128 @@ function showExportLoader() {
   closeBtn.style.display = "none";
   progressBar.style.width = "0%";
   progressBar.textContent = "0%";
-  progressText.textContent = "Préparation de l'export, veuillez patienter...";
+  progressText.textContent = "Initialisation de l'export...";
 
-  // Animation de la barre de progression
-  const interval = setInterval(() => {
-    progress += Math.floor(Math.random() * 10) + 5;
-    if (progress > 100) progress = 100;
-
-    progressBar.style.width = progress + "%";
-    progressBar.textContent = progress + "%";
-
-    if (progress >= 100) {
-      clearInterval(interval);
-      progressText.textContent = "Téléchargement en cours...";
-    }
-  }, 400);
-
-  // Affiche le bouton "Fermer" après 10 secondes
-  setTimeout(() => {
+  // Afficher le bouton "Fermer" après 5 secondes automatiquement
+  const autoShowCloseTimeout = setTimeout(() => {
     closeBtn.style.display = "";
-  }, 10000);
+    closeBtn.onclick = function () {
+      modal.hide();
+    };
+  }, 5000);
 
-  closeBtn.onclick = function () {
-    modal.hide();
+  return {
+    updateProgress: function (percentage, message, processed = 0, total = 0) {
+      progressBar.style.width = percentage + "%";
+      progressBar.textContent = Math.round(percentage) + "%";
+
+      if (processed > 0 && total > 0) {
+        progressText.textContent = `${message} (${processed.toLocaleString()}/${total.toLocaleString()})`;
+      } else {
+        progressText.textContent = message;
+      }
+    },
+    showCloseButton: function () {
+      clearTimeout(autoShowCloseTimeout); // Annuler le timeout automatique
+      closeBtn.style.display = "";
+      closeBtn.onclick = function () {
+        modal.hide();
+      };
+    },
+    hide: function () {
+      clearTimeout(autoShowCloseTimeout);
+      modal.hide();
+    },
   };
 }
+
 /**
- * Gestion de l'export Excel avec filtres
+ * Export avec suivi temps réel
  */
-function handleExcelExport() {
-  showExportLoader();
+function startProgressiveExport(type) {
+  const loader = showExportLoader();
+  const sessionId = Date.now().toString();
 
   // Construction de l'URL avec les filtres actuels
   const params = new URLSearchParams(currentFilters);
-  params.append("type", "excel");
+  params.append("type", type);
+  params.append("session", sessionId);
 
-  // Utiliser une iframe invisible pour le téléchargement
-  let iframe = document.getElementById("downloadFrame");
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = "downloadFrame";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-  }
-  iframe.src = `request/export_articles.php?${params}`;
+  const eventSource = new EventSource(
+    `request/export_articles_progressive.php?${params}`
+  );
+
+  eventSource.onmessage = function (event) {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (data.error) {
+        loader.updateProgress(0, "ERREUR: " + data.message);
+        loader.showCloseButton();
+        eventSource.close();
+        return;
+      }
+
+      loader.updateProgress(
+        data.percentage,
+        data.message,
+        data.processed,
+        data.total
+      );
+
+      if (data.completed && data.downloadUrl) {
+        // Déclencher le téléchargement
+        const link = document.createElement("a");
+        link.href = data.downloadUrl;
+        link.download = data.filename;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Afficher le bouton fermer après téléchargement
+        setTimeout(() => {
+          loader.showCloseButton();
+          eventSource.close();
+        }, 1000);
+      }
+    } catch (e) {
+      console.error("Erreur parsing JSON:", e);
+      loader.updateProgress(0, "Erreur de communication");
+      loader.showCloseButton();
+      eventSource.close();
+    }
+  };
+
+  eventSource.onerror = function (event) {
+    console.error("Erreur EventSource:", event);
+    loader.updateProgress(0, "Erreur de connexion");
+    loader.showCloseButton();
+    eventSource.close();
+  };
+
+  // Timeout de sécurité
+  setTimeout(() => {
+    if (eventSource.readyState !== EventSource.CLOSED) {
+      eventSource.close();
+      loader.updateProgress(0, "Timeout - export interrompu");
+      loader.showCloseButton();
+    }
+  }, 300000); // 5 minutes max
 }
 
 /**
- * Gestion de l'export PDF avec filtres
+ * Gestion de l'export Excel avec suivi temps réel
+ */
+function handleExcelExport() {
+  startProgressiveExport("excel");
+}
+
+/**
+ * Gestion de l'export PDF avec suivi temps réel
  */
 function handlePdfExport() {
-  showExportLoader();
-
-  // Construction de l'URL avec les filtres actuels
-  const params = new URLSearchParams(currentFilters);
-  params.append("type", "pdf");
-
-  // Utiliser une iframe invisible pour le téléchargement
-  let iframe = document.getElementById("downloadFrame");
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.id = "downloadFrame";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-  }
-  iframe.src = `request/export_articles.php?${params}`;
+  startProgressiveExport("pdf");
 }
 
 /**
