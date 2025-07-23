@@ -660,15 +660,129 @@ require_once 'includes/auth.php';
         async function validerTousVisible() {
             if (!confirm('Voulez-vous vraiment valider tous les doublons visibles ?')) return;
 
-            // Implémentation de la validation en lot
-            // TODO: Ajouter l'API pour validation en lot
+            // Filtrer les doublons en attente parmi ceux affichés
+            const doublonsEnAttente = derniersDoublons.filter(d => d.statut === 'en_attente');
+
+            if (doublonsEnAttente.length === 0) {
+                alert('Aucun doublon en attente à valider sur cette page.');
+                return;
+            }
+
+            const bouton = event.target.closest('button');
+            const texteBouton = bouton.innerHTML;
+            bouton.disabled = true;
+            bouton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation...';
+
+            let succes = 0;
+            let erreurs = 0;
+
+            try {
+                for (const doublon of doublonsEnAttente) {
+                    try {
+                        const response = await fetch('request/doublons_import_validation.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id: doublon.id,
+                                action: 'valide',
+                                commentaire: 'Validation en lot'
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (result.success) {
+                            succes++;
+                        } else {
+                            erreurs++;
+                            console.error(`Erreur validation doublon ${doublon.id}:`, result.message);
+                        }
+                    } catch (error) {
+                        erreurs++;
+                        console.error(`Erreur validation doublon ${doublon.id}:`, error);
+                    }
+                }
+
+                // Afficher le résultat
+                const message = `Validation terminée: ${succes} réussies, ${erreurs} erreurs`;
+                showNotification(message, erreurs === 0 ? 'success' : 'warning');
+
+                // Recharger les données
+                await chargerStatistiques();
+                chargerDoublons(currentPage);
+
+            } catch (error) {
+                console.error('Erreur lors de la validation en lot:', error);
+                showNotification('Erreur lors de la validation en lot', 'error');
+            } finally {
+                bouton.disabled = false;
+                bouton.innerHTML = texteBouton;
+            }
         }
 
         async function rejeterTousVisible() {
             if (!confirm('Voulez-vous vraiment rejeter tous les doublons visibles ?')) return;
 
-            // Implémentation du rejet en lot
-            // TODO: Ajouter l'API pour rejet en lot
+            // Filtrer les doublons en attente parmi ceux affichés
+            const doublonsEnAttente = derniersDoublons.filter(d => d.statut === 'en_attente');
+
+            if (doublonsEnAttente.length === 0) {
+                alert('Aucun doublon en attente à rejeter sur cette page.');
+                return;
+            }
+
+            const bouton = event.target.closest('button');
+            const texteBouton = bouton.innerHTML;
+            bouton.disabled = true;
+            bouton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Rejet...';
+
+            let succes = 0;
+            let erreurs = 0;
+
+            try {
+                for (const doublon of doublonsEnAttente) {
+                    try {
+                        const response = await fetch('request/doublons_import_validation.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                id: doublon.id,
+                                action: 'rejete',
+                                commentaire: 'Rejet en lot'
+                            })
+                        });
+
+                        const result = await response.json();
+                        if (result.success) {
+                            succes++;
+                        } else {
+                            erreurs++;
+                            console.error(`Erreur rejet doublon ${doublon.id}:`, result.message);
+                        }
+                    } catch (error) {
+                        erreurs++;
+                        console.error(`Erreur rejet doublon ${doublon.id}:`, error);
+                    }
+                }
+
+                // Afficher le résultat
+                const message = `Rejet terminé: ${succes} réussies, ${erreurs} erreurs`;
+                showNotification(message, erreurs === 0 ? 'success' : 'warning');
+
+                // Recharger les données
+                await chargerStatistiques();
+                chargerDoublons(currentPage);
+
+            } catch (error) {
+                console.error('Erreur lors du rejet en lot:', error);
+                showNotification('Erreur lors du rejet en lot', 'error');
+            } finally {
+                bouton.disabled = false;
+                bouton.innerHTML = texteBouton;
+            }
         }
     </script>
 </body>
