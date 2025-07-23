@@ -831,6 +831,498 @@ function initNomenclaturesPage() {
       updateSelectionButtons();
     }
   });
+
+  // Gestion du drag & drop pour l'importation
+  initImportDragDrop();
+
+  // Gestion des formulaires
+  initForms();
+}
+
+// ===============================
+// Gestion de l'importation Excel
+// ===============================
+
+/**
+ * Initialise le drag & drop pour l'importation
+ */
+function initImportDragDrop() {
+  const dropArea = document.getElementById("drop-area");
+  const fileInput = document.getElementById("excelFileInput");
+  const fileName = document.getElementById("fileName");
+  const startImportBtn = document.getElementById("startImportBtn");
+
+  if (!dropArea || !fileInput) return;
+
+  // Drag & Drop
+  ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
+    dropArea.addEventListener(eventName, preventDefaults, false);
+  });
+
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  ["dragenter", "dragover"].forEach((eventName) => {
+    dropArea.addEventListener(eventName, highlight, false);
+  });
+
+  ["dragleave", "drop"].forEach((eventName) => {
+    dropArea.addEventListener(eventName, unhighlight, false);
+  });
+
+  function highlight() {
+    dropArea.style.borderColor = "#1976d2";
+    dropArea.style.backgroundColor = "#f0f7ff";
+  }
+
+  function unhighlight() {
+    dropArea.style.borderColor = "";
+    dropArea.style.backgroundColor = "";
+  }
+
+  dropArea.addEventListener("drop", (e) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
+    }
+  });
+
+  // Click pour sélection
+  dropArea.addEventListener("click", () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length > 0) {
+      handleFile(e.target.files[0]);
+    }
+  });
+
+  function handleFile(file) {
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      showAlert(
+        "Format de fichier non supporté. Utilisez .xlsx ou .xls",
+        "danger"
+      );
+      return;
+    }
+
+    fileName.textContent = `✓ ${file.name}`;
+    fileName.className = "text-success mt-2";
+    startImportBtn.disabled = false;
+  }
+
+  // Démarrage de l'importation
+  if (startImportBtn) {
+    startImportBtn.addEventListener("click", () => {
+      if (fileInput.files.length > 0) {
+        startImport(fileInput.files[0]);
+      }
+    });
+  }
+}
+
+/**
+ * Lance l'importation du fichier Excel
+ */
+async function startImport(file) {
+  const progressContainer = document.getElementById(
+    "importProgressBarContainer"
+  );
+  const progressBar = document.getElementById("importProgressBar");
+  const resultContainer = document.getElementById("importResult");
+  const startBtn = document.getElementById("startImportBtn");
+
+  // Reset de l'interface
+  progressContainer.style.display = "block";
+  progressBar.style.width = "0%";
+  progressBar.textContent = "0%";
+  resultContainer.innerHTML = "";
+  startBtn.disabled = true;
+
+  try {
+    const formData = new FormData();
+    formData.append("excel_file", file);
+
+    // Simulation du progrès pendant l'upload
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 10;
+      if (progress >= 90) {
+        clearInterval(progressInterval);
+        progress = 90;
+      }
+      progressBar.style.width = progress + "%";
+      progressBar.textContent = Math.round(progress) + "%";
+    }, 200);
+
+    const response = await fetch("request/nomenclature_import_optimized.php", {
+      method: "POST",
+      body: formData,
+    });
+
+    clearInterval(progressInterval);
+    progressBar.style.width = "100%";
+    progressBar.textContent = "100%";
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Affichage du rapport d'importation
+      const reportHtml = generateImportReport(result);
+      resultContainer.innerHTML = reportHtml;
+
+      // Recharger les données
+      loadNomenclatures(1, false);
+
+      showAlert("Importation terminée avec succès !", "success");
+    } else {
+      throw new Error(result.message || "Erreur lors de l'importation");
+    }
+  } catch (error) {
+    console.error("Erreur d'importation:", error);
+    resultContainer.innerHTML = `
+      <div class="alert alert-danger">
+        <strong>Erreur :</strong> ${error.message}
+      </div>
+    `;
+    showAlert("Erreur lors de l'importation: " + error.message, "danger");
+  } finally {
+    startBtn.disabled = false;
+  }
+}
+
+/**
+ * Génère le rapport d'importation
+ */
+function generateImportReport(result) {
+  const stats = result.stats;
+  let html = `
+    <div class="alert alert-info">
+      <h6><strong>Rapport d'importation :</strong></h6>
+      <ul class="mb-0">
+        <li><strong>Total traité :</strong> ${stats.total} lignes</li>
+        <li><strong>Importé avec succès :</strong> ${stats.imported} nomenclatures</li>
+        <li><strong>Doublons détectés :</strong> ${stats.duplicates}</li>
+        <li><strong>Erreurs :</strong> ${stats.errors}</li>
+        <li><strong>Ignoré :</strong> ${stats.skipped}</li>
+      </ul>
+    </div>
+  `;
+
+  // Détails des doublons
+  if (stats.duplicates > 0 && result.details.duplicates.length > 0) {
+    html += `
+      <div class="alert alert-warning">
+        <h6><strong>Doublons détectés :</strong></h6>
+        <ul class="mb-0">
+    `;
+    result.details.duplicates.slice(0, 10).forEach((dup) => {
+      html += `<li>Ligne ${dup.line}: ${dup.repere_equipement} | ${dup.code_article}</li>`;
+    });
+    if (result.details.duplicates.length > 10) {
+      html += `<li>... et ${result.details.duplicates.length - 10} autres</li>`;
+    }
+    html += `</ul></div>`;
+  }
+
+  return html;
+}
+
+// ===============================
+// Gestion des doublons
+// ===============================
+
+/**
+ * Charge et affiche les doublons détectés
+ */
+async function loadDuplicates() {
+  try {
+    showAlert("Recherche des doublons en cours...", "info");
+
+    const response = await fetch(
+      "request/nomenclatures_duplicates.php?action=detect"
+    );
+    const result = await response.json();
+
+    if (result.success) {
+      if (result.duplicates.length === 0) {
+        showAlert("Aucun doublon détecté dans la base de données !", "success");
+      } else {
+        displayDuplicatesModal(result);
+      }
+    } else {
+      throw new Error(
+        result.message || "Erreur lors de la détection des doublons"
+      );
+    }
+  } catch (error) {
+    console.error("Erreur détection doublons:", error);
+    showAlert(
+      "Erreur lors de la détection des doublons: " + error.message,
+      "danger"
+    );
+  }
+}
+
+/**
+ * Affiche les doublons dans un modal
+ */
+function displayDuplicatesModal(duplicatesData) {
+  const modalHtml = `
+    <div class="modal fade" id="duplicatesModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <span class="material-icons me-2">warning</span>
+              Gestion des doublons (${duplicatesData.total_groups} groupes, ${
+    duplicatesData.total_items
+  } éléments)
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            ${generateDuplicatesHtml(duplicatesData.duplicates)}
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" onclick="resolveAllDuplicates()">
+              <span class="material-icons">auto_fix_high</span>
+              Résoudre automatiquement
+            </button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Supprimer un éventuel modal existant
+  const existingModal = document.getElementById("duplicatesModal");
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  // Ajouter le nouveau modal
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  // Afficher le modal
+  const modal = new bootstrap.Modal(document.getElementById("duplicatesModal"));
+  modal.show();
+}
+
+/**
+ * Génère le HTML pour afficher les doublons
+ */
+function generateDuplicatesHtml(duplicates) {
+  let html = "";
+
+  duplicates.forEach((group, index) => {
+    html += `
+      <div class="card mb-3">
+        <div class="card-header">
+          <h6 class="mb-0">
+            <strong>Groupe ${index + 1}:</strong> ${group.group_key}
+            <span class="badge bg-warning ms-2">${group.count} doublons</span>
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Action</th>
+                  <th>Repère équipement</th>
+                  <th>Code article</th>
+                  <th>Désignation équipement</th>
+                  <th>Désignation article</th>
+                  <th>Quantité</th>
+                  <th>Date création</th>
+                </tr>
+              </thead>
+              <tbody>
+    `;
+
+    group.items.forEach((item, itemIndex) => {
+      const isFirst = itemIndex === 0;
+      html += `
+        <tr class="${isFirst ? "table-success" : ""}">
+          <td>
+            <div class="form-check">
+              <input class="form-check-input duplicate-action" 
+                     type="radio" 
+                     name="action_group_${index}" 
+                     value="keep_${item.id}"
+                     ${isFirst ? "checked" : ""}>
+              <label class="form-check-label small">
+                ${isFirst ? "Conserver" : "Supprimer"}
+              </label>
+            </div>
+          </td>
+          <td><strong>${escapeHtml(item.repere_equipement || "")}</strong></td>
+          <td>${escapeHtml(item.code_article || "")}</td>
+          <td>${escapeHtml(item.designation_equipement || "")}</td>
+          <td>${escapeHtml(item.designation_article || "")}</td>
+          <td>${escapeHtml(item.quantite || "")}</td>
+          <td>${escapeHtml(item.date_creation || "")}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  return html;
+}
+
+/**
+ * Résout automatiquement tous les doublons (garde le plus ancien)
+ */
+async function resolveAllDuplicates() {
+  try {
+    showAlert("Résolution des doublons en cours...", "info");
+
+    // Collecter les actions de résolution
+    const actions = [];
+    const groups = document.querySelectorAll('[name^="action_group_"]');
+
+    const groupNumbers = [
+      ...new Set(
+        Array.from(groups).map(
+          (input) => input.name.match(/action_group_(\d+)/)[1]
+        )
+      ),
+    ];
+
+    groupNumbers.forEach((groupNum) => {
+      const checkedInput = document.querySelector(
+        `[name="action_group_${groupNum}"]:checked`
+      );
+      if (checkedInput) {
+        const keepId = checkedInput.value.replace("keep_", "");
+        const allInputs = document.querySelectorAll(
+          `[name="action_group_${groupNum}"]`
+        );
+        const deleteIds = Array.from(allInputs)
+          .filter((input) => input.value !== checkedInput.value)
+          .map((input) => input.value.replace("keep_", ""));
+
+        if (deleteIds.length > 0) {
+          actions.push({
+            type: "merge",
+            keep_id: keepId,
+            delete_ids: deleteIds,
+          });
+        }
+      }
+    });
+
+    if (actions.length === 0) {
+      showAlert("Aucune action de résolution définie", "warning");
+      return;
+    }
+
+    const response = await fetch(
+      "request/nomenclatures_duplicates.php?action=resolve",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ actions }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+      showAlert(`${result.resolved} doublons résolus avec succès !`, "success");
+
+      // Fermer le modal
+      const modal = bootstrap.Modal.getInstance(
+        document.getElementById("duplicatesModal")
+      );
+      if (modal) {
+        modal.hide();
+      }
+
+      // Recharger les données
+      loadNomenclatures(1, false);
+    } else {
+      throw new Error(
+        result.message || "Erreur lors de la résolution des doublons"
+      );
+    }
+  } catch (error) {
+    console.error("Erreur résolution doublons:", error);
+    showAlert(
+      "Erreur lors de la résolution des doublons: " + error.message,
+      "danger"
+    );
+  }
+}
+
+// ===============================
+// Fonctions utilitaires
+// ===============================
+
+/**
+ * Réinitialise tous les filtres
+ */
+function resetFilters() {
+  document.querySelectorAll(".filter-input").forEach((input) => {
+    input.value = "";
+  });
+
+  currentFilters = {};
+  hasMoreData = true;
+  loadNomenclatures(1, false);
+}
+
+/**
+ * Initialise les formulaires d'ajout et d'édition
+ */
+function initForms() {
+  // Gestion du formulaire d'ajout
+  const addForm = document.getElementById("addNomenclatureForm");
+  if (addForm) {
+    addForm.addEventListener("submit", handleAddNomenclature);
+  }
+
+  // Gestion du formulaire d'édition
+  const editForm = document.getElementById("editNomenclatureForm");
+  if (editForm) {
+    editForm.addEventListener("submit", handleEditNomenclature);
+  }
+}
+
+/**
+ * Traite l'ajout d'une nouvelle nomenclature
+ */
+async function handleAddNomenclature(e) {
+  e.preventDefault();
+  showAlert("Fonction d'ajout en cours d'implémentation", "info");
+}
+
+/**
+ * Traite la modification d'une nomenclature
+ */
+async function handleEditNomenclature(e) {
+  e.preventDefault();
+  showAlert("Fonction de modification en cours d'implémentation", "info");
 }
 
 // Initialisation automatique au chargement de la page

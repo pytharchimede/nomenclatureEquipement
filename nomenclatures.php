@@ -151,6 +151,9 @@ $hasDups = count($duplicates) > 0;
                     <button id="export-filtered-excel-btn" class="btn btn-outline-info" title="Exporter les nomenclatures filtrées en Excel">
                         <span class="material-icons">filter_alt</span>Excel Filtré
                     </button>
+                    <button id="check-duplicates-btn" class="btn btn-outline-warning" onclick="loadDuplicates()" title="Détecter et gérer les doublons">
+                        <span class="material-icons">find_in_page</span>Doublons
+                    </button>
                     <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importNomenclatureModal">
                         <span class="material-icons">upload_file</span>Importer Excel
                     </button>
