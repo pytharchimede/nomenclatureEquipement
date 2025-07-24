@@ -1069,6 +1069,26 @@ require_once 'includes/auth.php';
                             </div>
                         </div>
                         <div class="card-body">
+                            <!-- Informations clés en évidence -->
+                            <div class="alert alert-info mb-3">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong><span class="material-icons" style="vertical-align: middle; font-size: 18px;">qr_code</span> Repère Équipement:</strong><br>
+                                        <span class="fs-6 fw-bold text-primary">${doublon.repere_equipement}</span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong><span class="material-icons" style="vertical-align: middle; font-size: 18px;">inventory</span> Code Article:</strong><br>
+                                        <span class="fs-6 fw-bold text-primary">${doublon.code_article}</span>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <strong><span class="material-icons" style="vertical-align: middle; font-size: 18px;">warning</span> Type de Conflit:</strong>
+                                        <span class="badge bg-warning text-dark ms-2">${doublon.raison_rejet}</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6 class="text-primary">Données d'Import</h6>
@@ -1079,12 +1099,15 @@ require_once 'includes/auth.php';
                                         <tr><td><strong>Type:</strong></td><td>${doublon.type || 'N/A'}</td></tr>
                                         <tr><td><strong>Quantité:</strong></td><td>${doublon.quantite || 'N/A'} ${doublon.unite || ''}</td></tr>
                                         <tr><td><strong>Source:</strong></td><td>${doublon.source || 'N/A'}</td></tr>
+                                        <tr><td><strong>Poste:</strong></td><td>${doublon.numero_poste || 'N/A'}</td></tr>
+                                        <tr><td><strong>Métier:</strong></td><td>${doublon.metier || 'N/A'}</td></tr>
                                     </table>
                                 </div>
                                 <div class="col-md-6">
                                     <h6 class="text-warning">Analyse du Conflit</h6>
-                                    <p><strong>Type:</strong> <span class="badge bg-warning text-dark">${doublon.raison_rejet}</span></p>
                                     <p><strong>Date Import:</strong> ${doublon.date_import}</p>
+                                    <p><strong>Fichier:</strong> ${doublon.fichier_import}</p>
+                                    <p><strong>Ligne:</strong> ${doublon.ligne_import}</p>
                                     
                                     ${Object.keys(differences).length > 0 ? `
                                         <div class="mt-3">
@@ -1097,7 +1120,7 @@ require_once 'includes/auth.php';
                                                 </div>
                                             `).join('')}
                                         </div>
-                                    ` : '<p class="text-muted"><em>Doublon exact</em></p>'}
+                                    ` : '<div class="alert alert-warning"><span class="material-icons me-2">info</span><strong>Doublon exact détecté</strong><br><small>Aucune différence trouvée avec l\'entrée existante</small></div>'}
                                 </div>
                             </div>
                             
