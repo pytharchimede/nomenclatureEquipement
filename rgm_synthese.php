@@ -83,13 +83,11 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             text-align: center;
             background: linear-gradient(45deg, rgba(230, 81, 0, 0.05), rgba(255, 152, 0, 0.05));
             transition: all 0.3s ease;
-            cursor: pointer;
         }
 
         .file-upload-zone:hover {
             border-color: #ff9800;
             background: linear-gradient(45deg, rgba(230, 81, 0, 0.1), rgba(255, 152, 0, 0.1));
-            transform: scale(1.02);
         }
 
         .file-upload-zone.dragover {
@@ -557,9 +555,13 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="file-upload-zone" id="dropZone">
                             <i class="material-icons mb-3" style="font-size: 3rem; color: #e65100;">cloud_upload</i>
                             <h5>Glissez votre fichier ici</h5>
-                            <p class="text-muted">ou cliquez pour sélectionner</p>
+                            <p class="text-muted">ou</p>
+                            <button type="button" class="btn btn-primary btn-lg" onclick="document.getElementById('fileInput').click()">
+                                <i class="material-icons">folder_open</i>
+                                Parcourir les fichiers
+                            </button>
                             <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
-                            <small class="text-muted">Formats supportés: CSV, Excel (.xlsx, .xls)</small>
+                            <br><small class="text-muted mt-2">Formats supportés: CSV, Excel (.xlsx, .xls)</small>
                         </div>
                         <div class="mt-4" id="fileInfo" style="display: none;">
                             <div class="alert alert-info">
@@ -678,6 +680,74 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function hideProgress() {
             document.getElementById('progressOverlay').style.display = 'none';
         }
+
+        // Gestion de la sélection de fichier
+        function handleFileSelection(file) {
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('importBtn').disabled = false;
+        }
+
+        // Formatage de la taille de fichier
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Configuration de la zone de drop avec debug
+        function setupDropZone() {
+            console.log('setupDropZone: Initialisation...');
+
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            console.log('setupDropZone: dropZone =', dropZone);
+            console.log('setupDropZone: fileInput =', fileInput);
+
+            if (!dropZone || !fileInput) {
+                console.error('setupDropZone: Éléments DOM non trouvés!');
+                return;
+            }
+
+            // Gestion du drag & drop uniquement
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+                console.log('setupDropZone: dragover');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                console.log('setupDropZone: dragleave');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                console.log('setupDropZone: drop, files =', files);
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+
+            // Gestion du changement de fichier via input
+            fileInput.addEventListener('change', function(e) {
+                console.log('setupDropZone: fileInput change, files =', e.target.files);
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+
+            console.log('setupDropZone: Configuration terminée (drag&drop + bouton)');
+        }
+
+
 
         // Initialisation avec jQuery une fois le DOM chargé
         $(document).ready(function() {
@@ -872,56 +942,6 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $('#rgmTableBody').empty();
 
             loadMoreData(true);
-        }
-
-        // Configuration de la zone de drop
-        function setupDropZone() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-
-            dropZone.addEventListener('click', () => fileInput.click());
-
-            dropZone.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                this.classList.add('dragover');
-            });
-
-            dropZone.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                this.classList.remove('dragover');
-            });
-
-            dropZone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                this.classList.remove('dragover');
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    handleFileSelection(files[0]);
-                }
-            });
-
-            fileInput.addEventListener('change', function(e) {
-                if (e.target.files.length > 0) {
-                    handleFileSelection(e.target.files[0]);
-                }
-            });
-        }
-
-        // Gestion de la sélection de fichier
-        function handleFileSelection(file) {
-            $('#fileName').text(file.name);
-            $('#fileSize').text(formatFileSize(file.size));
-            $('#fileInfo').show();
-            $('#importBtn').prop('disabled', false);
-        }
-
-        // Formatage de la taille de fichier
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
     </script>
 </body>
