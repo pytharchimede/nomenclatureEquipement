@@ -5,7 +5,8 @@ require_once 'model/Quantitatif.php';
 require_once 'model/Famille.php';
 require_once 'includes/auth.php';
 
-$quantitatif = Quantitatif::getAll();
+// Chargement initial des premières données (pour éviter l'écran vide)
+$initialQuantitatif = Quantitatif::getPaginated(1, 50);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -474,6 +475,18 @@ $quantitatif = Quantitatif::getAll();
 
             <!-- Table de données -->
             <div class="data-table">
+                <!-- Indicateur de chargement et informations -->
+                <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+                    <div id="tableInfo" class="text-muted">
+                        <span class="material-icons me-2" style="vertical-align: middle;">info</span>
+                        Chargement des données...
+                    </div>
+                    <div id="loadingIndicator" class="text-primary" style="display: none;">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Chargement...
+                    </div>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-quantitatif">
                         <thead>
@@ -500,41 +513,24 @@ $quantitatif = Quantitatif::getAll();
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php foreach ($quantitatif as $q): ?>
-                                <tr>
-                                    <td>
-                                        <span class="badge-status badge-success">
-                                            <?= htmlspecialchars($q['famille'] ?? 'Non défini') ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <strong><?= htmlspecialchars($q['repere'] ?? '') ?></strong>
-                                    </td>
-                                    <td><?= htmlspecialchars($q['unite'] ?? '') ?></td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            <?= htmlspecialchars($q['quantite'] ?? '') ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(<?= $q['id'] ?>)">
-                                            <span class="material-icons" style="font-size: 1rem;">visibility</span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($quantitatif)): ?>
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-5">
-                                        <span class="material-icons mb-2" style="font-size: 3rem; opacity: 0.3;">inventory_2</span>
-                                        <br>Aucune donnée quantitative importée
-                                        <br><small>Importez un fichier Excel pour commencer</small>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
+                        <tbody id="quantitatifTableBody">
+                            <!-- Données chargées dynamiquement -->
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Message de fin de données -->
+                <div id="endOfDataMessage" class="text-center text-muted py-4" style="display: none;">
+                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.5;">check_circle</span>
+                    <br>Toutes les données ont été chargées
+                </div>
+
+                <!-- Indicateur de chargement en bas -->
+                <div id="bottomLoadingIndicator" class="text-center py-4" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="mt-2 text-muted">Chargement des données suivantes...</div>
                 </div>
             </div>
         </div>
@@ -701,6 +697,176 @@ $quantitatif = Quantitatif::getAll();
     <script>
         // Variables globales
         let uploadInProgress = false;
+
+        // Variables pour le défilement infini
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreData = true;
+        let currentFilters = {};
+        let allData = []; // Pour stocker toutes les données chargées
+        let observer; // Pour l'Intersection Observer
+
+        // Chargement des données avec pagination
+        async function loadQuantitatifData(page = 1, resetData = false) {
+            if (isLoading) return;
+
+            isLoading = true;
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            const bottomLoadingIndicator = document.getElementById('bottomLoadingIndicator');
+
+            if (page === 1) {
+                loadingIndicator.style.display = 'block';
+            } else {
+                bottomLoadingIndicator.style.display = 'block';
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    page: page,
+                    limit: 50,
+                    ...currentFilters
+                });
+
+                const response = await fetch(`api/quantitatif_pagination.php?${params}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    if (resetData) {
+                        allData = data.data;
+                        currentPage = 1;
+                    } else {
+                        allData = [...allData, ...data.data];
+                    }
+
+                    hasMoreData = data.pagination.has_more;
+                    currentPage = data.pagination.current_page;
+
+                    renderTable();
+                    updateTableInfo(data.pagination);
+
+                    // Mettre à jour l'observer si on a plus de données
+                    if (hasMoreData) {
+                        observeLastRow();
+                    } else {
+                        document.getElementById('endOfDataMessage').style.display = 'block';
+                    }
+                } else {
+                    throw new Error(data.error || 'Erreur lors du chargement des données');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+
+                if (allData.length === 0) {
+                    document.getElementById('quantitatifTableBody').innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <span class="material-icons mb-2" style="font-size: 3rem; opacity: 0.3; color: #dc3545;">error</span>
+                                <br>Erreur lors du chargement des données
+                                <br><small>${error.message}</small>
+                            </td>
+                        </tr>
+                    `;
+                }
+            } finally {
+                isLoading = false;
+                loadingIndicator.style.display = 'none';
+                bottomLoadingIndicator.style.display = 'none';
+            }
+        }
+
+        // Rendu de la table avec toutes les données chargées
+        function renderTable() {
+            const tbody = document.getElementById('quantitatifTableBody');
+
+            if (allData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <span class="material-icons mb-2" style="font-size: 3rem; opacity: 0.3;">inventory_2</span>
+                            <br>Aucune donnée quantitative trouvée
+                            <br><small>Importez un fichier Excel ou modifiez vos filtres</small>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = allData.map(q => `
+                <tr data-id="${q.id}">
+                    <td>
+                        <span class="badge-status badge-success">
+                            ${escapeHtml(q.famille || 'Non défini')}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>${escapeHtml(q.repere || '')}</strong>
+                    </td>
+                    <td>${escapeHtml(q.unite || '')}</td>
+                    <td>
+                        <span class="badge bg-light text-dark">
+                            ${escapeHtml(q.quantite || '')}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(${q.id})">
+                            <span class="material-icons" style="font-size: 1rem;">visibility</span>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Mise à jour des informations de la table
+        function updateTableInfo(pagination) {
+            const tableInfo = document.getElementById('tableInfo');
+            const {
+                from,
+                to,
+                total_count
+            } = pagination;
+
+            tableInfo.innerHTML = `
+                <span class="material-icons me-2" style="vertical-align: middle;">info</span>
+                Affichage de ${from} à ${to} sur ${total_count} éléments
+                ${Object.keys(currentFilters).length > 0 ? ' (filtré)' : ''}
+            `;
+        }
+
+        // Configuration de l'Intersection Observer pour le défilement infini
+        function setupInfiniteScroll() {
+            const options = {
+                root: null,
+                rootMargin: '100px',
+                threshold: 0.1
+            };
+
+            observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && hasMoreData && !isLoading) {
+                        loadQuantitatifData(currentPage + 1);
+                    }
+                });
+            }, options);
+        }
+
+        // Observer la dernière ligne pour déclencher le chargement
+        function observeLastRow() {
+            if (observer) {
+                observer.disconnect();
+            }
+
+            const lastRow = document.querySelector('#quantitatifTableBody tr:last-child');
+            if (lastRow && hasMoreData) {
+                observer.observe(lastRow);
+            }
+        }
+
+        // Fonction utilitaire pour échapper le HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
 
         // Chargement des statistiques
         async function loadStats() {
@@ -1046,71 +1212,104 @@ $quantitatif = Quantitatif::getAll();
             }
         }
 
-        // Filtrage de la table
+        // Filtrage de la table avec défilement infini
         function filterTable() {
-            const famille = document.getElementById('filterFamille').value.toLowerCase();
-            const repere = document.getElementById('filterRepere').value.toLowerCase();
-            const unite = document.getElementById('filterUnite').value.toLowerCase();
-            const rows = document.querySelectorAll('.table-quantitatif tbody tr');
+            const famille = document.getElementById('filterFamille').value.trim();
+            const repere = document.getElementById('filterRepere').value.trim();
+            const unite = document.getElementById('filterUnite').value.trim();
 
-            let visibleCount = 0;
+            // Mise à jour des filtres actuels
+            currentFilters = {};
+            if (famille) currentFilters.famille = famille;
+            if (repere) currentFilters.repere = repere;
+            if (unite) currentFilters.unite = unite;
 
-            rows.forEach(row => {
-                const tds = row.querySelectorAll('td');
-                if (tds.length < 4) return;
+            // Reset et rechargement avec les nouveaux filtres
+            allData = [];
+            hasMoreData = true;
+            currentPage = 1;
+            document.getElementById('endOfDataMessage').style.display = 'none';
 
-                let show = true;
-                if (famille && !tds[0].textContent.toLowerCase().includes(famille)) show = false;
-                if (repere && !tds[1].textContent.toLowerCase().includes(repere)) show = false;
-                if (unite && !tds[2].textContent.toLowerCase().includes(unite)) show = false;
-
-                row.style.display = show ? '' : 'none';
-                if (show) visibleCount++;
-            });
-
-            // Mise à jour du compteur de résultats
-            const totalRows = rows.length - (document.querySelector('.table-quantitatif tbody tr td[colspan]') ? 1 : 0);
-            console.log(`Filtrage: ${visibleCount}/${totalRows} éléments affichés`);
+            loadQuantitatifData(1, true);
         }
 
-        // Export CSV
-        function exportCSV() {
-            const rows = document.querySelectorAll('.table-quantitatif tr');
-            const csv = [];
+        // Debounce pour les filtres
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
 
-            rows.forEach(row => {
-                if (row.style.display === 'none') return;
-                const cols = Array.from(row.querySelectorAll('th,td')).slice(0, 4).map(td =>
-                    '"' + td.textContent.replace(/"/g, '""').trim() + '"'
-                );
-                if (cols.length > 0 && !cols[0].includes('colspan')) {
-                    csv.push(cols.join(';'));
+        // Export CSV avec filtres appliqués
+        async function exportCSV() {
+            try {
+                // Récupérer toutes les données filtrées
+                const params = new URLSearchParams({
+                    page: 1,
+                    limit: 10000, // Grande limite pour récupérer toutes les données
+                    ...currentFilters
+                });
+
+                const response = await fetch(`api/quantitatif_pagination.php?${params}`);
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Erreur lors de l\'export');
                 }
-            });
 
-            const blob = new Blob([csv.join('\r\n')], {
-                type: 'text/csv;charset=utf-8;'
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `quantitatif_export_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+                // Créer le CSV
+                const headers = ['Famille', 'Repère', 'Unité', 'Quantité'];
+                const csvContent = [
+                    headers.map(h => `"${h}"`).join(';'),
+                    ...data.data.map(row => [
+                        `"${(row.famille || 'Non défini').replace(/"/g, '""')}"`,
+                        `"${(row.repere || '').replace(/"/g, '""')}"`,
+                        `"${(row.unite || '').replace(/"/g, '""')}"`,
+                        `"${(row.quantite || '').replace(/"/g, '""')}"`
+                    ].join(';'))
+                ].join('\r\n');
+
+                // Télécharger le fichier
+                const blob = new Blob([csvContent], {
+                    type: 'text/csv;charset=utf-8;'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `quantitatif_export_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error('Erreur lors de l\'export CSV:', error);
+                alert('Erreur lors de l\'export CSV: ' + error.message);
+            }
         }
 
-        // Export Excel
+        // Export Excel avec filtres appliqués
         function exportExcel() {
-            window.open('request/export_quantitatif_excel.php', '_blank');
+            const params = new URLSearchParams(currentFilters);
+            const url = `request/export_quantitatif_excel.php?${params}`;
+            window.open(url, '_blank');
         }
 
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // Configuration du défilement infini
+            setupInfiniteScroll();
+
             // Chargement initial des données
             loadStats();
             loadImportHistory();
+            loadQuantitatifData(1, true);
 
             // Configuration du drag & drop
             setupDragAndDrop();
@@ -1121,9 +1320,10 @@ $quantitatif = Quantitatif::getAll();
             document.getElementById('exportQuantitatif').addEventListener('click', exportCSV);
             document.getElementById('exportQuantitatifExcel').addEventListener('click', exportExcel);
 
-            // Event listeners pour les filtres
+            // Event listeners pour les filtres avec debounce
+            const debouncedFilter = debounce(filterTable, 500);
             ['filterFamille', 'filterRepere', 'filterUnite'].forEach(id => {
-                document.getElementById(id).addEventListener('input', filterTable);
+                document.getElementById(id).addEventListener('input', debouncedFilter);
             });
 
             // Actualisation périodique des statistiques
