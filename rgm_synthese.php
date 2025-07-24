@@ -614,30 +614,79 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         let totalCount = 0;
         let loadedCount = 0;
 
-        // Initialisation
+        // Fonctions globales accessibles depuis onclick
+        function showImportModal() {
+            const modal = new bootstrap.Modal(document.getElementById('importModal'));
+            modal.show();
+        }
+
+        function scrollToTop() {
+            document.getElementById('tableContainer').scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        function exportRgmData() {
+            showProgress('Export en cours...', 'Génération du fichier Excel');
+            const params = new URLSearchParams(currentFilters);
+            window.location.href = 'api/export_rgm.php?' + params.toString();
+            setTimeout(hideProgress, 2000);
+        }
+
+        function startImport() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            showProgress('Import en cours...', 'Traitement du fichier RGM');
+
+            fetch('api/import_rgm.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideProgress();
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('importModal'));
+                    modal.hide();
+
+                    if (data.success) {
+                        alert('Import réussi ! ' + data.imported + ' éléments importés.');
+                        loadStatistics();
+                        loadInitialData();
+                    } else {
+                        alert('Erreur lors de l\'import: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    hideProgress();
+                    alert('Erreur lors de l\'import');
+                    console.error('Erreur:', error);
+                });
+        }
+
+        // Gestion de l'overlay de progression
+        function showProgress(title, message) {
+            document.getElementById('progressTitle').textContent = title;
+            document.getElementById('progressMessage').textContent = message;
+            document.getElementById('progressOverlay').style.display = 'flex';
+        }
+
+        function hideProgress() {
+            document.getElementById('progressOverlay').style.display = 'none';
+        }
+
+        // Initialisation avec jQuery une fois le DOM chargé
         $(document).ready(function() {
             initializeFilters();
             loadStatistics();
             loadInitialData();
             setupInfiniteScroll();
             setupDropZone();
-            updateLastSyncTime();
         });
-
-        // Fonctions pour les modals
-        function showImportModal() {
-            $('#importModal').modal('show');
-        }
-
-        function showEditModal(id) {
-            // Code pour charger les données et afficher le modal d'édition
-            $('#editModal').modal('show');
-        }
-
-        function showDeleteModal(id) {
-            // Code pour afficher le modal de confirmation de suppression
-            $('#deleteModal').modal('show');
-        }
 
         // Chargement des statistiques
         function loadStatistics() {
@@ -873,110 +922,6 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        // Functions pour les actions
-        function showImportModal() {
-            $('#importModal').modal('show');
-        }
-
-        function startImport() {
-            const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files[0]) return;
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            showProgress('Import en cours...', 'Traitement du fichier RGM');
-
-            $.ajax({
-                url: 'api/import_rgm.php',
-                method: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    hideProgress();
-                    $('#importModal').modal('hide');
-
-                    if (response.success) {
-                        alert('Import réussi ! ' + response.imported + ' éléments importés.');
-                        loadStatistics();
-                        loadInitialData();
-                    } else {
-                        alert('Erreur lors de l\'import: ' + response.message);
-                    }
-                },
-                error: function() {
-                    hideProgress();
-                    alert('Erreur lors de l\'import');
-                }
-            });
-        }
-
-        function exportRgmData() {
-            showProgress('Export en cours...', 'Génération du fichier Excel');
-
-            const params = new URLSearchParams(currentFilters);
-            window.location.href = 'api/export_rgm.php?' + params.toString();
-
-            setTimeout(hideProgress, 2000);
-        }
-
-        function syncToNomenclature() {
-            showProgress('Synchronisation...', 'Mise à jour de la nomenclature');
-
-            $.ajax({
-                url: 'api/sync_rgm_nomenclature.php',
-                method: 'POST',
-                success: function(response) {
-                    hideProgress();
-                    if (response.success) {
-                        alert('Synchronisation réussie ! ' + response.synced + ' éléments synchronisés.');
-                        loadStatistics();
-                        loadInitialData();
-                        updateLastSyncTime();
-                    } else {
-                        alert('Erreur lors de la synchronisation: ' + response.message);
-                    }
-                },
-                error: function() {
-                    hideProgress();
-                    alert('Erreur lors de la synchronisation');
-                }
-            });
-        }
-
-        function forceSyncToNomenclature() {
-            if (confirm('Forcer la synchronisation complète ? Cette opération peut prendre du temps.')) {
-                syncToNomenclature();
-            }
-        }
-
-        // Gestion de l'overlay de progression
-        function showProgress(title, message) {
-            $('#progressTitle').text(title);
-            $('#progressMessage').text(message);
-            $('#progressOverlay').css('display', 'flex');
-        }
-
-        function hideProgress() {
-            $('#progressOverlay').hide();
-        }
-
-        // Scroll vers le haut
-        function scrollToTop() {
-            document.getElementById('tableContainer').scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-
-        // Mise à jour de l'heure de dernière synchro
-        function updateLastSyncTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleString('fr-FR');
-            $('#lastSync').text(timeStr);
         }
     </script>
 </body>
