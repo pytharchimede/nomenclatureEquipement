@@ -237,6 +237,42 @@ require_once 'includes/auth.php';
         </div>
     </div>
 
+    <!-- Modal de groupe de doublons -->
+    <div class="modal fade" id="groupeDoublonsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <span class="material-icons me-2">group</span>
+                        Groupe de Doublons
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="groupeDoublonsContent">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <p class="mt-3">Chargement du groupe de doublons...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto">
+                        <button class="btn btn-success" onclick="validerTousGroupe()">
+                            <span class="material-icons">check_circle</span>Valider Tous du Groupe
+                        </button>
+                        <button class="btn btn-danger" onclick="rejeterTousGroupe()">
+                            <span class="material-icons">cancel</span>Rejeter Tous du Groupe
+                        </button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentDoublonId = null;
@@ -518,6 +554,9 @@ require_once 'includes/auth.php';
                                 ` : ''}
                                 <button class="btn btn-info btn-sm" onclick="voirDetails(${doublon.id})">
                                     <span class="material-icons">visibility</span>Détails
+                                </button>
+                                <button class="btn btn-warning btn-sm" onclick="voirGroupeDoublons('${doublon.repere_equipement}', '${doublon.code_article}')">
+                                    <span class="material-icons">group</span>Groupe
                                 </button>
                             </div>
                         </div>
@@ -916,6 +955,342 @@ require_once 'includes/auth.php';
                 bouton.disabled = false;
                 bouton.innerHTML = texteBouton;
             }
+        }
+
+        // Variables pour le groupe de doublons
+        let currentGroupeDoublons = [];
+
+        // Voir le groupe de doublons pour un repère/article
+        async function voirGroupeDoublons(repere, codeArticle) {
+            console.log('Affichage du groupe de doublons pour:', repere, codeArticle);
+
+            // Afficher le modal
+            const modal = new bootstrap.Modal(document.getElementById('groupeDoublonsModal'));
+            modal.show();
+
+            // Mettre à jour le titre
+            document.querySelector('#groupeDoublonsModal .modal-title').innerHTML = `
+                <span class="material-icons me-2">group</span>
+                Groupe de Doublons: ${repere} | ${codeArticle}
+            `;
+
+            try {
+                const response = await fetch(`request/doublons_import_groupe.php?repere=${encodeURIComponent(repere)}&code_article=${encodeURIComponent(codeArticle)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    currentGroupeDoublons = data.doublons;
+                    afficherGroupeDoublons(data.doublons, data.nomenclature_existante);
+                } else {
+                    document.getElementById('groupeDoublonsContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <span class="material-icons">error</span>
+                            Erreur: ${data.message}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement du groupe:', error);
+                document.getElementById('groupeDoublonsContent').innerHTML = `
+                    <div class="alert alert-danger">
+                        <span class="material-icons">error</span>
+                        Erreur de connexion: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Afficher les doublons d'un groupe
+        function afficherGroupeDoublons(doublons, nomenclatureExistante) {
+            let html = '';
+
+            // Afficher la nomenclature existante si elle existe
+            if (nomenclatureExistante) {
+                html += `
+                    <div class="card border-success mb-4">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0">
+                                <span class="material-icons me-2">check_circle</span>
+                                Nomenclature Existante (Base de données)
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Repère:</strong> ${nomenclatureExistante.repere_equipement}<br>
+                                    <strong>Code Article:</strong> ${nomenclatureExistante.code_article}<br>
+                                    <strong>Équipement:</strong> ${nomenclatureExistante.designation_equipement}<br>
+                                    <strong>Article:</strong> ${nomenclatureExistante.designation_article}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Fabricant:</strong> ${nomenclatureExistante.fabricant || 'N/A'}<br>
+                                    <strong>Type:</strong> ${nomenclatureExistante.type || 'N/A'}<br>
+                                    <strong>Quantité:</strong> ${nomenclatureExistante.quantite} ${nomenclatureExistante.unite}<br>
+                                    <strong>Source:</strong> ${nomenclatureExistante.source || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Afficher les doublons
+            html += `<h6 class="text-warning mb-3">
+                <span class="material-icons me-2">warning</span>
+                Doublons Détectés (${doublons.length})
+            </h6>`;
+
+            doublons.forEach((doublon, index) => {
+                const conflitData = JSON.parse(doublon.details_conflit || '{}');
+                const differences = conflitData.differences || {};
+                const scoreSimilitude = conflitData.score_similitude || 0;
+
+                html += `
+                    <div class="card mb-3 ${doublon.statut === 'valide' ? 'border-success' : doublon.statut === 'rejete' ? 'border-danger' : 'border-warning'}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Import #${index + 1}</strong>
+                                <span class="badge bg-${getStatutColor(doublon.statut)} ms-2">${doublon.statut}</span>
+                                <span class="badge bg-info ms-1">Similarité: ${scoreSimilitude}%</span>
+                                <small class="text-muted ms-2">${doublon.fichier_import} (ligne ${doublon.ligne_import})</small>
+                            </div>
+                            <div>
+                                ${doublon.statut === 'en_attente' ? `
+                                    <button class="btn btn-success btn-sm" onclick="validerDoublonGroupe(${doublon.id})">
+                                        <span class="material-icons">check</span>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejeterDoublonGroupe(${doublon.id})">
+                                        <span class="material-icons">close</span>
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-info btn-sm" onclick="voirDetails(${doublon.id}); bootstrap.Modal.getInstance(document.getElementById('groupeDoublonsModal')).hide();">
+                                    <span class="material-icons">visibility</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">Données d'Import</h6>
+                                    <table class="table table-sm">
+                                        <tr><td><strong>Équipement:</strong></td><td>${doublon.designation_equipement || 'N/A'}</td></tr>
+                                        <tr><td><strong>Article:</strong></td><td>${doublon.designation_article || 'N/A'}</td></tr>
+                                        <tr><td><strong>Fabricant:</strong></td><td>${doublon.fabricant || 'N/A'}</td></tr>
+                                        <tr><td><strong>Type:</strong></td><td>${doublon.type || 'N/A'}</td></tr>
+                                        <tr><td><strong>Quantité:</strong></td><td>${doublon.quantite || 'N/A'} ${doublon.unite || ''}</td></tr>
+                                        <tr><td><strong>Source:</strong></td><td>${doublon.source || 'N/A'}</td></tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-warning">Analyse du Conflit</h6>
+                                    <p><strong>Type:</strong> <span class="badge bg-warning text-dark">${doublon.raison_rejet}</span></p>
+                                    <p><strong>Date Import:</strong> ${doublon.date_import}</p>
+                                    
+                                    ${Object.keys(differences).length > 0 ? `
+                                        <div class="mt-3">
+                                            <h6>Différences Détectées:</h6>
+                                            ${Object.entries(differences).map(([champ, diff]) => `
+                                                <div class="mb-2 p-2 border rounded">
+                                                    <strong>${champ}:</strong><br>
+                                                    <span class="text-danger">Base: ${diff.base}</span><br>
+                                                    <span class="text-success">Import: ${diff.import}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    ` : '<p class="text-muted"><em>Doublon exact</em></p>'}
+                                </div>
+                            </div>
+                            
+                            ${doublon.commentaire_validation ? `
+                                <div class="mt-3 p-2 bg-light rounded">
+                                    <strong>Commentaire:</strong> ${doublon.commentaire_validation}
+                                    ${doublon.valide_par ? `<br><small class="text-muted">par ${doublon.valide_par} le ${doublon.date_validation}</small>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('groupeDoublonsContent').innerHTML = html;
+        }
+
+        // Valider un doublon dans le groupe
+        async function validerDoublonGroupe(doublonId) {
+            try {
+                const response = await fetch('request/doublons_import_validation.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: doublonId,
+                        action: 'valide',
+                        commentaire: 'Validation depuis le groupe'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Doublon validé avec succès', 'success');
+
+                    // Recharger le groupe et les données principales
+                    const currentModal = document.querySelector('#groupeDoublonsModal .modal-title');
+                    const repereMatch = currentModal.textContent.match(/Groupe de Doublons: ([^|]+) \| (.+)/);
+                    if (repereMatch) {
+                        voirGroupeDoublons(repereMatch[1].trim(), repereMatch[2].trim());
+                    }
+
+                    await chargerStatistiques();
+                    chargerDoublons(currentPage);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Erreur validation doublon:', error);
+                showNotification('Erreur lors de la validation', 'error');
+            }
+        }
+
+        // Rejeter un doublon dans le groupe
+        async function rejeterDoublonGroupe(doublonId) {
+            try {
+                const response = await fetch('request/doublons_import_validation.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: doublonId,
+                        action: 'rejete',
+                        commentaire: 'Rejet depuis le groupe'
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Doublon rejeté avec succès', 'success');
+
+                    // Recharger le groupe et les données principales
+                    const currentModal = document.querySelector('#groupeDoublonsModal .modal-title');
+                    const repereMatch = currentModal.textContent.match(/Groupe de Doublons: ([^|]+) \| (.+)/);
+                    if (repereMatch) {
+                        voirGroupeDoublons(repereMatch[1].trim(), repereMatch[2].trim());
+                    }
+
+                    await chargerStatistiques();
+                    chargerDoublons(currentPage);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Erreur rejet doublon:', error);
+                showNotification('Erreur lors du rejet', 'error');
+            }
+        }
+
+        // Valider tous les doublons du groupe
+        async function validerTousGroupe() {
+            const doublonsEnAttente = currentGroupeDoublons.filter(d => d.statut === 'en_attente');
+
+            if (doublonsEnAttente.length === 0) {
+                alert('Aucun doublon en attente dans ce groupe.');
+                return;
+            }
+
+            if (!confirm(`Voulez-vous vraiment valider tous les ${doublonsEnAttente.length} doublons en attente de ce groupe ?`)) return;
+
+            let succes = 0;
+            let erreurs = 0;
+
+            for (const doublon of doublonsEnAttente) {
+                try {
+                    const response = await fetch('request/doublons_import_validation.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: doublon.id,
+                            action: 'valide',
+                            commentaire: 'Validation en lot du groupe'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        succes++;
+                    } else {
+                        erreurs++;
+                    }
+                } catch (error) {
+                    erreurs++;
+                }
+            }
+
+            showNotification(`Validation terminée: ${succes} réussies, ${erreurs} erreurs`, erreurs === 0 ? 'success' : 'warning');
+
+            // Recharger le groupe et les données principales
+            const currentModal = document.querySelector('#groupeDoublonsModal .modal-title');
+            const repereMatch = currentModal.textContent.match(/Groupe de Doublons: ([^|]+) \| (.+)/);
+            if (repereMatch) {
+                voirGroupeDoublons(repereMatch[1].trim(), repereMatch[2].trim());
+            }
+
+            await chargerStatistiques();
+            chargerDoublons(currentPage);
+        }
+
+        // Rejeter tous les doublons du groupe
+        async function rejeterTousGroupe() {
+            const doublonsEnAttente = currentGroupeDoublons.filter(d => d.statut === 'en_attente');
+
+            if (doublonsEnAttente.length === 0) {
+                alert('Aucun doublon en attente dans ce groupe.');
+                return;
+            }
+
+            if (!confirm(`Voulez-vous vraiment rejeter tous les ${doublonsEnAttente.length} doublons en attente de ce groupe ?`)) return;
+
+            let succes = 0;
+            let erreurs = 0;
+
+            for (const doublon of doublonsEnAttente) {
+                try {
+                    const response = await fetch('request/doublons_import_validation.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            id: doublon.id,
+                            action: 'rejete',
+                            commentaire: 'Rejet en lot du groupe'
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        succes++;
+                    } else {
+                        erreurs++;
+                    }
+                } catch (error) {
+                    erreurs++;
+                }
+            }
+
+            showNotification(`Rejet terminé: ${succes} réussies, ${erreurs} erreurs`, erreurs === 0 ? 'success' : 'warning');
+
+            // Recharger le groupe et les données principales
+            const currentModal = document.querySelector('#groupeDoublonsModal .modal-title');
+            const repereMatch = currentModal.textContent.match(/Groupe de Doublons: ([^|]+) \| (.+)/);
+            if (repereMatch) {
+                voirGroupeDoublons(repereMatch[1].trim(), repereMatch[2].trim());
+            }
+
+            await chargerStatistiques();
+            chargerDoublons(currentPage);
         }
     </script>
 </body>
