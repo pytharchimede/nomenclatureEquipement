@@ -1,0 +1,307 @@
+/* Template SPL Modern Styles */
+
+.template-spl-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 15px;
+    padding: 10px;
+}
+
+.chart-wrapper canvas {
+    border-radius: 10px;
+}
+
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mini-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(25, 118, 210, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.mini-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(25, 118, 210, 0.15);
+}
+
+.mini-card .material-icons {
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, #1976d2, #42a5f5);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.filter-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.table-modern {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.table-modern .table {
+    margin-bottom: 0;
+}
+
+.table-modern .table thead th {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    color: white;
+    border: none;
+    padding: 15px 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table-modern .table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table-modern .table tbody tr:hover {
+    background: rgba(25, 118, 210, 0.05);
+    transform: scale(1.01);
+}
+
+.table-modern .table tbody td {
+    padding: 12px;
+    border-color: rgba(0, 0, 0, 0.05);
+    vertical-align: middle;
+}
+
+.badge-modern {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.highlight {
+    border-color: #1976d2 !important;
+    background-color: rgba(25, 118, 210, 0.1) !important;
+    transform: scale(1.02);
+    transition: all 0.3s ease;
+}
+
+#loadingIndicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 25px;
+    z-index: 1000;
+    display: none;
+    box-shadow: 0 8px 32px rgba(25, 118, 210, 0.3);
+    backdrop-filter: blur(10px);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.modal-modern .modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.modal-modern .modal-header {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    border: none;
+    padding: 20px 30px;
+}
+
+.modal-modern .modal-body {
+    padding: 30px;
+}
+
+.modal-modern .modal-footer {
+    border: none;
+    padding: 20px 30px;
+    background: #f8f9fa;
+}
+
+.drop-area-modern {
+    border: 3px dashed #1976d2;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(25, 118, 210, 0.05) 0%, rgba(25, 118, 210, 0.1) 100%);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.drop-area-modern:hover {
+    background: linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(25, 118, 210, 0.15) 100%);
+    transform: translateY(-2px);
+}
+
+.drop-area-modern.highlight {
+    background: linear-gradient(135deg, rgba(25, 118, 210, 0.15) 0%, rgba(25, 118, 210, 0.2) 100%);
+    border-color: #1565c0;
+    transform: scale(1.02);
+}
+
+.progress-modern {
+    height: 30px;
+    border-radius: 15px;
+    background: rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.progress-modern .progress-bar {
+    border-radius: 15px;
+    background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+    transition: all 0.3s ease;
+}
+
+.btn-modern {
+    border-radius: 25px;
+    padding: 10px 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-modern {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.card-modern .card-header {
+    border-radius: 20px 20px 0 0;
+    border: none;
+    padding: 20px 25px;
+}
+
+.card-modern .card-body {
+    padding: 25px;
+}
+
+/* Animation pour les éléments qui apparaissent */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .chart-wrapper {
+        height: 250px;
+    }
+    
+    .mini-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+    
+    .filter-section .row > div {
+        margin-bottom: 10px;
+    }
+    
+    .table-responsive {
+        max-height: 50vh;
+    }
+}
+
+/* Scrollbar personnalisée */
+.table-responsive::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+    border-radius: 10px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #1565c0;
+}
+
+/* Performance indicator */
+.performance-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 999;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 10px 15px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    font-size: 0.8rem;
+    backdrop-filter: blur(10px);
+}
+
+.performance-indicator.healthy {
+    border-left: 4px solid #4caf50;
+}
+
+.performance-indicator.warning {
+    border-left: 4px solid #ff9800;
+}
+
+.performance-indicator.critical {
+    border-left: 4px solid #f44336;
+}
