@@ -60,9 +60,12 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1) rotate(0deg);
             }
+
             50% {
                 transform: scale(1.1) rotate(180deg);
             }
@@ -455,7 +458,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="family-grid" id="famillesGrid">
                         <!-- Données chargées dynamiquement -->
                         <div class="text-center py-5">
@@ -491,7 +494,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (data.success) {
                     famillesData = data.stats;
                     filteredFamillesData = [...famillesData.familles_details];
-                    
+
                     updateStats();
                     updateInsights();
                     renderFamillesGrid();
@@ -510,7 +513,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('totalFamillesDefinies').textContent = famillesData.total_familles_definies || '0';
             document.getElementById('totalFamillesUtilisees').textContent = famillesData.total_familles_utilisees || '0';
             document.getElementById('totalElements').textContent = numberWithCommas(famillesData.total_elements || '0');
-            
+
             // Famille leader
             if (famillesData.top_familles && famillesData.top_familles.length > 0) {
                 document.getElementById('familleTop').textContent = famillesData.top_familles[0].famille;
@@ -521,7 +524,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function updateInsights() {
             const insightsList = document.getElementById('insightsList');
             const insights = generateInsights();
-            
+
             insightsList.innerHTML = insights.map(insight => `
                 <div class="insight-item">
                     <div class="insight-icon">
@@ -538,7 +541,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Génération d'insights intelligents
         function generateInsights() {
             const insights = [];
-            
+
             // Taux d'utilisation
             const tauxUtilisation = (famillesData.total_familles_utilisees / famillesData.total_familles_definies * 100).toFixed(1);
             insights.push({
@@ -573,7 +576,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Rendu de la grille des familles
         function renderFamillesGrid() {
             const grid = document.getElementById('famillesGrid');
-            
+
             if (filteredFamillesData.length === 0) {
                 grid.innerHTML = `
                     <div class="empty-state col-12">
@@ -651,9 +654,9 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function createPieChart() {
             const ctx = document.getElementById('famillesPieChart');
             if (!famillesData.top_familles || famillesData.top_familles.length === 0) return;
-            
+
             const topFamilles = famillesData.top_familles.slice(0, 5);
-            
+
             new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -682,9 +685,9 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function createBarChart() {
             const ctx = document.getElementById('famillesBarChart');
             if (!famillesData.top_familles || famillesData.top_familles.length === 0) return;
-            
+
             const topFamilles = famillesData.top_familles.slice(0, 10);
-            
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -716,7 +719,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Filtrage des familles
         function filterFamilles(filter) {
             currentFilter = filter;
-            
+
             filteredFamillesData = famillesData.familles_details.filter(famille => {
                 if (filter === 'all') return true;
                 return famille.status === filter;

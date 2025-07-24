@@ -40,7 +40,9 @@ foreach ($seen as $key => $first) {
 $nbDoublons = count($dups);
 
 // Ajout du contrôle d'accès
-if (!isset($_SESSION)) session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/includes/auth.php';
 ?>
 <nav class="sidebar p-3" id="sidebar">
