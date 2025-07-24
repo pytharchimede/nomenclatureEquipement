@@ -1,9 +1,9 @@
 <?php
+session_start();
 require_once 'model/Database.php';
 require_once 'model/Quantitatif.php';
 require_once 'model/Famille.php';
 require_once 'includes/auth.php';
-
 
 $quantitatif = Quantitatif::getAll();
 ?>
@@ -12,31 +12,325 @@ $quantitatif = Quantitatif::getAll();
 
 <head>
     <meta charset="UTF-8">
-    <title>Quantitatif</title>
+    <title>Centre de Gestion Quantitatif - Nomenclature Équipements</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="plugins/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="css/style_dashboard.css" rel="stylesheet">
     <style>
-        .table-quantitatif th,
+        .quantitatif-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .quantitatif-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(180deg);
+            }
+        }
+
+        .import-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin-bottom: 30px;
+        }
+
+        .import-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-zone:hover {
+            border-color: #764ba2;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            transform: scale(1.02);
+        }
+
+        .file-upload-zone.dragover {
+            border-color: #28a745;
+            background: linear-gradient(45deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.05));
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .filter-panel {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .table-quantitatif {
+            margin-bottom: 0;
+        }
+
+        .table-quantitatif th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px;
+        }
+
         .table-quantitatif td {
-            font-size: 0.95em;
+            padding: 12px 15px;
+            border-color: #f0f0f0;
+            vertical-align: middle;
+        }
+
+        .table-quantitatif tbody tr:hover {
+            background: linear-gradient(90deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+        }
+
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .progress-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            min-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-ring {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+        }
+
+        .progress-ring__circle {
+            stroke: #667eea;
+            stroke-linecap: round;
+            stroke-dasharray: 251;
+            stroke-dashoffset: 251;
+            animation: progress-ring 2s ease-in-out;
+        }
+
+        @keyframes progress-ring {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .btn-modern {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-outline-modern {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 10px 23px;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-outline-modern:hover {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-color: transparent;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .btn-floating {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-floating:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .import-history {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .history-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: linear-gradient(45deg, #28a745, #34ce57);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(45deg, #ffc107, #ffcd3a);
+            color: #333;
+        }
+
+        .badge-danger {
+            background: linear-gradient(45deg, #dc3545, #e85563);
+            color: white;
         }
 
         #logContent {
-            background: #f8f9fa;
-            border: 1px solid #b0b0b0;
-            font-family: 'Consolas', 'Courier New', monospace;
-            font-size: 1em;
-            padding: 1em;
+            background: #2d3748;
+            color: #a0aec0;
+            border: 1px solid #4a5568;
+            font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+            font-size: 0.9em;
+            padding: 20px;
             min-height: 200px;
             max-height: 400px;
             overflow-y: auto;
-            color: #222;
-            box-shadow: 0 2px 8px #0001;
-            margin-bottom: 1em;
+            border-radius: 10px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
         }
 
-        #progressContainer {
-            transition: opacity 0.5s;
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            border-bottom: none;
         }
     </style>
 </head>
@@ -45,106 +339,198 @@ $quantitatif = Quantitatif::getAll();
     <div class="d-flex">
         <?php include 'menu.php'; ?>
         <div class="flex-grow-1 content">
-            <div class="container my-5">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="mb-0" style="color:#1976d2;font-weight:700;">Quantitatif</h2>
-                    <form id="importForm" enctype="multipart/form-data" class="d-inline-block">
-                        <label for="quantitatif" class="btn btn-primary mb-0">
-                            <span class="material-icons" style="vertical-align:middle;">upload_file</span>
-                            Importer Excel
-                            <input type="file" name="quantitatif" id="quantitatif" accept=".xlsx" required style="display:none;">
-                        </label>
-                        <a href="logout.php" class="btn btn-outline-primary ms-auto">
-                            <span class="material-icons">logout</span>Déconnexion
-                        </a>
-                    </form>
-                </div>
-                <div id="progressContainer" style="display:none;">
-                    <div class="progress mb-2" style="height:25px;">
-                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%">0%
-                        </div>
+            <!-- Hero Section -->
+            <div class="quantitatif-hero">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="mb-3" style="font-weight: 700; font-size: 2.5rem;">
+                            <span class="material-icons me-3" style="font-size: 3rem; vertical-align: middle;">assessment</span>
+                            Centre de Gestion Quantitatif
+                        </h1>
+                        <p class="mb-0" style="font-size: 1.2rem; opacity: 0.9;">
+                            Gestion avancée des livrables avec import Excel multi-feuilles et traçabilité complète
+                        </p>
                     </div>
-                    <div id="progressText" class="small text-muted"></div>
-                </div>
-                <!-- Modal log -->
-                <div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="logModalLabel">Rapport d'import</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                            </div>
-                            <div class="modal-body">
-                                <pre id="logContent" style="max-height:400px;overflow:auto;"></pre>
-                                <a id="downloadLog" href="#" download="rapport_import.txt" class="btn btn-outline-secondary btn-sm mt-2"
-                                    target="_blank">
-                                    Télécharger le log
-                                </a>
-                                <a id="viewLog" href="#" class="btn btn-outline-info btn-sm mt-2" target="_blank">
-                                    Visualiser dans un nouvel onglet
-                                </a>
-                                <a id="downloadResidu" href="#" download="residu_import.csv" class="btn btn-outline-warning btn-sm mt-2"
-                                    target="_blank" style="display:none;">
-                                    Télécharger le résiduel
-                                </a>
-                            </div>
+                    <div class="col-md-4 text-end">
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="exportations.php" class="btn btn-outline-light">
+                                <span class="material-icons me-2">cloud_download</span>Exports
+                            </a>
+                            <a href="logout.php" class="btn btn-outline-light">
+                                <span class="material-icons me-2">logout</span>Déconnexion
+                            </a>
                         </div>
                     </div>
                 </div>
-                <div class="alert alert-info">
-                    Seules les feuilles contenant toutes les entêtes attendues sont importées.<br>
-                    Le fichier doit contenir une feuille par famille, chaque feuille avec les colonnes attendues.
+            </div>
+
+            <!-- Statistiques -->
+            <div class="stats-grid" id="statsContainer">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalQuantitatif">-</div>
+                    <small class="text-muted">Total Éléments</small>
                 </div>
-                <div class="row mb-3">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalFamilles">-</div>
+                    <small class="text-muted">Familles</small>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalReperes">-</div>
+                    <small class="text-muted">Repères Uniques</small>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUnites">-</div>
+                    <small class="text-muted">Unités Différentes</small>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div class="import-card">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4 class="mb-3" style="color: #667eea; font-weight: 600;">
+                            <span class="material-icons me-2" style="vertical-align: middle;">upload_file</span>
+                            Import de Fichier Excel Multi-Feuilles
+                        </h4>
+                        <div class="file-upload-zone" id="fileUploadZone">
+                            <form id="importForm" enctype="multipart/form-data">
+                                <span class="material-icons mb-3" style="font-size: 4rem; color: #667eea;">cloud_upload</span>
+                                <h5 class="mb-2">Glissez votre fichier Excel ici</h5>
+                                <p class="text-muted mb-3">ou cliquez pour sélectionner un fichier</p>
+                                <input type="file" name="quantitatif" id="quantitatif" accept=".xlsx,.xls" required style="display:none;">
+                                <button type="button" class="btn-modern" onclick="document.getElementById('quantitatif').click()">
+                                    <span class="material-icons">folder_open</span>
+                                    Choisir un fichier
+                                </button>
+                            </form>
+                        </div>
+                        <div class="mt-3">
+                            <div class="alert alert-info border-0" style="background: linear-gradient(45deg, rgba(13, 202, 240, 0.1), rgba(13, 110, 253, 0.1));">
+                                <strong>Format attendu :</strong> Fichier Excel avec une feuille par famille contenant les colonnes :
+                                Unité, Quantité, Repère, et colonnes de suivi (Av. %, Fiches Photos, etc.)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="import-history">
+                            <h6 class="mb-3" style="color: #667eea; font-weight: 600;">
+                                <span class="material-icons me-2" style="font-size: 1.2rem;">history</span>
+                                Historique des Imports
+                            </h6>
+                            <div id="importHistory">
+                                <div class="text-muted text-center py-3">
+                                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.5;">inbox</span>
+                                    <br>Aucun import récent
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="filter-panel">
+                <h5 class="mb-3" style="color: #667eea; font-weight: 600;">
+                    <span class="material-icons me-2" style="vertical-align: middle;">filter_list</span>
+                    Filtres et Actions
+                </h5>
+                <div class="row g-3">
                     <div class="col-md-3">
+                        <label class="form-label small text-muted">Famille</label>
                         <input type="text" id="filterFamille" class="form-control" placeholder="Filtrer par famille">
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label small text-muted">Repère</label>
                         <input type="text" id="filterRepere" class="form-control" placeholder="Filtrer par repère">
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label small text-muted">Unité</label>
                         <input type="text" id="filterUnite" class="form-control" placeholder="Filtrer par unité">
                     </div>
-                    <div class="col-md-3 text-end">
-                        <div class="d-inline-flex">
-                            <button id="exportQuantitatif" class="btn btn-success me-2">
-                                <span class="material-icons" style="vertical-align:middle;">download</span>
-                                Export (CSV)
+                    <div class="col-md-3">
+                        <label class="form-label small text-muted">Actions</label>
+                        <div class="d-flex gap-2">
+                            <button id="normalizeRepere" class="btn-outline-modern" title="Normaliser les repères">
+                                <span class="material-icons">auto_fix_high</span>
                             </button>
-                            <button id="exportQuantitatifExcel" class="btn btn-primary">
-                                <span class="material-icons" style="vertical-align:middle;">table_view</span>
-                                Export (Excel)
-                            </button>
+                            <div class="dropdown">
+                                <button class="btn-modern dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <span class="material-icons">download</span>
+                                    Export
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" id="exportQuantitatif" href="#">
+                                            <span class="material-icons me-2">description</span>CSV
+                                        </a></li>
+                                    <li><a class="dropdown-item" id="exportQuantitatifExcel" href="#">
+                                            <span class="material-icons me-2">table_view</span>Excel
+                                        </a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Table de données -->
+            <div class="data-table">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-quantitatif">
-                        <thead class="table-light">
+                    <table class="table table-quantitatif">
+                        <thead>
                             <tr>
-                                <th>Famille</th>
                                 <th>
-                                    Repère
-                                    <button id="normalizeRepere" type="button" class="btn btn-outline-secondary btn-sm ms-2" title="Normaliser les repères">
-                                        <span class="material-icons" style="font-size:1em;vertical-align:middle;">auto_fix_high</span>
-                                    </button>
+                                    <span class="material-icons me-2" style="vertical-align: middle;">category</span>
+                                    Famille
                                 </th>
-                                <th>Unité</th>
-                                <th>Quantité</th>
+                                <th>
+                                    <span class="material-icons me-2" style="vertical-align: middle;">place</span>
+                                    Repère
+                                </th>
+                                <th>
+                                    <span class="material-icons me-2" style="vertical-align: middle;">straighten</span>
+                                    Unité
+                                </th>
+                                <th>
+                                    <span class="material-icons me-2" style="vertical-align: middle;">numbers</span>
+                                    Quantité
+                                </th>
+                                <th>
+                                    <span class="material-icons me-2" style="vertical-align: middle;">more_horiz</span>
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($quantitatif as $q): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($q['famille'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($q['repere'] ?? '') ?></td>
+                                    <td>
+                                        <span class="badge-status badge-success">
+                                            <?= htmlspecialchars($q['famille'] ?? 'Non défini') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($q['repere'] ?? '') ?></strong>
+                                    </td>
                                     <td><?= htmlspecialchars($q['unite'] ?? '') ?></td>
-                                    <td><?= htmlspecialchars($q['quantite'] ?? '') ?></td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">
+                                            <?= htmlspecialchars($q['quantite'] ?? '') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails(<?= $q['id'] ?>)">
+                                            <span class="material-icons" style="font-size: 1rem;">visibility</span>
+                                        </button>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                             <?php if (empty($quantitatif)): ?>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">Aucune donnée importée.</td>
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        <span class="material-icons mb-2" style="font-size: 3rem; opacity: 0.3;">inventory_2</span>
+                                        <br>Aucune donnée quantitative importée
+                                        <br><small>Importez un fichier Excel pour commencer</small>
+                                    </td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -153,112 +539,417 @@ $quantitatif = Quantitatif::getAll();
             </div>
         </div>
     </div>
-    <script>
-        document.getElementById('quantitatif').addEventListener('change', function(e) {
-            let form = document.getElementById('importForm');
-            let fileInput = document.getElementById('quantitatif');
-            if (!fileInput.files.length) return;
-            let formData = new FormData(form);
-            let xhr = new XMLHttpRequest();
-            let progressBar = document.getElementById('progressBar');
-            let progressContainer = document.getElementById('progressContainer');
-            let progressText = document.getElementById('progressText');
-            progressContainer.style.display = 'block';
-            progressBar.style.width = '0%';
-            progressBar.innerText = '0%';
-            progressText.innerText = 'Envoi du fichier...';
+    <!-- Overlays et Modals -->
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-content">
+            <svg class="progress-ring" width="80" height="80">
+                <circle class="progress-ring__circle" stroke="#667eea" stroke-width="4" fill="transparent" r="36" cx="40" cy="40" />
+            </svg>
+            <h5 class="mb-2">Import en cours...</h5>
+            <div class="progress mb-3" style="height: 8px;">
+                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div>
+            </div>
+            <div id="progressText" class="text-muted">Initialisation...</div>
+        </div>
+    </div>
 
+    <!-- Modal de rapport d'import -->
+    <div class="modal fade" id="logModal" tabindex="-1" aria-labelledby="logModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logModalLabel">
+                        <span class="material-icons me-2">analytics</span>
+                        Rapport d'Import Détaillé
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number text-success" id="importSuccess">0</div>
+                                <small class="text-muted">Lignes Importées</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number text-warning" id="importWarnings">0</div>
+                                <small class="text-muted">Avertissements</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <div class="stat-number text-danger" id="importErrors">0</div>
+                                <small class="text-muted">Erreurs</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6 class="fw-bold">Journal détaillé :</h6>
+                        <pre id="logContent"></pre>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <a id="downloadLog" href="#" download="rapport_import.txt" class="btn-modern">
+                            <span class="material-icons">download</span>
+                            Télécharger le Rapport
+                        </a>
+                        <a id="viewLog" href="#" class="btn-outline-modern" target="_blank">
+                            <span class="material-icons">open_in_new</span>
+                            Ouvrir dans un Nouvel Onglet
+                        </a>
+                        <a id="downloadResidu" href="#" download="residu_import.csv" class="btn-outline-modern" style="display:none;">
+                            <span class="material-icons">warning</span>
+                            Télécharger les Résidus
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de détails d'un élément -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detailModalLabel">
+                        <span class="material-icons me-2">info</span>
+                        Détails de l'Élément
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body" id="detailContent">
+                    <!-- Contenu dynamique -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bouton flottant d'aide -->
+    <div class="floating-action">
+        <button class="btn-floating" data-bs-toggle="modal" data-bs-target="#helpModal" title="Aide">
+            <span class="material-icons">help</span>
+        </button>
+    </div>
+
+    <!-- Modal d'aide -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="helpModalLabel">
+                        <span class="material-icons me-2">help_center</span>
+                        Guide d'Utilisation - Quantitatif
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3">Format de Fichier Excel</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <span class="material-icons text-success me-2" style="font-size: 1rem;">check_circle</span>
+                                    Une feuille par famille d'équipements
+                                </li>
+                                <li class="mb-2">
+                                    <span class="material-icons text-success me-2" style="font-size: 1rem;">check_circle</span>
+                                    Colonnes obligatoires : Unité, Quantité, Repère
+                                </li>
+                                <li class="mb-2">
+                                    <span class="material-icons text-success me-2" style="font-size: 1rem;">check_circle</span>
+                                    Colonnes de suivi optionnelles (Av. %, Fiches Photos, etc.)
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary mb-3">Fonctionnalités</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <span class="material-icons text-info me-2" style="font-size: 1rem;">upload</span>
+                                    Import par glisser-déposer ou sélection
+                                </li>
+                                <li class="mb-2">
+                                    <span class="material-icons text-info me-2" style="font-size: 1rem;">filter_list</span>
+                                    Filtrage avancé par famille, repère, unité
+                                </li>
+                                <li class="mb-2">
+                                    <span class="material-icons text-info me-2" style="font-size: 1rem;">auto_fix_high</span>
+                                    Normalisation automatique des repères
+                                </li>
+                                <li class="mb-2">
+                                    <span class="material-icons text-info me-2" style="font-size: 1rem;">download</span>
+                                    Export CSV et Excel avec filtres appliqués
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <strong>Astuce :</strong> Le système détecte automatiquement les feuilles valides dans votre fichier Excel
+                        et importe uniquement celles contenant les colonnes requises.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="plugins/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script>
+        // Variables globales
+        let uploadInProgress = false;
+
+        // Chargement des statistiques
+        async function loadStats() {
+            try {
+                const response = await fetch('api/quantitatif_stats.php');
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('totalQuantitatif').textContent = data.stats.total_elements || '0';
+                    document.getElementById('totalFamilles').textContent = data.stats.total_familles || '0';
+                    document.getElementById('totalReperes').textContent = data.stats.total_reperes || '0';
+                    document.getElementById('totalUnites').textContent = data.stats.total_unites || '0';
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des statistiques:', error);
+            }
+        }
+
+        // Chargement de l'historique des imports
+        async function loadImportHistory() {
+            try {
+                const response = await fetch('api/quantitatif_history.php');
+                const data = await response.json();
+
+                if (data.success && data.history.length > 0) {
+                    const historyContainer = document.getElementById('importHistory');
+                    historyContainer.innerHTML = data.history.map(item => `
+                        <div class="history-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold">${item.filename}</div>
+                                    <small class="text-muted">${item.date}</small>
+                                </div>
+                                <span class="badge-status ${item.status === 'success' ? 'badge-success' : 'badge-warning'}">
+                                    ${item.status === 'success' ? 'Réussi' : 'Partiel'}
+                                </span>
+                            </div>
+                            <div class="mt-2">
+                                <small>${item.lines_imported} lignes importées</small>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement de l\'historique:', error);
+            }
+        }
+
+        // Gestion du drag & drop
+        function setupDragAndDrop() {
+            const uploadZone = document.getElementById('fileUploadZone');
+            const fileInput = document.getElementById('quantitatif');
+
+            uploadZone.addEventListener('click', () => {
+                if (!uploadInProgress) {
+                    fileInput.click();
+                }
+            });
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+
+                if (!uploadInProgress && e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                        fileInput.files = e.dataTransfer.files;
+                        handleFileUpload();
+                    } else {
+                        alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+                    }
+                }
+            });
+        }
+
+        // Gestion de l'upload de fichier
+        function handleFileUpload() {
+            const form = document.getElementById('importForm');
+            const fileInput = document.getElementById('quantitatif');
+
+            if (!fileInput.files.length || uploadInProgress) return;
+
+            uploadInProgress = true;
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+
+            // Affichage de l'overlay de progression
+            const overlay = document.getElementById('progressOverlay');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            overlay.style.display = 'flex';
+
+            // Gestion de la progression
             xhr.upload.onprogress = function(e) {
                 if (e.lengthComputable) {
-                    let percent = Math.round((e.loaded / e.total) * 100);
+                    const percent = Math.round((e.loaded / e.total) * 100);
                     progressBar.style.width = percent + '%';
-                    progressBar.innerText = percent + '%';
+                    if (percent < 100) {
+                        progressText.textContent = `Envoi du fichier... ${percent}%`;
+                    }
                 }
             };
-            xhr.onloadstart = function() {
-                progressBar.style.width = '0%';
-                progressBar.innerText = '0%';
-                progressText.innerText = 'Envoi du fichier...';
-            };
+
             xhr.onload = function() {
                 progressBar.style.width = '100%';
-                progressBar.innerText = '100%';
-                progressText.innerText = 'Traitement terminé';
+                progressText.textContent = 'Traitement des données...';
             };
+
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
-                    progressBar.style.width = '100%';
-                    progressBar.innerText = '100%';
-                    progressText.innerText = 'Traitement terminé';
+                    uploadInProgress = false;
+                    overlay.style.display = 'none';
 
-                    let resp = JSON.parse(xhr.responseText);
+                    try {
+                        const resp = JSON.parse(xhr.responseText);
+                        showImportResults(resp);
 
-                    // Affiche le log dans la modale, scroll auto
-                    let logModal = new bootstrap.Modal(document.getElementById('logModal'));
-                    let logContent = document.getElementById('logContent');
-                    logContent.textContent = resp.log_txt;
-                    logContent.scrollTop = logContent.scrollHeight;
-
-                    // Fournir le vrai log.txt du serveur si dispo
-                    let downloadLog = document.getElementById('downloadLog');
-                    let viewLog = document.getElementById('viewLog');
-                    if (resp.log_url) {
-                        downloadLog.href = resp.log_url;
-                        viewLog.href = resp.log_url;
-                    } else {
-                        // fallback blob
-                        let blob = new Blob([resp.log_txt], {
-                            type: "text/plain"
-                        });
-                        let url = URL.createObjectURL(blob);
-                        downloadLog.href = url;
-                        viewLog.href = url;
-                    }
-
-                    // Résiduel
-                    let residuBtn = document.getElementById('downloadResidu');
-                    if (resp.residu_url) {
-                        residuBtn.href = resp.residu_url;
-                        residuBtn.style.display = '';
-                    } else {
-                        residuBtn.style.display = 'none';
-                    }
-
-                    logModal.show();
-
-                    // Compte à rebours avant disparition de la jauge
-                    let seconds = 5;
-                    progressText.innerHTML = 'Traitement terminé<br>Fermeture de la jauge dans <span id="countdown">' + seconds + '</span> sec...';
-                    let countdown = setInterval(function() {
-                        seconds--;
-                        document.getElementById('countdown').innerText = seconds;
-                        if (seconds <= 0) {
-                            clearInterval(countdown);
-                            progressContainer.style.display = 'none';
+                        // Recharger les données après un import réussi
+                        if (resp.success) {
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 3000);
                         }
-                    }, 1000);
-
-                    // Recharge la page après import pour afficher les nouvelles données
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 5000);
+                    } catch (error) {
+                        alert('Erreur lors du traitement de la réponse du serveur');
+                        console.error('Erreur parsing JSON:', error);
+                    }
                 }
             };
+
+            xhr.onerror = function() {
+                uploadInProgress = false;
+                overlay.style.display = 'none';
+                alert('Erreur lors de l\'envoi du fichier');
+            };
+
             xhr.open('POST', 'request/import_quantitatif_ajax.php', true);
             xhr.send(formData);
-        });
+        }
 
-        document.getElementById('normalizeRepere').addEventListener('click', function() {
-            let rows = document.querySelectorAll('.table-quantitatif tbody tr');
-            let updates = [];
+        // Affichage des résultats d'import
+        function showImportResults(response) {
+            const logModal = new bootstrap.Modal(document.getElementById('logModal'));
+            const logContent = document.getElementById('logContent');
+
+            // Mise à jour des statistiques du modal
+            document.getElementById('importSuccess').textContent = response.stats?.success || '0';
+            document.getElementById('importWarnings').textContent = response.stats?.warnings || '0';
+            document.getElementById('importErrors').textContent = response.stats?.errors || '0';
+
+            // Affichage du log
+            logContent.textContent = response.log_txt || 'Aucun log disponible';
+            logContent.scrollTop = logContent.scrollHeight;
+
+            // Configuration des liens de téléchargement
+            const downloadLog = document.getElementById('downloadLog');
+            const viewLog = document.getElementById('viewLog');
+            const residuBtn = document.getElementById('downloadResidu');
+
+            if (response.log_url) {
+                downloadLog.href = response.log_url;
+                viewLog.href = response.log_url;
+            } else {
+                const blob = new Blob([response.log_txt], {
+                    type: "text/plain"
+                });
+                const url = URL.createObjectURL(blob);
+                downloadLog.href = url;
+                viewLog.href = url;
+            }
+
+            if (response.residu_url) {
+                residuBtn.href = response.residu_url;
+                residuBtn.style.display = '';
+            } else {
+                residuBtn.style.display = 'none';
+            }
+
+            logModal.show();
+        }
+
+        // Fonction pour voir les détails d'un élément
+        async function viewDetails(id) {
+            try {
+                const response = await fetch(`api/quantitatif_details.php?id=${id}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    const detailContent = document.getElementById('detailContent');
+                    detailContent.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-primary mb-3">Informations Principales</h6>
+                                <table class="table table-sm">
+                                    <tr><td class="fw-bold">Famille:</td><td>${data.item.famille || 'Non définie'}</td></tr>
+                                    <tr><td class="fw-bold">Repère:</td><td>${data.item.repere || 'Non défini'}</td></tr>
+                                    <tr><td class="fw-bold">Unité:</td><td>${data.item.unite || 'Non définie'}</td></tr>
+                                    <tr><td class="fw-bold">Quantité:</td><td>${data.item.quantite || 'Non définie'}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-primary mb-3">Données Additionnelles</h6>
+                                <div class="bg-light p-3 rounded">
+                                    ${data.item.autres_colonnes ? 
+                                        Object.entries(JSON.parse(data.item.autres_colonnes))
+                                            .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
+                                            .join('') 
+                                        : 'Aucune donnée additionnelle'
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+                    detailModal.show();
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des détails:', error);
+                alert('Erreur lors du chargement des détails');
+            }
+        }
+
+        // Normalisation des repères
+        async function normalizeReperes() {
+            const rows = document.querySelectorAll('.table-quantitatif tbody tr');
+            const updates = [];
+
             rows.forEach(row => {
-                let tds = row.querySelectorAll('td');
+                const tds = row.querySelectorAll('td');
                 if (tds.length < 2) return;
-                let famille = tds[0].textContent;
-                let repere = tds[1].textContent;
-                let repereNormalise = repere.replace(/\s+/g, '');
+
+                const famille = tds[0].textContent.trim();
+                const repere = tds[1].textContent.trim();
+                const repereNormalise = repere.replace(/\s+/g, '');
+
                 if (repere !== repereNormalise && repereNormalise !== '') {
-                    tds[1].textContent = repereNormalise;
+                    tds[1].innerHTML = `<strong>${repereNormalise}</strong>`;
                     updates.push({
                         famille: famille,
                         repere: repere,
@@ -266,8 +957,10 @@ $quantitatif = Quantitatif::getAll();
                     });
                 }
             });
+
             if (updates.length > 0) {
-                fetch('request/normalize_reperes.php', {
+                try {
+                    const response = await fetch('request/normalize_reperes.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -275,68 +968,110 @@ $quantitatif = Quantitatif::getAll();
                         body: JSON.stringify({
                             updates: updates
                         })
-                    })
-                    .then(r => r.json())
-                    .then(resp => {
-                        if (resp.success) {
-                            alert('Normalisation terminée et enregistrée en base.');
-                        } else {
-                            alert('Erreur lors de la mise à jour en base : ' + resp.message);
-                        }
-                    })
-                    .catch(() => alert('Erreur réseau lors de la normalisation.'));
-            }
-        });
+                    });
 
+                    const result = await response.json();
+                    if (result.success) {
+                        alert(`✅ ${updates.length} repères normalisés avec succès !`);
+                    } else {
+                        alert('❌ Erreur lors de la normalisation: ' + result.message);
+                    }
+                } catch (error) {
+                    alert('❌ Erreur réseau lors de la normalisation');
+                    console.error('Erreur:', error);
+                }
+            } else {
+                alert('ℹ️ Aucun repère à normaliser trouvé');
+            }
+        }
+
+        // Filtrage de la table
         function filterTable() {
-            let famille = document.getElementById('filterFamille').value.toLowerCase();
-            let repere = document.getElementById('filterRepere').value.toLowerCase();
-            let unite = document.getElementById('filterUnite').value.toLowerCase();
-            let rows = document.querySelectorAll('.table-quantitatif tbody tr');
+            const famille = document.getElementById('filterFamille').value.toLowerCase();
+            const repere = document.getElementById('filterRepere').value.toLowerCase();
+            const unite = document.getElementById('filterUnite').value.toLowerCase();
+            const rows = document.querySelectorAll('.table-quantitatif tbody tr');
+
+            let visibleCount = 0;
+
             rows.forEach(row => {
-                let tds = row.querySelectorAll('td');
-                if (tds.length < 4) return; // ignore "aucune donnée"
+                const tds = row.querySelectorAll('td');
+                if (tds.length < 4) return;
+
                 let show = true;
                 if (famille && !tds[0].textContent.toLowerCase().includes(famille)) show = false;
                 if (repere && !tds[1].textContent.toLowerCase().includes(repere)) show = false;
                 if (unite && !tds[2].textContent.toLowerCase().includes(unite)) show = false;
+
                 row.style.display = show ? '' : 'none';
+                if (show) visibleCount++;
             });
+
+            // Mise à jour du compteur de résultats
+            const totalRows = rows.length - (document.querySelector('.table-quantitatif tbody tr td[colspan]') ? 1 : 0);
+            console.log(`Filtrage: ${visibleCount}/${totalRows} éléments affichés`);
         }
-        ['filterFamille', 'filterRepere', 'filterUnite'].forEach(id => {
-            document.getElementById(id).addEventListener('input', filterTable);
-        });
 
         // Export CSV
-        document.getElementById('exportQuantitatif').addEventListener('click', function() {
-            let rows = document.querySelectorAll('.table-quantitatif tr');
-            let csv = [];
+        function exportCSV() {
+            const rows = document.querySelectorAll('.table-quantitatif tr');
+            const csv = [];
+
             rows.forEach(row => {
                 if (row.style.display === 'none') return;
-                let cols = Array.from(row.querySelectorAll('th,td')).map(td =>
-                    '"' + td.textContent.replace(/"/g, '""') + '"'
+                const cols = Array.from(row.querySelectorAll('th,td')).slice(0, 4).map(td =>
+                    '"' + td.textContent.replace(/"/g, '""').trim() + '"'
                 );
-                csv.push(cols.join(';'));
+                if (cols.length > 0 && !cols[0].includes('colspan')) {
+                    csv.push(cols.join(';'));
+                }
             });
-            let blob = new Blob([csv.join('\r\n')], {
-                type: 'text/csv'
+
+            const blob = new Blob([csv.join('\r\n')], {
+                type: 'text/csv;charset=utf-8;'
             });
-            let url = URL.createObjectURL(blob);
-            let a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
             a.href = url;
-            a.download = 'quantitatif_export.csv';
+            a.download = `quantitatif_export_${new Date().toISOString().split('T')[0]}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        // Export Excel
+        function exportExcel() {
+            window.open('request/export_quantitatif_excel.php', '_blank');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chargement initial des données
+            loadStats();
+            loadImportHistory();
+
+            // Configuration du drag & drop
+            setupDragAndDrop();
+
+            // Event listeners pour les boutons et inputs
+            document.getElementById('quantitatif').addEventListener('change', handleFileUpload);
+            document.getElementById('normalizeRepere').addEventListener('click', normalizeReperes);
+            document.getElementById('exportQuantitatif').addEventListener('click', exportCSV);
+            document.getElementById('exportQuantitatifExcel').addEventListener('click', exportExcel);
+
+            // Event listeners pour les filtres
+            ['filterFamille', 'filterRepere', 'filterUnite'].forEach(id => {
+                document.getElementById(id).addEventListener('input', filterTable);
+            });
+
+            // Actualisation périodique des statistiques
+            setInterval(loadStats, 30000); // Toutes les 30 secondes
         });
 
-        // Export Excel (XLSX)
-        document.getElementById('exportQuantitatifExcel').addEventListener('click', function() {
-            window.open('request/export_quantitatif_excel.php', '_blank');
-        });
+        // Fonction globale pour les détails (accessible depuis le HTML)
+        window.viewDetails = viewDetails;
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 </body>
 
 </html>
