@@ -7,20 +7,20 @@ header('Content-Type: application/json');
 try {
     $pdo = Database::getConnection();
 
-    // Statistiques générales pour les données RGM dans la table nomenclatures
-    $totalElements = $pdo->query("SELECT COUNT(*) as total FROM nomenclatures WHERE source = 'RGM'")->fetch()['total'];
+    // Statistiques générales pour les données RGM dans la table rgm_synthese
+    $totalElements = $pdo->query("SELECT COUNT(*) as total FROM rgm_synthese")->fetch()['total'];
 
-    $totalDesignations = $pdo->query("SELECT COUNT(DISTINCT designation_article) as total FROM nomenclatures WHERE source = 'RGM' AND designation_article IS NOT NULL AND designation_article != ''")->fetch()['total'];
+    $totalDesignations = $pdo->query("SELECT COUNT(DISTINCT designation_article) as total FROM rgm_synthese WHERE designation_article IS NOT NULL AND designation_article != ''")->fetch()['total'];
 
-    $totalReperes = $pdo->query("SELECT COUNT(DISTINCT repere_equipement) as total FROM nomenclatures WHERE source = 'RGM' AND repere_equipement IS NOT NULL AND repere_equipement != ''")->fetch()['total'];
+    $totalReperes = $pdo->query("SELECT COUNT(DISTINCT repere_equipement) as total FROM rgm_synthese WHERE repere_equipement IS NOT NULL AND repere_equipement != ''")->fetch()['total'];
 
-    $totalUnites = $pdo->query("SELECT COUNT(DISTINCT unite) as total FROM nomenclatures WHERE source = 'RGM' AND unite IS NOT NULL AND unite != ''")->fetch()['total'];
+    $totalUnites = $pdo->query("SELECT COUNT(DISTINCT unite) as total FROM rgm_synthese WHERE unite IS NOT NULL AND unite != ''")->fetch()['total'];
 
     // Top désignations pour les données RGM
     $topDesignations = $pdo->query("
         SELECT designation_article, COUNT(*) as count 
-        FROM nomenclatures 
-        WHERE source = 'RGM' AND designation_article IS NOT NULL AND designation_article != ''
+        FROM rgm_synthese 
+        WHERE designation_article IS NOT NULL AND designation_article != ''
         GROUP BY designation_article 
         ORDER BY count DESC 
         LIMIT 5
@@ -29,27 +29,30 @@ try {
     // Top unités pour les données RGM
     $topUnites = $pdo->query("
         SELECT unite, COUNT(*) as count 
-        FROM nomenclatures 
-        WHERE source = 'RGM' AND unite IS NOT NULL AND unite != ''
+        FROM rgm_synthese 
+        WHERE unite IS NOT NULL AND unite != ''
         GROUP BY unite 
         ORDER BY count DESC 
         LIMIT 5
     ")->fetchAll(PDO::FETCH_ASSOC);
 
-    // Répartition par source (toutes sources confondues pour comparaison)
+    // Répartition par source (comparaison avec nomenclatures)
     $sources = $pdo->query("
+        SELECT 'RGM' as source, COUNT(*) as count FROM rgm_synthese
+        UNION ALL
         SELECT source, COUNT(*) as count 
         FROM nomenclatures 
+        WHERE source != 'RGM'
         GROUP BY source 
         ORDER BY count DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 
     // Import récents RGM (7 derniers jours)
     $recentImports = $pdo->query("
-        SELECT DATE(date_creation) as date, COUNT(*) as count 
-        FROM nomenclatures 
-        WHERE source = 'RGM' AND date_creation >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY DATE(date_creation) 
+        SELECT DATE(date_import) as date, COUNT(*) as count 
+        FROM rgm_synthese 
+        WHERE date_import >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(date_import) 
         ORDER BY date DESC
     ")->fetchAll(PDO::FETCH_ASSOC);
 

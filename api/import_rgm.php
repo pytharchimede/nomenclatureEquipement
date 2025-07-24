@@ -214,8 +214,8 @@ function checkExistingRgmEntry($repereEquipement, $codeArticle)
     try {
         $pdo = Database::getConnection();
         $stmt = $pdo->prepare("
-            SELECT id FROM nomenclatures 
-            WHERE repere_equipement = ? AND code_article = ? AND source = 'RGM'
+            SELECT id FROM rgm_synthese 
+            WHERE repere_equipement = ? AND code_article = ?
             LIMIT 1
         ");
         $stmt->execute([$repereEquipement, $codeArticle]);
@@ -231,21 +231,42 @@ function updateRgmEntry($id, $data)
 {
     try {
         $pdo = Database::getConnection();
+
+        // Mise à jour dans rgm_synthese
+        $stmt = $pdo->prepare("
+            UPDATE rgm_synthese SET 
+                designation_article = ?,
+                quantite = ?,
+                unite = ?,
+                date_import = NOW()
+            WHERE id = ?
+        ");
+        $rgmUpdated = $stmt->execute([
+            $data['designation_article'],
+            $data['quantite'],
+            $data['unite'],
+            $id
+        ]);
+
+        // Mise à jour également dans nomenclatures (si elle existe)
         $stmt = $pdo->prepare("
             UPDATE nomenclatures SET 
                 designation_article = ?,
                 quantite = ?,
                 unite = ?,
                 date_creation = ?
-            WHERE id = ?
+            WHERE repere_equipement = ? AND code_article = ? AND source = 'RGM'
         ");
-        return $stmt->execute([
+        $stmt->execute([
             $data['designation_article'],
             $data['quantite'],
             $data['unite'],
             $data['date_creation'],
-            $id
+            $data['repere_equipement'],
+            $data['code_article']
         ]);
+
+        return $rgmUpdated;
     } catch (Exception $e) {
         error_log("Erreur updateRgmEntry: " . $e->getMessage());
         return false;
@@ -256,6 +277,9 @@ function insertNewRgmEntry($data)
 {
     try {
         $pdo = Database::getConnection();
+
+        // Commencer une transaction pour s'assurer de la cohérence
+        $pdo->beginTransaction();
 
         // D'abord, vérifier si l'article existe, sinon le créer
         $stmt = $pdo->prepare("SELECT id FROM articles WHERE code_article = ?");
@@ -276,23 +300,49 @@ function insertNewRgmEntry($data)
             ]);
         }
 
-        // Maintenant insérer dans nomenclatures
+        // 1. Insérer dans rgm_synthese (table dédiée)
+        $stmt = $pdo->prepare("
+            INSERT INTO rgm_synthese (
+                repere_equipement, code_article, designation_article, 
+                quantite, unite, source, date_import
+            ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $rgmInserted = $stmt->execute([
+            $data['repere_equipement'],
+            $data['code_article'],
+            $data['designation_article'],
+            $data['quantite'],
+            $data['unite'],
+            'RGM'
+        ]);
+
+        // 2. Insérer également dans nomenclatures (pour intégration globale)
         $stmt = $pdo->prepare("
             INSERT INTO nomenclatures (
                 repere_equipement, code_article, designation_article, 
                 quantite, unite, source, date_creation
             ) VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([
+        $nomenclatureInserted = $stmt->execute([
             $data['repere_equipement'],
             $data['code_article'],
             $data['designation_article'],
             $data['quantite'],
             $data['unite'],
-            $data['source'],
+            'RGM',
             $data['date_creation']
         ]);
+
+        // Valider la transaction seulement si les deux insertions ont réussi
+        if ($rgmInserted && $nomenclatureInserted) {
+            $pdo->commit();
+            return true;
+        } else {
+            $pdo->rollback();
+            return false;
+        }
     } catch (Exception $e) {
+        $pdo->rollback();
         error_log("Erreur insertNewRgmEntry: " . $e->getMessage());
         return false;
     }

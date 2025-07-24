@@ -15,7 +15,7 @@ try {
         return !empty(trim($value));
     });
 
-    // Récupération de toutes les données RGM depuis la table nomenclatures
+    // Récupération de toutes les données RGM depuis la table rgm_synthese
     $data = getRgmExportData($filters);
 
     // Nom du fichier avec timestamp
@@ -54,7 +54,7 @@ try {
             $row['quantite'] ?? 0,
             $row['unite'] ?? '',
             $row['source'] ?? 'RGM',
-            isset($row['date_creation']) ? date('d/m/Y', strtotime($row['date_creation'])) : ''
+            isset($row['date_import']) ? date('d/m/Y', strtotime($row['date_import'])) : ''
         ];
         fputcsv($output, $csvRow, ';');
     }
@@ -71,7 +71,7 @@ function getRgmExportData($filters)
 {
     $pdo = Database::getConnection();
 
-    $whereConditions = ["source = 'RGM'"];
+    $whereConditions = [];
     $params = [];
 
     // Construction des conditions WHERE
@@ -92,14 +92,14 @@ function getRgmExportData($filters)
         $params[] = $filters['unite'];
     }
 
-    $whereClause = "WHERE " . implode(" AND ", $whereConditions);
+    $whereClause = empty($whereConditions) ? "" : "WHERE " . implode(" AND ", $whereConditions);
 
     $sql = "
         SELECT repere_equipement, code_article, designation_article, 
-               quantite, unite, source, date_creation
-        FROM nomenclatures 
+               quantite, unite, source, date_import
+        FROM rgm_synthese 
         {$whereClause}
-        ORDER BY date_creation DESC, repere_equipement ASC
+        ORDER BY date_import DESC, repere_equipement ASC
     ";
 
     $stmt = $pdo->prepare($sql);

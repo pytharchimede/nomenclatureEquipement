@@ -61,7 +61,7 @@ function getRgmPaginatedData($page, $limit, $filters)
     $pdo = Database::getConnection();
 
     $offset = ($page - 1) * $limit;
-    $whereConditions = ["source = 'RGM'"];
+    $whereConditions = [];
     $params = [];
 
     // Construction des conditions WHERE
@@ -82,14 +82,14 @@ function getRgmPaginatedData($page, $limit, $filters)
         $params[] = $filters['unite'];
     }
 
-    $whereClause = "WHERE " . implode(" AND ", $whereConditions);
+    $whereClause = empty($whereConditions) ? "" : "WHERE " . implode(" AND ", $whereConditions);
 
     $sql = "
         SELECT id, repere_equipement, code_article, designation_article, 
-               quantite, unite, date_creation
-        FROM nomenclatures 
+               quantite, unite, date_import as date_creation
+        FROM rgm_synthese 
         {$whereClause}
-        ORDER BY date_creation DESC, id DESC
+        ORDER BY date_import DESC, id DESC
         LIMIT {$limit} OFFSET {$offset}
     ";
 
@@ -110,7 +110,7 @@ function getRgmTotalCount($filters)
 {
     $pdo = Database::getConnection();
 
-    $whereConditions = ["source = 'RGM'"];
+    $whereConditions = [];
     $params = [];
 
     // Construction des conditions WHERE (même logique que getRgmPaginatedData)
@@ -131,9 +131,9 @@ function getRgmTotalCount($filters)
         $params[] = $filters['unite'];
     }
 
-    $whereClause = "WHERE " . implode(" AND ", $whereConditions);
+    $whereClause = empty($whereConditions) ? "" : "WHERE " . implode(" AND ", $whereConditions);
 
-    $sql = "SELECT COUNT(*) FROM nomenclatures {$whereClause}";
+    $sql = "SELECT COUNT(*) FROM rgm_synthese {$whereClause}";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

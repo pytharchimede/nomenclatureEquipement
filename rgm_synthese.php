@@ -6,7 +6,7 @@ require_once 'includes/auth.php';
 
 // Chargement initial des premières données RGM (pour éviter l'écran vide)
 $pdo = Database::getConnection();
-$stmt = $pdo->prepare("SELECT * FROM nomenclatures WHERE source = 'RGM' ORDER BY date_creation DESC LIMIT 50");
+$stmt = $pdo->prepare("SELECT * FROM rgm_synthese ORDER BY date_import DESC LIMIT 50");
 $stmt->execute();
 $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
