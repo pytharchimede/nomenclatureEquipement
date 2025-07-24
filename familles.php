@@ -60,9 +60,12 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: scale(1) rotate(0deg);
             }
+
             50% {
                 transform: scale(1.1) rotate(180deg);
             }
@@ -199,6 +202,18 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             padding: 25px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
             margin-bottom: 25px;
+            position: relative;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .chart-wrapper canvas {
+            max-height: 300px !important;
+            width: 100% !important;
         }
 
         .filter-panel {
@@ -425,7 +440,9 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="material-icons" style="vertical-align: middle;">pie_chart</i>
                                 Répartition par Famille
                             </h6>
-                            <canvas id="famillesPieChart" width="400" height="200"></canvas>
+                            <div class="chart-wrapper">
+                                <canvas id="famillesPieChart"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -434,7 +451,9 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <i class="material-icons" style="vertical-align: middle;">bar_chart</i>
                                 Top 10 Familles
                             </h6>
-                            <canvas id="famillesBarChart" width="400" height="200"></canvas>
+                            <div class="chart-wrapper">
+                                <canvas id="famillesBarChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -455,7 +474,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="family-grid" id="famillesGrid">
                         <!-- Données chargées dynamiquement -->
                         <div class="text-center py-5">
@@ -481,6 +500,8 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         let filteredFamillesData = [];
         let currentFilter = 'all';
         let currentSort = 'elements';
+        let pieChart = null;
+        let barChart = null;
 
         // Chargement des données
         async function loadFamillesData() {
@@ -491,7 +512,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if (data.success) {
                     famillesData = data.stats;
                     filteredFamillesData = [...famillesData.familles_details];
-                    
+
                     updateStats();
                     updateInsights();
                     renderFamillesGrid();
@@ -510,7 +531,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('totalFamillesDefinies').textContent = famillesData.total_familles_definies || '0';
             document.getElementById('totalFamillesUtilisees').textContent = famillesData.total_familles_utilisees || '0';
             document.getElementById('totalElements').textContent = numberWithCommas(famillesData.total_elements || '0');
-            
+
             // Famille leader
             if (famillesData.top_familles && famillesData.top_familles.length > 0) {
                 document.getElementById('familleTop').textContent = famillesData.top_familles[0].famille;
@@ -521,7 +542,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function updateInsights() {
             const insightsList = document.getElementById('insightsList');
             const insights = generateInsights();
-            
+
             insightsList.innerHTML = insights.map(insight => `
                 <div class="insight-item">
                     <div class="insight-icon">
@@ -538,7 +559,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Génération d'insights intelligents
         function generateInsights() {
             const insights = [];
-            
+
             // Taux d'utilisation
             const tauxUtilisation = (famillesData.total_familles_utilisees / famillesData.total_familles_definies * 100).toFixed(1);
             insights.push({
@@ -573,7 +594,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Rendu de la grille des familles
         function renderFamillesGrid() {
             const grid = document.getElementById('famillesGrid');
-            
+
             if (filteredFamillesData.length === 0) {
                 grid.innerHTML = `
                     <div class="empty-state col-12">
@@ -643,6 +664,16 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Création des graphiques
         function createCharts() {
+            // Détruire les anciens graphiques s'ils existent
+            if (pieChart) {
+                pieChart.destroy();
+                pieChart = null;
+            }
+            if (barChart) {
+                barChart.destroy();
+                barChart = null;
+            }
+
             createPieChart();
             createBarChart();
         }
@@ -651,10 +682,10 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function createPieChart() {
             const ctx = document.getElementById('famillesPieChart');
             if (!famillesData.top_familles || famillesData.top_familles.length === 0) return;
-            
+
             const topFamilles = famillesData.top_familles.slice(0, 5);
-            
-            new Chart(ctx, {
+
+            pieChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: topFamilles.map(f => f.famille),
@@ -663,16 +694,25 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         backgroundColor: [
                             '#667eea', '#764ba2', '#28a745', '#ffc107', '#dc3545'
                         ],
-                        borderWidth: 0
+                        borderWidth: 0,
+                        hoverOffset: 10
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.5,
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
                         }
+                    },
+                    layout: {
+                        padding: 10
                     }
                 }
             });
@@ -682,10 +722,10 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function createBarChart() {
             const ctx = document.getElementById('famillesBarChart');
             if (!famillesData.top_familles || famillesData.top_familles.length === 0) return;
-            
+
             const topFamilles = famillesData.top_familles.slice(0, 10);
-            
-            new Chart(ctx, {
+
+            barChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: topFamilles.map(f => f.famille),
@@ -693,12 +733,15 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         label: 'Nombre d\'éléments',
                         data: topFamilles.map(f => f.count_elements),
                         backgroundColor: '#667eea',
-                        borderRadius: 5
+                        borderRadius: 5,
+                        borderSkipped: false,
+                        hoverBackgroundColor: '#764ba2'
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1.5,
                     plugins: {
                         legend: {
                             display: false
@@ -706,8 +749,30 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     },
                     scales: {
                         y: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.1)'
+                            },
+                            ticks: {
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxRotation: 45,
+                                font: {
+                                    size: 11
+                                }
+                            }
                         }
+                    },
+                    layout: {
+                        padding: 10
                     }
                 }
             });
@@ -716,7 +781,7 @@ $topFamilles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         // Filtrage des familles
         function filterFamilles(filter) {
             currentFilter = filter;
-            
+
             filteredFamillesData = famillesData.familles_details.filter(famille => {
                 if (filter === 'all') return true;
                 return famille.status === filter;

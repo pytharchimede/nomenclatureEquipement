@@ -88,18 +88,18 @@ try {
     ");
     $stats['unites_par_famille'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Statistiques d'évolution (derniers imports par famille)
+    // Statistiques d'évolution (remplacé par top familles par quantité)
     $stmt = $pdo->query("
         SELECT 
             famille,
-            DATE(date_import) as date_import,
-            COUNT(*) as elements_importes
+            'Récent' as periode,
+            COUNT(*) as elements_importes,
+            SUM(CAST(quantite AS UNSIGNED)) as total_quantite_periode
         FROM quantitatif 
         WHERE famille IS NOT NULL AND famille != ''
-        AND date_import >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY famille, DATE(date_import)
-        ORDER BY date_import DESC, elements_importes DESC
-        LIMIT 20
+        GROUP BY famille
+        ORDER BY total_quantite_periode DESC, elements_importes DESC
+        LIMIT 10
     ");
     $stats['evolution_recente'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
