@@ -113,6 +113,19 @@ require_once __DIR__ . '/includes/auth.php';
                 Quantitatif
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('rgm_synthese.php'); ?>" href="rgm_synthese.php">
+                <span class="material-icons">table_view</span>
+                Synthèse RGM
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo isActive('compilation_template.php'); ?>" href="compilation_template.php">
+                <span class="material-icons">table_view</span>
+                Compilation Template SPL
+            </a>
+        </li>
         <li class="nav-item">
             <a class="nav-link <?php echo isActive('utilisateurs.php'); ?>" href="utilisateurs.php">
                 <span class="material-icons">people</span>
@@ -129,18 +142,6 @@ require_once __DIR__ . '/includes/auth.php';
             <a class="nav-link <?php echo isActive('profil.php'); ?>" href="profil.php">
                 <span class="material-icons">account_circle</span>
                 Mon profil
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?php echo isActive('rgm_synthese.php'); ?>" href="rgm_synthese.php">
-                <span class="material-icons">table_view</span>
-                Synthèse RGM
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?php echo isActive('compilation_template.php'); ?>" href="compilation_template.php">
-                <span class="material-icons">table_view</span>
-                Compilation Template SPL
             </a>
         </li>
         <li class="nav-item mt-3">

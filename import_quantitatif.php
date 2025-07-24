@@ -132,6 +132,68 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            height: 600px;
+            /* Hauteur fixe pour la box */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Scrollbar personnalisée pour le container */
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #5a6fd8, #6a4190);
+        }
+
+        /* Animation pour indiquer le défilement possible */
+        .scroll-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            animation: fadeInOut 3s infinite;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInOut {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Masquer l'indicateur quand on scroll */
+        .table-container.scrolled .scroll-hint {
+            display: none;
         }
 
         .table-quantitatif {
@@ -144,6 +206,9 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
             border: none;
             font-weight: 600;
             padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .table-quantitatif td {
@@ -333,6 +398,46 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
             border-radius: 20px 20px 0 0;
             border-bottom: none;
         }
+
+        .table-info-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 15px 20px;
+            flex-shrink: 0;
+            border-radius: 15px 15px 0 0;
+        }
+
+        /* Animation pour indiquer le défilement possible */
+        .scroll-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            animation: fadeInOut 3s infinite;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInOut {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Masquer l'indicateur quand on scroll */
+        .table-container.scrolled .scroll-hint {
+            display: none;
+        }
     </style>
 </head>
 
@@ -475,8 +580,8 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
 
             <!-- Table de données -->
             <div class="data-table">
-                <!-- Indicateur de chargement et informations -->
-                <div class="d-flex justify-content-between align-items-center p-3 bg-light border-bottom">
+                <!-- Barre d'informations fixe en haut -->
+                <div class="table-info-bar d-flex justify-content-between align-items-center">
                     <div id="tableInfo" class="text-muted">
                         <span class="material-icons me-2" style="vertical-align: middle;">info</span>
                         Chargement des données...
@@ -487,7 +592,14 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
                     </div>
                 </div>
 
-                <div class="table-responsive">
+                <!-- Container avec défilement -->
+                <div class="table-container" id="tableContainer">
+                    <!-- Indicateur de défilement -->
+                    <div class="scroll-hint" id="scrollHint">
+                        <span class="material-icons" style="font-size: 1rem; vertical-align: middle;">keyboard_arrow_down</span>
+                        Faites défiler pour plus de données
+                    </div>
+
                     <table class="table table-quantitatif">
                         <thead>
                             <tr>
@@ -517,20 +629,20 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
                             <!-- Données chargées dynamiquement -->
                         </tbody>
                     </table>
-                </div>
 
-                <!-- Message de fin de données -->
-                <div id="endOfDataMessage" class="text-center text-muted py-4" style="display: none;">
-                    <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.5;">check_circle</span>
-                    <br>Toutes les données ont été chargées
-                </div>
-
-                <!-- Indicateur de chargement en bas -->
-                <div id="bottomLoadingIndicator" class="text-center py-4" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Chargement...</span>
+                    <!-- Message de fin de données -->
+                    <div id="endOfDataMessage" class="text-center text-muted py-4" style="display: none;">
+                        <span class="material-icons mb-2" style="font-size: 2rem; opacity: 0.5;">check_circle</span>
+                        <br>Toutes les données ont été chargées
                     </div>
-                    <div class="mt-2 text-muted">Chargement des données suivantes...</div>
+
+                    <!-- Indicateur de chargement en bas -->
+                    <div id="bottomLoadingIndicator" class="text-center py-4" style="display: none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <div class="mt-2 text-muted">Chargement des données suivantes...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -777,6 +889,8 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
         // Rendu de la table avec toutes les données chargées
         function renderTable() {
             const tbody = document.getElementById('quantitatifTableBody');
+            const tableContainer = document.getElementById('tableContainer');
+            const scrollHint = document.getElementById('scrollHint');
 
             if (allData.length === 0) {
                 tbody.innerHTML = `
@@ -788,6 +902,7 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
                         </td>
                     </tr>
                 `;
+                scrollHint.style.display = 'none';
                 return;
             }
 
@@ -814,6 +929,19 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
                     </td>
                 </tr>
             `).join('');
+
+            // Afficher l'indicateur de défilement seulement s'il y a plus de données et qu'on n'a pas encore scrollé
+            setTimeout(() => {
+                const {
+                    scrollHeight,
+                    clientHeight
+                } = tableContainer;
+                if (hasMoreData && scrollHeight > clientHeight && !tableContainer.classList.contains('scrolled')) {
+                    scrollHint.style.display = 'block';
+                } else {
+                    scrollHint.style.display = 'none';
+                }
+            }, 100);
         }
 
         // Mise à jour des informations de la table
@@ -834,9 +962,11 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
 
         // Configuration de l'Intersection Observer pour le défilement infini
         function setupInfiniteScroll() {
+            const tableContainer = document.getElementById('tableContainer');
+
             const options = {
-                root: null,
-                rootMargin: '100px',
+                root: tableContainer, // Observer dans le container de la table
+                rootMargin: '50px',
                 threshold: 0.1
             };
 
@@ -847,6 +977,25 @@ $initialQuantitatif = Quantitatif::getPaginated(1, 50);
                     }
                 });
             }, options);
+
+            // Alternative : écouter l'événement de scroll sur le container
+            tableContainer.addEventListener('scroll', () => {
+                const {
+                    scrollTop,
+                    scrollHeight,
+                    clientHeight
+                } = tableContainer;
+
+                // Masquer l'indicateur de défilement après le premier scroll
+                if (scrollTop > 0) {
+                    tableContainer.classList.add('scrolled');
+                }
+
+                // Si on est proche du bas (50px avant la fin)
+                if (scrollTop + clientHeight >= scrollHeight - 50 && hasMoreData && !isLoading) {
+                    loadQuantitatifData(currentPage + 1);
+                }
+            });
         }
 
         // Observer la dernière ligne pour déclencher le chargement
