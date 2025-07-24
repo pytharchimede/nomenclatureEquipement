@@ -770,7 +770,7 @@ function initNomenclaturesPage() {
   // Événements pour les filtres - Input en temps réel avec debounce
   const textFilters = [
     "#code-equipement-filter",
-    "#code-article-filter", 
+    "#code-article-filter",
     "#repere-equipement-filter",
     "#designation-equipement-filter",
     "#fabricant-filter",
@@ -781,7 +781,8 @@ function initNomenclaturesPage() {
     "#poste-technique-filter",
     "#metier-filter",
     "#source-filter",
-  ];  textFilters.forEach((selector) => {
+  ];
+  textFilters.forEach((selector) => {
     const element = document.querySelector(selector);
     if (element) {
       element.addEventListener("input", (e) => {
