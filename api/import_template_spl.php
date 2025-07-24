@@ -45,16 +45,28 @@ try {
     // Configuration pour l'import par chunks
     $chunkSize = 100; // Traiter 100 lignes à la fois
     $imported = 0;
+    $importedNomenclatures = 0;
     $duplicates = 0;
+    $duplicatesNomenclatures = 0;
     $errors = [];
 
     // Préparer les requêtes une seule fois
     $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM template_spl WHERE code_article = ? AND equipement = ?");
+    $checkNomenclatureStmt = $pdo->prepare("SELECT COUNT(*) FROM nomenclatures WHERE code_article = ? AND repere_equipement = ? AND source = 'SPL'");
+
     $insertStmt = $pdo->prepare("
         INSERT INTO template_spl (
             numero, code_sap, code_article, quantite, designation_article, 
             unite_base, metier, numero_piece_fabricant, fabricant, equipement, import_par
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+
+    $insertNomenclatureStmt = $pdo->prepare("
+        INSERT INTO nomenclatures (
+            code_equipement, code_article, repere_equipement, designation_equipement, 
+            fabricant, numero_serie_fabricant, designation_article, quantite, 
+            unite, metier, date_creation, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'SPL')
     ");
 
     // Commencer la transaction pour de meilleures performances
@@ -105,30 +117,52 @@ try {
                         $equipement = trim($equipement);
                         if (empty($equipement)) continue;
 
-                        // Vérification des doublons
+                        // === INSERTION DANS TEMPLATE_SPL ===
+                        // Vérification des doublons template_spl
                         $checkStmt->execute([$data['code_article'], $equipement]);
 
-                        if ($checkStmt->fetchColumn() > 0) {
+                        if ($checkStmt->fetchColumn() == 0) {
+                            // Insertion dans template_spl
+                            $insertStmt->execute([
+                                $data['numero'],
+                                $data['code_sap'],
+                                $data['code_article'],
+                                $data['quantite'],
+                                $data['designation_article'],
+                                $data['unite_base'],
+                                $data['metier'],
+                                $data['numero_piece_fabricant'],
+                                $data['fabricant'],
+                                $equipement,
+                                $data['import_par']
+                            ]);
+                            $imported++;
+                        } else {
                             $duplicates++;
-                            continue;
                         }
 
-                        // Insertion
-                        $insertStmt->execute([
-                            $data['numero'],
-                            $data['code_sap'],
-                            $data['code_article'],
-                            $data['quantite'],
-                            $data['designation_article'],
-                            $data['unite_base'],
-                            $data['metier'],
-                            $data['numero_piece_fabricant'],
-                            $data['fabricant'],
-                            $equipement,
-                            $data['import_par']
-                        ]);
+                        // === INSERTION DANS NOMENCLATURES ===
+                        // Vérification des doublons nomenclatures (même repère + même code article + source SPL)
+                        $checkNomenclatureStmt->execute([$data['code_article'], $equipement]);
 
-                        $imported++;
+                        if ($checkNomenclatureStmt->fetchColumn() == 0) {
+                            // Insertion dans nomenclatures avec mapping des champs
+                            $insertNomenclatureStmt->execute([
+                                $equipement,                        // code_equipement = repère
+                                $data['code_article'],              // code_article
+                                $equipement,                        // repere_equipement = même que code_equipement
+                                'SPL - ' . $data['metier'],         // designation_equipement = SPL + métier
+                                $data['fabricant'],                 // fabricant
+                                $data['numero_piece_fabricant'],    // numero_serie_fabricant
+                                $data['designation_article'],       // designation_article
+                                $data['quantite'],                  // quantite
+                                $data['unite_base'],               // unite
+                                $data['metier']                    // metier
+                            ]);
+                            $importedNomenclatures++;
+                        } else {
+                            $duplicatesNomenclatures++;
+                        }
                     }
                 } catch (Exception $e) {
                     $errors[] = "Ligne $row: " . $e->getMessage();
@@ -158,7 +192,9 @@ try {
         'message' => "Import terminé avec succès",
         'stats' => [
             'imported' => $imported,
+            'imported_nomenclatures' => $importedNomenclatures,
             'duplicates' => $duplicates,
+            'duplicates_nomenclatures' => $duplicatesNomenclatures,
             'errors' => count($errors),
             'total_processed' => $highestRow - 1
         ],

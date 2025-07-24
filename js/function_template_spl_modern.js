@@ -482,39 +482,64 @@ async function startImport() {
                 <div class="alert alert-success">
                     <span class="material-icons me-2">check_circle</span>
                     <strong>Import réussi !</strong><br>
-                    <div class="row mt-2">
-                        <div class="col-6">
-                            <i class="material-icons text-success">add_circle</i> 
-                            <strong>${
-                              result.stats.imported
-                            }</strong> éléments importés
+                    <div class="row mt-3">
+                        <div class="col-lg-3 col-6">
+                            <div class="text-center">
+                                <i class="material-icons text-success" style="font-size: 1.5rem;">add_circle</i><br>
+                                <strong class="text-success">${
+                                  result.stats.imported
+                                }</strong><br>
+                                <small>Template SPL</small>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <i class="material-icons text-warning">content_copy</i> 
-                            <strong>${
-                              result.stats.duplicates
-                            }</strong> doublons ignorés
+                        <div class="col-lg-3 col-6">
+                            <div class="text-center">
+                                <i class="material-icons text-primary" style="font-size: 1.5rem;">inventory</i><br>
+                                <strong class="text-primary">${
+                                  result.stats.imported_nomenclatures || 0
+                                }</strong><br>
+                                <small>Nomenclatures</small>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-6">
+                            <div class="text-center">
+                                <i class="material-icons text-warning" style="font-size: 1.5rem;">content_copy</i><br>
+                                <strong class="text-warning">${
+                                  result.stats.duplicates +
+                                  (result.stats.duplicates_nomenclatures || 0)
+                                }</strong><br>
+                                <small>Doublons ignorés</small>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-6">
+                            <div class="text-center">
+                                <i class="material-icons ${
+                                  result.stats.errors > 0
+                                    ? "text-danger"
+                                    : "text-success"
+                                }" style="font-size: 1.5rem;">${
+        result.stats.errors > 0 ? "error" : "check"
+      }</i><br>
+                                <strong class="${
+                                  result.stats.errors > 0
+                                    ? "text-danger"
+                                    : "text-success"
+                                }">${result.stats.errors}</strong><br>
+                                <small>Erreurs</small>
+                            </div>
                         </div>
                     </div>
-                    ${
-                      result.stats.errors > 0
-                        ? `
-                        <div class="mt-2">
-                            <i class="material-icons text-danger">error</i> 
-                            <strong>${result.stats.errors}</strong> erreurs rencontrées
-                        </div>
-                    `
-                        : ""
-                    }
-                    <div class="mt-2 text-muted">
-                        <small>Total traité: ${
-                          result.stats.total_processed
-                        } lignes</small>
+                    <div class="mt-3 p-2 bg-light rounded">
+                        <small class="text-muted">
+                            <i class="material-icons" style="font-size: 1rem;">info</i>
+                            <strong>Détail :</strong> ${
+                              result.stats.total_processed
+                            } lignes traitées. 
+                            Les données SPL ont été importées dans Template SPL ET dans Nomenclatures avec source "SPL".
+                        </small>
                     </div>
                 </div>
-            `;
-
-      // Afficher les erreurs si présentes
+            `; // Afficher les erreurs si présentes
       if (result.errors && result.errors.length > 0) {
         resultDiv.innerHTML += `
                     <div class="alert alert-warning mt-2">
