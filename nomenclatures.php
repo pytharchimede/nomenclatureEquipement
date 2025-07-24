@@ -243,6 +243,10 @@ $hasDups = count($duplicates) > 0;
                             <input type="text" id="repere-equipement-filter" class="form-control form-control-sm filter-input" placeholder="Repère" />
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">Désignation Équipement</label>
+                            <input type="text" id="designation-equipement-filter" class="form-control form-control-sm filter-input" placeholder="Désignation équipement" />
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label small text-muted mb-1">Fabricant</label>
                             <input type="text" id="fabricant-filter" class="form-control form-control-sm filter-input" placeholder="Fabricant" />
                         </div>
@@ -259,8 +263,12 @@ $hasDups = count($duplicates) > 0;
                             <input type="text" id="type-filter" class="form-control form-control-sm filter-input" placeholder="Type" />
                         </div>
                         <div class="col-md-2">
+                            <label class="form-label small text-muted mb-1">N° Série Fabricant</label>
+                            <input type="text" id="numero-serie-fabricant-filter" class="form-control form-control-sm filter-input" placeholder="N° série" />
+                        </div>
+                        <div class="col-md-2">
                             <label class="form-label small text-muted mb-1">Désignation Article</label>
-                            <input type="text" id="designation-article-filter" class="form-control form-control-sm filter-input" placeholder="Désignation" />
+                            <input type="text" id="designation-article-filter" class="form-control form-control-sm filter-input" placeholder="Désignation article" />
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted mb-1">Unité</label>

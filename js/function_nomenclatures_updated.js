@@ -218,8 +218,14 @@ function applyFilters() {
   const repereEquipementFilter = document.querySelector(
     "#repere-equipement-filter"
   );
+  const designationEquipementFilter = document.querySelector(
+    "#designation-equipement-filter"
+  );
   const fabricantFilter = document.querySelector("#fabricant-filter");
   const typeFilter = document.querySelector("#type-filter");
+  const numeroSerieFabricantFilter = document.querySelector(
+    "#numero-serie-fabricant-filter"
+  );
   const designationArticleFilter = document.querySelector(
     "#designation-article-filter"
   );
@@ -248,12 +254,20 @@ function applyFilters() {
     currentFilters.repere_equipement = repereEquipementFilter.value;
   }
 
+  if (designationEquipementFilter && designationEquipementFilter.value) {
+    currentFilters.designation_equipement = designationEquipementFilter.value;
+  }
+
   if (fabricantFilter && fabricantFilter.value) {
     currentFilters.fabricant = fabricantFilter.value;
   }
 
   if (typeFilter && typeFilter.value) {
     currentFilters.type = typeFilter.value;
+  }
+
+  if (numeroSerieFabricantFilter && numeroSerieFabricantFilter.value) {
+    currentFilters.numero_serie_fabricant = numeroSerieFabricantFilter.value;
   }
 
   if (designationArticleFilter && designationArticleFilter.value) {
@@ -753,23 +767,30 @@ function initNomenclaturesPage() {
     });
   }
 
-  // Événements pour les filtres select
-  const filters = [
+  // Événements pour les filtres - Input en temps réel avec debounce
+  const textFilters = [
     "#code-equipement-filter",
-    "#code-article-filter",
+    "#code-article-filter", 
     "#repere-equipement-filter",
+    "#designation-equipement-filter",
     "#fabricant-filter",
     "#type-filter",
+    "#numero-serie-fabricant-filter",
     "#designation-article-filter",
     "#unite-filter",
     "#poste-technique-filter",
     "#metier-filter",
     "#source-filter",
-  ];
-  filters.forEach((selector) => {
+  ];  textFilters.forEach((selector) => {
     const element = document.querySelector(selector);
     if (element) {
-      element.addEventListener("change", applyFilters);
+      element.addEventListener("input", (e) => {
+        // Debounce pour éviter trop de requêtes
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          applyFilters();
+        }, 300);
+      });
     }
   });
 

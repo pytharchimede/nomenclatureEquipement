@@ -32,12 +32,13 @@ try {
             designation_article LIKE ? OR 
             fabricant LIKE ? OR 
             type LIKE ? OR 
+            numero_serie_fabricant LIKE ? OR
             poste_technique LIKE ? OR 
             metier LIKE ? OR 
             source LIKE ?
         )";
-        // Ajouter le paramètre 10 fois pour chaque champ
-        for ($i = 0; $i < 10; $i++) {
+        // Ajouter le paramètre 11 fois pour chaque champ
+        for ($i = 0; $i < 11; $i++) {
             $params[] = $search;
         }
     }
@@ -47,8 +48,10 @@ try {
         'code_equipement',
         'code_article',
         'repere_equipement',
+        'designation_equipement',
         'fabricant',
         'type',
+        'numero_serie_fabricant',
         'designation_article',
         'unite',
         'poste_technique',
