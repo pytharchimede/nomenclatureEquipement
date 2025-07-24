@@ -72,6 +72,24 @@ require_once 'includes/auth.php';
             padding: 20px;
             margin-bottom: 25px;
         }
+
+        .btn-group .btn-success {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            font-weight: 500;
+        }
+
+        .btn-group .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #e74c3c);
+            border: none;
+            font-weight: 500;
+        }
+
+        .btn-group .btn-success:hover,
+        .btn-group .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
     </style>
 </head>
 
@@ -90,13 +108,23 @@ require_once 'includes/auth.php';
                         Validation des Doublons d'Importation
                     </h2>
                 </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-success" onclick="validerTousVisible()">
-                        <span class="material-icons">check_circle</span>Valider Tous Visibles
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="rejeterTousVisible()">
-                        <span class="material-icons">cancel</span>Rejeter Tous Visibles
-                    </button>
+                <div class="d-flex gap-2 flex-wrap">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-success" onclick="validerTousVisible()">
+                            <span class="material-icons">check_circle</span>Valider Tous Visibles
+                        </button>
+                        <button class="btn btn-success" onclick="validerTous()">
+                            <span class="material-icons">check_circle_outline</span>Valider TOUS
+                        </button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-outline-danger" onclick="rejeterTousVisible()">
+                            <span class="material-icons">cancel</span>Rejeter Tous Visibles
+                        </button>
+                        <button class="btn btn-danger" onclick="rejeterTous()">
+                            <span class="material-icons">highlight_off</span>Rejeter TOUS
+                        </button>
+                    </div>
                     <a href="logout.php" class="btn btn-outline-primary">
                         <span class="material-icons">logout</span>Déconnexion
                     </a>
@@ -779,6 +807,111 @@ require_once 'includes/auth.php';
             } catch (error) {
                 console.error('Erreur lors du rejet en lot:', error);
                 showNotification('Erreur lors du rejet en lot', 'error');
+            } finally {
+                bouton.disabled = false;
+                bouton.innerHTML = texteBouton;
+            }
+        }
+
+        // Valider TOUS les doublons (même non visibles)
+        async function validerTous() {
+            console.log('=== DÉBUT validerTous ===');
+
+            if (!confirm('⚠️ ATTENTION : Cette action va valider TOUS les doublons en attente dans la base de données.\n\nÊtes-vous sûr de vouloir continuer ?')) {
+                console.log('Utilisateur a annulé');
+                return;
+            }
+
+            console.log('Utilisateur a confirmé, début du traitement...');
+
+            const bouton = event.target.closest('button');
+            const texteBouton = bouton.innerHTML;
+            bouton.disabled = true;
+            bouton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validation de tous...';
+
+            try {
+                console.log('Envoi de la requête vers request/doublons_import_validation_bulk.php');
+
+                const response = await fetch('request/doublons_import_validation_bulk.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'valider_tous',
+                        commentaire: 'Validation en lot de tous les doublons'
+                    })
+                });
+
+                console.log('Réponse reçue, status:', response.status);
+                console.log('Response OK:', response.ok);
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
+                const result = await response.json();
+                console.log('Données JSON décodées:', result);
+
+                if (result.success) {
+                    showNotification(`Tous les doublons ont été validés avec succès ! (${result.count} doublons traités)`, 'success');
+
+                    // Recharger les données
+                    console.log('Rechargement des statistiques...');
+                    await chargerStatistiques();
+                    console.log('Rechargement des doublons...');
+                    chargerDoublons(currentPage);
+                } else {
+                    console.error('Erreur du serveur:', result.message);
+                    showNotification(result.message || 'Erreur lors de la validation globale', 'error');
+                }
+
+            } catch (error) {
+                console.error('Erreur lors de la validation globale:', error);
+                showNotification(`Erreur lors de la validation globale: ${error.message}`, 'error');
+            } finally {
+                bouton.disabled = false;
+                bouton.innerHTML = texteBouton;
+                console.log('=== FIN validerTous ===');
+            }
+        }
+
+        // Rejeter TOUS les doublons (même non visibles)
+        async function rejeterTous() {
+            if (!confirm('⚠️ ATTENTION : Cette action va rejeter TOUS les doublons en attente dans la base de données.\n\nÊtes-vous sûr de vouloir continuer ?')) return;
+
+            const bouton = event.target.closest('button');
+            const texteBouton = bouton.innerHTML;
+            bouton.disabled = true;
+            bouton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Rejet de tous...';
+
+            try {
+                const response = await fetch('request/doublons_import_validation_bulk.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'rejeter_tous',
+                        commentaire: 'Rejet en lot de tous les doublons'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showNotification(`Tous les doublons ont été rejetés avec succès ! (${result.count} doublons traités)`, 'success');
+
+                    // Recharger les données
+                    await chargerStatistiques();
+                    chargerDoublons(currentPage);
+                } else {
+                    showNotification(result.message || 'Erreur lors du rejet global', 'error');
+                }
+
+            } catch (error) {
+                console.error('Erreur lors du rejet global:', error);
+                showNotification('Erreur lors du rejet global', 'error');
             } finally {
                 bouton.disabled = false;
                 bouton.innerHTML = texteBouton;

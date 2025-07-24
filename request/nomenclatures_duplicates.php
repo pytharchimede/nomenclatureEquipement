@@ -76,6 +76,51 @@ try {
             ]);
             break;
 
+        case 'details':
+            // Récupération des détails d'un groupe de doublons spécifique
+            $repere = $_GET['repere'] ?? '';
+            $codeArticle = $_GET['code_article'] ?? '';
+
+            if (empty($repere) || empty($codeArticle)) {
+                throw new Exception('Paramètres repere et code_article requis');
+            }
+
+            $query = "
+                SELECT 
+                    id,
+                    code_equipement,
+                    code_article,
+                    repere_equipement,
+                    designation_equipement,
+                    fabricant,
+                    type,
+                    numero_serie_fabricant,
+                    designation_article,
+                    numero_poste,
+                    quantite,
+                    unite,
+                    poste_technique,
+                    metier,
+                    date_creation,
+                    source
+                FROM nomenclatures 
+                WHERE repere_equipement = ? AND code_article = ?
+                ORDER BY id
+            ";
+
+            $stmt = $pdo->prepare($query);
+            $stmt->execute([$repere, $codeArticle]);
+            $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode([
+                'success' => true,
+                'entries' => $entries,
+                'count' => count($entries),
+                'repere_equipement' => $repere,
+                'code_article' => $codeArticle
+            ]);
+            break;
+
         case 'resolve':
             // Résolution des doublons
             $input = json_decode(file_get_contents('php://input'), true);

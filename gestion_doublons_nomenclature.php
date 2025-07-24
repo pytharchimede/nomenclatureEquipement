@@ -43,6 +43,47 @@ require_once 'includes/auth.php';
             font-size: 1.1em;
             padding: 12px 24px;
         }
+
+        .duplicate-group {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid transparent;
+        }
+
+        .duplicate-group:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
+
+        .duplicate-group.selected {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .details-card {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .conflict-highlight {
+            background: linear-gradient(45deg, #ffeb3b22, #ff572222);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        .entry-card {
+            border-left: 4px solid #2196f3;
+            margin-bottom: 10px;
+        }
+
+        .entry-card.duplicate {
+            border-left-color: #f44336;
+        }
     </style>
 </head>
 
@@ -181,11 +222,25 @@ require_once 'includes/auth.php';
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div id="analysisContainer">
-                        <p class="text-center text-muted">
-                            <span class="material-icons" style="font-size: 3rem;">search</span><br>
-                            Chargement de l'analyse...
-                        </p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><span class="material-icons me-2">list</span>Groupes de Doublons</h6>
+                            <div id="analysisContainer">
+                                <p class="text-center text-muted">
+                                    <span class="material-icons" style="font-size: 3rem;">search</span><br>
+                                    Chargement de l'analyse...
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><span class="material-icons me-2">visibility</span>Détails du Groupe Sélectionné</h6>
+                            <div id="detailsContainer">
+                                <div class="text-center text-muted p-4">
+                                    <span class="material-icons" style="font-size: 3rem;">touch_app</span><br>
+                                    Cliquez sur un groupe pour voir les détails
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -314,116 +369,270 @@ require_once 'includes/auth.php';
                 return;
             }
 
-            // Répartition par nombre de doublons
-            const repartition = {};
-            duplicates.forEach(dup => {
-                const count = dup.count;
-                repartition[count] = (repartition[count] || 0) + 1;
-            });
+            // Tri par nombre de doublons (descendant)
+            duplicates.sort((a, b) => b.count - a.count);
 
             let html = `
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6><span class="material-icons me-2">pie_chart</span>Répartition par nombre de doublons</h6>
-                        <ul class="list-group">
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <span class="material-icons" style="font-size: 16px;">info</span>
+                        Cliquez sur un groupe pour voir les détails
+                    </small>
+                </div>
             `;
 
-            Object.keys(repartition).sort((a, b) => b - a).forEach(count => {
-                const groupes = repartition[count];
+            duplicates.forEach((dup, index) => {
+                const severity = getSeverityClass(dup.count);
                 html += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        ${count} doublons
-                        <span class="badge bg-primary rounded-pill">${groupes} groupes</span>
-                    </li>
-                `;
-            });
-
-            html += `
-                        </ul>
+                    <div class="duplicate-group ${severity}" data-group-index="${index}" onclick="selectGroup(${index})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="conflict-highlight">
+                                    ${dup.repere_equipement} | ${dup.code_article}
+                                </strong>
+                                <br>
+                                <small class="text-muted">
+                                    <span class="material-icons" style="font-size: 14px;">content_copy</span>
+                                    ${dup.count} occurences
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-${getSeverityBadge(dup.count)} fs-6">
+                                    ${dup.count}x
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <h6><span class="material-icons me-2">warning</span>Top 5 des groupes les plus problématiques</h6>
-                        <ul class="list-group">
+                `;
+            });
+
+            container.innerHTML = html;
+
+            // Stocker les données pour utilisation ultérieure
+            window.duplicatesData = duplicates;
+        }
+
+        // Fonction pour déterminer la classe de sévérité
+        function getSeverityClass(count) {
+            if (count >= 5) return 'border-danger';
+            if (count >= 3) return 'border-warning';
+            return 'border-info';
+        }
+
+        // Fonction pour déterminer la couleur du badge
+        function getSeverityBadge(count) {
+            if (count >= 5) return 'danger';
+            if (count >= 3) return 'warning';
+            return 'info';
+        }
+
+        // Sélection d'un groupe de doublons
+        async function selectGroup(groupIndex) {
+            // Supprimer la sélection précédente
+            document.querySelectorAll('.duplicate-group').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Ajouter la sélection au groupe cliqué
+            const selectedGroup = document.querySelector(`[data-group-index="${groupIndex}"]`);
+            selectedGroup.classList.add('selected');
+
+            const group = window.duplicatesData[groupIndex];
+
+            // Charger les détails du groupe
+            await loadGroupDetails(group.repere_equipement, group.code_article);
+        }
+
+        // Chargement des détails d'un groupe
+        async function loadGroupDetails(repere, codeArticle) {
+            const detailsContainer = document.getElementById('detailsContainer');
+
+            // Afficher un spinner
+            detailsContainer.innerHTML = `
+                <div class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-2">Chargement des détails...</p>
+                </div>
             `;
 
-            duplicates.slice(0, 5).forEach((dup, index) => {
+            try {
+                const response = await fetch(`request/nomenclatures_duplicates.php?action=details&repere=${encodeURIComponent(repere)}&code_article=${encodeURIComponent(codeArticle)}`);
+                const data = await response.json();
+
+                if (data.success && data.entries) {
+                    displayGroupDetails(repere, codeArticle, data.entries);
+                } else {
+                    detailsContainer.innerHTML = `
+                        <div class="alert alert-warning">
+                            <span class="material-icons me-2">warning</span>
+                            Impossible de charger les détails de ce groupe
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Erreur chargement détails:', error);
+                detailsContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <span class="material-icons me-2">error</span>
+                        Erreur lors du chargement des détails
+                    </div>
+                `;
+            }
+        }
+
+        // Affichage des détails d'un groupe
+        function displayGroupDetails(repere, codeArticle, entries) {
+            const detailsContainer = document.getElementById('detailsContainer');
+
+            let html = `
+                <div class="details-card">
+                    <div class="mb-3 p-3 bg-light rounded">
+                        <h6 class="mb-1">
+                            <span class="material-icons me-2">info</span>
+                            Conflit détecté
+                        </h6>
+                        <p class="mb-0">
+                            Le <strong class="conflict-highlight">code article "${codeArticle}"</strong> 
+                            apparaît plusieurs fois pour le 
+                            <strong class="conflict-highlight">repère équipement "${repere}"</strong>
+                        </p>
+                        <small class="text-muted">
+                            Règle violée : Un code article ne doit apparaître qu'une seule fois par repère équipement
+                        </small>
+                    </div>
+                    
+                    <h6>
+                        <span class="material-icons me-2">list</span>
+                        Entrées en conflit (${entries.length})
+                    </h6>
+            `;
+
+            entries.forEach((entry, index) => {
                 html += `
-                    <li class="list-group-item">
-                        <strong>#${index + 1}</strong> - ${dup.repere_equipement} | ${dup.code_article}
-                        <br><small class="text-muted">${dup.count} occurences</small>
-                    </li>
+                    <div class="card entry-card duplicate mb-2">
+                        <div class="card-body p-3">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6 class="card-title mb-2">
+                                        <span class="badge bg-secondary me-2">#${entry.id}</span>
+                                        Entrée ${index + 1}
+                                    </h6>
+                                    <p class="mb-1">
+                                        <strong>Repère:</strong> 
+                                        <span class="conflict-highlight">${entry.repere_equipement}</span>
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Code Article:</strong> 
+                                        <span class="conflict-highlight">${entry.code_article}</span>
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Désignation Équipement:</strong> 
+                                        ${entry.designation_equipement || 'N/A'}
+                                    </p>
+                                    <p class="mb-1">
+                                        <strong>Désignation Article:</strong> 
+                                        ${entry.designation_article || 'N/A'}
+                                    </p>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">
+                                        <strong>Fabricant:</strong> ${entry.fabricant || 'N/A'}<br>
+                                        <strong>Type:</strong> ${entry.type || 'N/A'}<br>
+                                        <strong>Quantité:</strong> ${entry.quantite || 'N/A'} ${entry.unite || ''}<br>
+                                        <strong>Poste:</strong> ${entry.numero_poste || 'N/A'}<br>
+                                        <strong>Métier:</strong> ${entry.metier || 'N/A'}<br>
+                                        <strong>Source:</strong> ${entry.source || 'N/A'}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-danger btn-sm" onclick="deleteEntry(${entry.id})">
+                                    <span class="material-icons me-1">delete</span>
+                                    Supprimer
+                                </button>
+                                <button class="btn btn-warning btn-sm ms-2" onclick="editEntry(${entry.id})">
+                                    <span class="material-icons me-1">edit</span>
+                                    Modifier
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 `;
             });
 
             html += `
-                        </ul>
+                    <div class="mt-3 p-2 bg-warning bg-opacity-10 rounded">
+                        <small class="text-warning">
+                            <span class="material-icons me-1" style="font-size: 16px;">warning</span>
+                            <strong>Recommandation:</strong> 
+                            Vérifiez si ces entrées sont réellement identiques ou s'il s'agit d'erreurs de saisie.
+                            Supprimez les doublons ou corrigez les codes articles si nécessaire.
+                        </small>
                     </div>
                 </div>
             `;
 
-            container.innerHTML = html;
+            detailsContainer.innerHTML = html;
         }
 
-        // Chargement initial
-        document.addEventListener('DOMContentLoaded', loadStats);
-    </script>
-    <script src="plugins/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.getElementById('dupsForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const form = this;
-            const formData = new FormData(form);
-            fetch(form.action, {
+        // Fonction pour supprimer une entrée
+        async function deleteEntry(entryId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée ?')) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('delete', entryId);
+
+                const response = await fetch('request/gestion_doublons_save.php', {
                     method: 'POST',
                     body: formData
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.success) {
-                        showAlert('Modifications enregistrées avec succès.', 'success');
-                        setTimeout(() => location.reload(), 1200);
-                    } else if (res.deleted) {
-                        showAlert('Ligne supprimée avec succès.', 'info');
-                        setTimeout(() => location.reload(), 1200);
-                    } else {
-                        showAlert('Erreur lors du traitement.', 'danger');
-                    }
-                })
-                .catch(() => showAlert('Erreur réseau.', 'danger'));
-        });
+                });
 
-        // Gestion suppression directe (bouton supprimer)
-        document.querySelectorAll('button[name="delete"]').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (!confirm('Supprimer cette ligne ?')) return;
-                const formData = new FormData();
-                formData.append('delete', this.value);
-                fetch('request/gestion_doublons_save.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(r => r.json())
-                    .then(res => {
-                        if (res.deleted) {
-                            showAlert('Ligne supprimée avec succès.', 'info');
-                            setTimeout(() => location.reload(), 1200);
-                        } else {
-                            showAlert('Erreur lors de la suppression.', 'danger');
-                        }
-                    })
-                    .catch(() => showAlert('Erreur réseau.', 'danger'));
-            });
-        });
+                const result = await response.json();
+
+                if (result.deleted) {
+                    showAlert('Entrée supprimée avec succès.', 'success');
+                    // Recharger les données
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showAlert('Erreur lors de la suppression.', 'danger');
+                }
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                showAlert('Erreur lors de la suppression.', 'danger');
+            }
+        }
+
+        // Fonction pour éditer une entrée (placeholder)
+        function editEntry(entryId) {
+            showAlert('Fonctionnalité d\'édition en cours de développement.', 'info');
+        }
 
         // Fonction d'affichage d'alerte
         function showAlert(msg, type) {
             let alert = document.createElement('div');
-            alert.className = 'alert alert-' + type + ' mt-3';
-            alert.innerHTML = msg;
-            document.querySelector('.container').prepend(alert);
-            setTimeout(() => alert.remove(), 3000);
+            alert.className = 'alert alert-' + type + ' alert-dismissible fade show position-fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '9999';
+            alert.innerHTML = `
+                ${msg}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 3000);
         }
+
+        // Chargement initial
+        document.addEventListener('DOMContentLoaded', loadStats);
     </script>
 </body>
 
