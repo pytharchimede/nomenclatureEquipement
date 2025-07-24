@@ -698,39 +698,31 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        // Configuration de la zone de drop avec debug
+        // Configuration de la zone de drop
         function setupDropZone() {
-            console.log('setupDropZone: Initialisation...');
-
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
-
-            console.log('setupDropZone: dropZone =', dropZone);
-            console.log('setupDropZone: fileInput =', fileInput);
 
             if (!dropZone || !fileInput) {
                 console.error('setupDropZone: Éléments DOM non trouvés!');
                 return;
             }
 
-            // Gestion du drag & drop uniquement
+            // Gestion du drag & drop
             dropZone.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 this.classList.add('dragover');
-                console.log('setupDropZone: dragover');
             });
 
             dropZone.addEventListener('dragleave', function(e) {
                 e.preventDefault();
                 this.classList.remove('dragover');
-                console.log('setupDropZone: dragleave');
             });
 
             dropZone.addEventListener('drop', function(e) {
                 e.preventDefault();
                 this.classList.remove('dragover');
                 const files = e.dataTransfer.files;
-                console.log('setupDropZone: drop, files =', files);
                 if (files.length > 0) {
                     handleFileSelection(files[0]);
                 }
@@ -738,13 +730,10 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Gestion du changement de fichier via input
             fileInput.addEventListener('change', function(e) {
-                console.log('setupDropZone: fileInput change, files =', e.target.files);
                 if (e.target.files.length > 0) {
                     handleFileSelection(e.target.files[0]);
                 }
             });
-
-            console.log('setupDropZone: Configuration terminée (drag&drop + bouton)');
         }
 
 
