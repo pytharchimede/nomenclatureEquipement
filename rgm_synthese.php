@@ -1,725 +1,967 @@
 <?php
-
 session_start();
-
+require_once 'model/Database.php';
 require_once 'model/RgmSynthese.php';
 require_once 'model/Nomenclature.php';
 require_once 'includes/auth.php';
 
-// Synchronisation régulière à chaque chargement de page
-//Nomenclature::syncFromRgmSynthese();
-
-$rgmData = RgmSynthese::getAll();
-
-// Utilisation de la classe pour la map des existants
-$existMap = Nomenclature::getExistingRepereArticleMap();
-
-// Statistiques pour mini-cards
-$total = count($rgmData);
-
-// Par désignation article
-$categories = [];
-foreach ($rgmData as $row) {
-    $cat = $row['designation_article'] ?? 'Non défini';
-    $categories[$cat] = ($categories[$cat] ?? 0) + 1;
-}
-$catLabels = array_keys($categories);
-$catData = array_values($categories);
-$catMax = $catData ? max($catData) : 0;
-$catTop = $catLabels ? $catLabels[array_search($catMax, $catData)] : '';
-
-// Par unité
-$unites = [];
-foreach ($rgmData as $row) {
-    $u = $row['unite'] ?? 'Non défini';
-    $unites[$u] = ($unites[$u] ?? 0) + 1;
-}
-$uniteLabels = array_keys($unites);
-$uniteData = array_values($unites);
+// Chargement initial des premières données (pour éviter l'écran vide)
+$initialRgmData = RgmSynthese::getPaginated(1, 50);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 
 <head>
     <meta charset="UTF-8">
-    <title>Synthèse RGM</title>
+    <title>Centre de Gestion RGM Synthèse - Nomenclature Équipements</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="plugins/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
-    <link href="css/style_nomenclature.css" rel="stylesheet">
+    <style>
+        .content {
+            padding: 1rem;
+            margin-left: 0;
+            transition: all 0.3s ease;
+        }
+
+        .rgm-hero {
+            background: linear-gradient(135deg, #e65100 0%, #ff9800 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rgm-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(1.1) rotate(180deg);
+            }
+        }
+
+        .import-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: none;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin-bottom: 30px;
+        }
+
+        .import-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-upload-zone {
+            border: 3px dashed #e65100;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(45deg, rgba(230, 81, 0, 0.05), rgba(255, 152, 0, 0.05));
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-zone:hover {
+            border-color: #ff9800;
+            background: linear-gradient(45deg, rgba(230, 81, 0, 0.1), rgba(255, 152, 0, 0.1));
+            transform: scale(1.02);
+        }
+
+        .file-upload-zone.dragover {
+            border-color: #4caf50;
+            background: linear-gradient(45deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .filter-panel {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .data-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            border-radius: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(45deg, #d84315, #f57c00);
+        }
+
+        .table-info-bar {
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 15px 20px;
+            flex-shrink: 0;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .table-rgm {
+            margin-bottom: 0;
+        }
+
+        .table-rgm th {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table-rgm td {
+            padding: 12px 15px;
+            border-color: #f0f0f0;
+            vertical-align: middle;
+        }
+
+        .table-rgm tbody tr:hover {
+            background: linear-gradient(90deg, rgba(230, 81, 0, 0.05), rgba(255, 152, 0, 0.05));
+        }
+
+        .btn-modern {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            border: none;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(230, 81, 0, 0.4);
+            color: white;
+        }
+
+        .btn-outline-modern {
+            background: transparent;
+            border: 2px solid #e65100;
+            color: #e65100;
+            padding: 10px 23px;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-outline-modern:hover {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            border-color: transparent;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: linear-gradient(45deg, #4caf50, #66bb6a);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(45deg, #ff9800, #ffb74d);
+            color: white;
+        }
+
+        .badge-rgm {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            color: white;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 20px;
+            background: rgba(230, 81, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            animation: fadeInOut 3s infinite;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        @keyframes fadeInOut {
+
+            0%,
+            100% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        .table-container.scrolled .scroll-hint {
+            display: none;
+        }
+
+        .sync-panel {
+            background: linear-gradient(145deg, #e8f5e8, #f1f8e9);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            border-bottom: none;
+        }
+
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .progress-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            min-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .btn-floating {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #e65100, #ff9800);
+            border: none;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-floating:hover {
+            transform: scale(1.1) rotate(180deg);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+        }
+    </style>
 </head>
 
 <body>
     <div class="d-flex">
+        <!-- Sidebar -->
         <?php include 'menu.php'; ?>
+
+        <!-- Main Content -->
         <div class="flex-grow-1 content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
-                <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Synthèse RGM</h2>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#importRgmModal">
-                        <span class="material-icons">upload_file</span>Importer Synthèse RGM
-                    </button>
-                    <a href="logout.php" class="btn btn-outline-primary ms-2">
-                        <span class="material-icons">logout</span>Déconnexion
-                    </a>
-                </div>
-            </div>
-            <!-- Mini Cards -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-3 col-6">
-                    <div class="mini-card">
-                        <span class="material-icons">list_alt</span>
-                        <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $total ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Total synthèses</div>
+            <div class="container-fluid p-4">
+                <!-- Hero Section -->
+                <div class="rgm-hero">
+                    <div class="position-relative">
+                        <h1 class="display-4 font-weight-bold mb-3">
+                            <i class="material-icons" style="font-size: 3rem; vertical-align: middle;">engineering</i>
+                            Centre de Gestion RGM Synthèse
+                        </h1>
+                        <p class="lead mb-4">Interface avancée pour la gestion des données RGM avec synchronisation nomenclature</p>
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="#" class="btn-modern" onclick="showImportModal()">
+                                <i class="material-icons">cloud_upload</i>
+                                Importer RGM
+                            </a>
+                            <a href="#" class="btn-outline-modern" onclick="exportRgmData()">
+                                <i class="material-icons">get_app</i>
+                                Exporter Excel
+                            </a>
+                            <a href="#" class="btn-outline-modern" onclick="syncToNomenclature()">
+                                <i class="material-icons">sync</i>
+                                Synchroniser
+                            </a>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
-                    <div class="mini-card">
-                        <span class="material-icons" style="color:#43a047;">category</span>
-                        <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catTop ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Article le + présent</div>
-                        </div>
+
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalCount">0</div>
+                        <div class="text-muted font-weight-bold">Total Éléments RGM</div>
+                        <small class="text-success">
+                            <i class="material-icons" style="font-size: 16px;">trending_up</i>
+                            Données synchronisées
+                        </small>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="categoriesCount">0</div>
+                        <div class="text-muted font-weight-bold">Désignations Uniques</div>
+                        <small class="text-info">
+                            <i class="material-icons" style="font-size: 16px;">category</i>
+                            <span id="topCategory">-</span>
+                        </small>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="unitesCount">0</div>
+                        <div class="text-muted font-weight-bold">Unités Différentes</div>
+                        <small class="text-warning">
+                            <i class="material-icons" style="font-size: 16px;">straighten</i>
+                            <span id="topUnite">-</span>
+                        </small>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="syncedCount">0</div>
+                        <div class="text-muted font-weight-bold">Synchro Nomenclature</div>
+                        <small class="text-success">
+                            <i class="material-icons" style="font-size: 16px;">check_circle</i>
+                            Correspondances trouvées
+                        </small>
                     </div>
                 </div>
-                <div class="col-md-3 col-6">
-                    <div class="mini-card">
-                        <canvas id="miniPieRgm" class="mini-graph"></canvas>
+
+                <!-- Synchronization Panel -->
+                <div class="sync-panel">
+                    <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $catMax ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Max pour un article</div>
+                            <h5 class="mb-1">
+                                <i class="material-icons text-success" style="vertical-align: middle;">sync</i>
+                                État de Synchronisation
+                            </h5>
+                            <p class="mb-0 text-muted">Dernière synchronisation : <span id="lastSync">En cours...</span></p>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="mini-card">
-                        <canvas id="miniPieUniteRgm" class="mini-graph"></canvas>
                         <div>
-                            <div style="font-size:1.3rem;font-weight:700;"><?= $uniteLabels[0] ?? '' ?></div>
-                            <div class="text-muted" style="font-size:0.95rem;">Unité la + utilisée</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Bouton Synchroniser RGM -->
-            <button id="syncRgmBtn" class="btn btn-outline-success mb-3">
-                <span class="material-icons">sync</span>Synchroniser RGM → Nomenclature
-            </button>
-            <div id="syncRgmProgress" class="mt-2" style="display:none;">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="syncRgmBar" style="width:0%">0%</div>
-                </div>
-                <div id="syncRgmText" class="mt-1"></div>
-            </div>
-            <!-- Tableau Synthèse RGM -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0" style="color:#1976d2;">Liste des synthèses RGM</h5>
-                        <div>
-                            <button id="exportFilteredRgmBtn" class="btn btn-outline-primary me-2" style="display:none;">
-                                <span class="material-icons">file_download</span>Exporter la sélection
+                            <button class="btn btn-success btn-sm" onclick="forceSyncToNomenclature()">
+                                <i class="material-icons">refresh</i>
+                                Forcer la synchro
                             </button>
-                            <button id="deleteSelectedRgmBtn" class="btn btn-outline-danger" style="display:none;">
-                                <span class="material-icons">delete</span>Supprimer la sélection
-                            </button>
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
+                </div>
+
+                <!-- Filters Panel -->
+                <div class="filter-panel">
+                    <h5 class="mb-3">
+                        <i class="material-icons" style="vertical-align: middle;">filter_list</i>
+                        Filtres de Recherche
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Référence Équipement</label>
+                            <input type="text" class="form-control" id="filterRepere" placeholder="Filtrer par repère...">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Code Article</label>
+                            <input type="text" class="form-control" id="filterCode" placeholder="Filtrer par code...">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Désignation</label>
+                            <input type="text" class="form-control" id="filterDesignation" placeholder="Filtrer par désignation...">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label font-weight-bold">Unité</label>
+                            <select class="form-control" id="filterUnite">
+                                <option value="">Toutes les unités</option>
+                                <!-- Options chargées dynamiquement -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-modern" onclick="applyFilters()">
+                            <i class="material-icons">search</i>
+                            Appliquer Filtres
+                        </button>
+                        <button class="btn-outline-modern" onclick="clearFilters()">
+                            <i class="material-icons">clear</i>
+                            Effacer
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data Table -->
+                <div class="data-table">
+                    <div class="table-info-bar">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <span id="currentRange" class="font-weight-bold text-primary">Chargement...</span>
+                                <span class="text-muted">|</span>
+                                <span id="totalItems" class="text-muted">Total: 0 éléments</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="material-icons text-muted">info</i>
+                                <span class="text-muted small">Scroll pour charger plus</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container" id="tableContainer">
+                        <table class="table table-rgm table-hover">
                             <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="selectAllRgm"></th>
-                                    <th>Repère équipement</th>
-                                    <th>Code article</th>
-                                    <th>Désignation article</th>
-                                    <th>Quantité</th>
-                                    <th>Unité</th>
-                                    <th>Date import</th>
-                                    <th>Source</th>
-                                    <th>Déjà en nomenclature</th> <!-- Nouvelle colonne -->
-                                </tr>
-                                <tr id="filter-row-rgm">
-                                    <th></th>
-                                    <?php for ($i = 1; $i <= 7; $i++): ?>
-                                        <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer" data-col="<?= $i ?>"></th>
-                                    <?php endfor; ?>
-                                    <th></th> <!-- Pour la nouvelle colonne -->
-                                    <th>
-                                        <button type="button" id="resetRgmFilters" class="btn btn-sm btn-outline-secondary" title="Réinitialiser les filtres">
-                                            <span class="material-icons" style="font-size:1.1em;">close</span>
-                                        </button>
-                                    </th>
+                                    <th style="width: 15%;">Repère Équipement</th>
+                                    <th style="width: 15%;">Code Article</th>
+                                    <th style="width: 35%;">Désignation Article</th>
+                                    <th style="width: 12%;">Quantité</th>
+                                    <th style="width: 10%;">Unité</th>
+                                    <th style="width: 13%;">Statut Synchro</th>
                                 </tr>
                             </thead>
                             <tbody id="rgmTableBody">
-                                <?php foreach ($rgmData as $row): ?>
-                                    <?php
-                                    $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
-                                    $isPresent = isset($existMap[$key]);
-                                    ?>
-                                    <tr>
-                                        <td><input type="checkbox" class="rgm-checkbox" value="<?= $row['id'] ?>"></td>
-                                        <td><?= htmlspecialchars($row['repere_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['code_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['designation_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['quantite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['unite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['date_import'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['source'] ?? '') ?></td>
-                                        <td class="text-center"><?= $isPresent ? '<span style="color:green;font-size:1.3em;">✔️</span>' : '' ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
+                                <!-- Données chargées dynamiquement -->
                             </tbody>
                         </table>
-                    </div>
-                    <div class="d-flex justify-content-center my-3" id="paginationRgm"></div>
-                </div>
-            </div>
-            <!-- Modal Importation Synthèse RGM -->
-            <div class="modal fade" id="importRgmModal" tabindex="-1" aria-labelledby="importRgmModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <form class="modal-content" id="importRgmForm" enctype="multipart/form-data" method="post" action="request/rgm_import.php">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="importRgmModalLabel">Importer une synthèse RGM (CSV/Excel)</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="dropzone border border-primary rounded p-3 text-center mb-2" id="dropzoneRgm">
-                                <span class="material-icons" style="font-size:2.5em;color:#1976d2;">cloud_upload</span><br>
-                                Glissez-déposez votre fichier ici ou cliquez pour sélectionner
-                            </div>
-                            <input type="file" name="rgm_file" id="rgm_file" class="form-control d-none" accept=".xlsx,.xls,.csv" required>
-                            <div id="importRgmMsg" class="mt-2"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-primary" id="importBtnRgm" type="submit">
-                                <span class="spinner-border spinner-border-sm d-none" id="importSpinnerRgm"></span>
-                                Importer
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <!-- Modal export en cours -->
-            <div class="modal fade" id="exportLoadingModalRgm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content text-center p-4">
-                        <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
-                        <div id="exportProgressTextRgm" style="font-size:1.2rem;">Préparation de l’export, veuillez patienter...</div>
-                        <div class="progress mt-3" style="height:18px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBarRgm" style="width:0%">0%</div>
-                        </div>
-                        <button id="closeExportModalBtnRgm" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
-                        <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
-                    </div>
-                </div>
-            </div>
-            <!-- Tableau Synthèse RGM -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="card-title mb-0" style="color:#1976d2;">Liste des synthèses RGM</h5>
-                        <div>
-                            <button id="exportFilteredRgmBtn" class="btn btn-outline-primary me-2" style="display:none;">
-                                <span class="material-icons">file_download</span>Exporter la sélection
-                            </button>
-                            <button id="deleteSelectedRgmBtn" class="btn btn-outline-danger" style="display:none;">
-                                <span class="material-icons">delete</span>Supprimer la sélection
-                            </button>
+                        <div class="scroll-hint">
+                            <i class="material-icons" style="font-size: 16px;">keyboard_arrow_down</i>
+                            Scroll pour plus
                         </div>
                     </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th><input type="checkbox" id="selectAllRgm"></th>
-                                    <th>Repère équipement</th>
-                                    <th>Code article</th>
-                                    <th>Désignation article</th>
-                                    <th>Quantité</th>
-                                    <th>Unité</th>
-                                    <th>Date import</th>
-                                    <th>Source</th>
-                                    <th>Déjà en nomenclature</th> <!-- Nouvelle colonne -->
-                                </tr>
-                                <tr id="filter-row-rgm">
-                                    <th></th>
-                                    <?php for ($i = 1; $i <= 7; $i++): ?>
-                                        <th><input type="text" class="form-control form-control-sm" placeholder="Filtrer" data-col="<?= $i ?>"></th>
-                                    <?php endfor; ?>
-                                    <th></th> <!-- Pour la nouvelle colonne -->
-                                    <th>
-                                        <button type="button" id="resetRgmFilters" class="btn btn-sm btn-outline-secondary" title="Réinitialiser les filtres">
-                                            <span class="material-icons" style="font-size:1.1em;">close</span>
-                                        </button>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody id="rgmTableBody">
-                                <?php foreach ($rgmData as $row): ?>
-                                    <?php
-                                    $key = strtolower(trim($row['repere_equipement'] ?? '')) . '|' . strtolower(trim($row['code_article'] ?? ''));
-                                    $isPresent = isset($existMap[$key]);
-                                    ?>
-                                    <tr>
-                                        <td><input type="checkbox" class="rgm-checkbox" value="<?= $row['id'] ?>"></td>
-                                        <td><?= htmlspecialchars($row['repere_equipement'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['code_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['designation_article'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['quantite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['unite'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['date_import'] ?? '') ?></td>
-                                        <td><?= htmlspecialchars($row['source'] ?? '') ?></td>
-                                        <td class="text-center"><?= $isPresent ? '<span style="color:green;font-size:1.3em;">✔️</span>' : '' ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div class="text-center mt-4" id="loadingIndicator" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Chargement...</span>
                     </div>
-                    <div class="d-flex justify-content-center my-3" id="paginationRgm"></div>
+                    <p class="mt-2 text-muted">Chargement des données RGM...</p>
                 </div>
-            </div>
-            <!-- Modal Importation Synthèse RGM -->
-            <div class="modal fade" id="importRgmModal" tabindex="-1" aria-labelledby="importRgmModalLabel" aria-hidden="true">
-                <div class="modal-dialog">
-                    <form class="modal-content" id="importRgmForm" enctype="multipart/form-data" method="post" action="request/rgm_import.php">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="importRgmModalLabel">Importer une synthèse RGM (CSV/Excel)</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="dropzone border border-primary rounded p-3 text-center mb-2" id="dropzoneRgm">
-                                <span class="material-icons" style="font-size:2.5em;color:#1976d2;">cloud_upload</span><br>
-                                Glissez-déposez votre fichier ici ou cliquez pour sélectionner
-                            </div>
-                            <input type="file" name="rgm_file" id="rgm_file" class="form-control d-none" accept=".xlsx,.xls,.csv" required>
-                            <div id="importRgmMsg" class="mt-2"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-primary" id="importBtnRgm" type="submit">
-                                <span class="spinner-border spinner-border-sm d-none" id="importSpinnerRgm"></span>
-                                Importer
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            <!-- Modal export en cours -->
-            <div class="modal fade" id="exportLoadingModalRgm" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content text-center p-4">
-                        <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
-                        <div id="exportProgressTextRgm" style="font-size:1.2rem;">Préparation de l’export, veuillez patienter...</div>
-                        <div class="progress mt-3" style="height:18px;">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" id="exportProgressBarRgm" style="width:0%">0%</div>
-                        </div>
-                        <button id="closeExportModalBtnRgm" class="btn btn-outline-secondary mt-3" style="display:none;">Fermer</button>
-                        <div class="mt-2 text-muted" style="font-size:0.95em;">Le téléchargement va démarrer automatiquement.<br>Si ce n'est pas le cas, cliquez sur "Fermer".</div>
-                    </div>
-                </div>
-            </div>
-            <!-- Bouton Synchroniser RGM -->
-            <button id="syncRgmBtn" class="btn btn-outline-success mb-3">
-                <span class="material-icons">sync</span>Synchroniser RGM → Nomenclature
-            </button>
-            <div id="syncRgmProgress" class="mt-2" style="display:none;">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="syncRgmBar" style="width:0%">0%</div>
-                </div>
-                <div id="syncRgmText" class="mt-1"></div>
             </div>
         </div>
     </div>
-    <script src="plugins/js/chart.js"></script>
+
+    <!-- Import Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="material-icons" style="vertical-align: middle;">cloud_upload</i>
+                        Import de Données RGM
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="import-card">
+                        <div class="file-upload-zone" id="dropZone">
+                            <i class="material-icons mb-3" style="font-size: 3rem; color: #e65100;">cloud_upload</i>
+                            <h5>Glissez votre fichier ici</h5>
+                            <p class="text-muted">ou cliquez pour sélectionner</p>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+                            <small class="text-muted">Formats supportés: CSV, Excel (.xlsx, .xls)</small>
+                        </div>
+                        <div class="mt-4" id="fileInfo" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="material-icons">info</i>
+                                <span id="fileName"></span> - <span id="fileSize"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" onclick="startImport()" id="importBtn" disabled>
+                        <i class="material-icons">upload</i>
+                        Importer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Overlay -->
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-content">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;"></div>
+            <h5 id="progressTitle">Traitement en cours...</h5>
+            <p id="progressMessage" class="text-muted">Veuillez patienter</p>
+            <div class="progress mt-3">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="floating-action">
+        <button class="btn-floating" onclick="scrollToTop()">
+            <i class="material-icons">keyboard_arrow_up</i>
+        </button>
+    </div>
+
+    </div> <!-- container-fluid -->
+    </div> <!-- content -->
+    </div> <!-- d-flex -->
+
+    <script src="plugins/js/jquery.min.js"></script>
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
-        }
+        // Variables globales pour la pagination infinie
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMoreData = true;
+        let currentFilters = {};
+        let totalCount = 0;
+        let loadedCount = 0;
 
-        // Mini Pie Chart Article
-        new Chart(document.getElementById('miniPieRgm').getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: <?= json_encode($catLabels) ?>,
-                datasets: [{
-                    data: <?= json_encode($catData) ?>,
-                    backgroundColor: [
-                        '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
-                    ]
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                responsive: false
-            }
+        // Initialisation
+        $(document).ready(function() {
+            initializeFilters();
+            loadStatistics();
+            loadInitialData();
+            setupInfiniteScroll();
+            setupDropZone();
+            updateLastSyncTime();
         });
 
-        // Mini Pie Chart Unité
-        new Chart(document.getElementById('miniPieUniteRgm').getContext('2d'), {
-            type: 'pie',
-            data: {
-                labels: <?= json_encode($uniteLabels) ?>,
-                datasets: [{
-                    data: <?= json_encode($uniteData) ?>,
-                    backgroundColor: [
-                        '#1976d2', '#43a047', '#fbc02d', '#e53935', '#8e24aa'
-                    ]
-                }]
-            },
-            options: {
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                responsive: false
-            }
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tbody = document.getElementById('rgmTableBody');
-            const filterRow = document.getElementById('filter-row-rgm');
-            const filterInputs = filterRow.querySelectorAll('input, select');
-            const resetBtn = document.getElementById('resetRgmFilters');
-            const exportFilteredBtn = document.getElementById('exportFilteredRgmBtn');
-            const deleteBtn = document.getElementById('deleteSelectedRgmBtn');
-            const selectAll = document.getElementById('selectAllRgm');
-            const checkboxes = document.querySelectorAll('.rgm-checkbox');
+        // Chargement des statistiques
+        function loadStatistics() {
+            $.ajax({
+                url: 'api/rgm_stats.php',
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        $('#totalCount').text(data.stats.total_count);
+                        $('#categoriesCount').text(data.stats.unique_designations);
+                        $('#unitesCount').text(data.stats.unique_unites);
+                        $('#syncedCount').text(data.stats.synced_count);
 
-            function filterTable() {
-                let total = 0;
-                tbody.querySelectorAll('tr').forEach(tr => {
-                    let show = true;
-                    filterInputs.forEach((input, idx) => {
-                        let val = input.value.trim().toLowerCase();
-                        let colIdx = parseInt(input.getAttribute('data-col'), 10);
-                        let cell = tr.children[colIdx];
-                        if (!cell) return;
-                        if (input.tagName === 'SELECT') {
-                            if (val && cell.textContent.trim().toLowerCase() !== val) show = false;
-                        } else {
-                            if (val && !cell.textContent.toLowerCase().includes(val)) show = false;
+                        if (data.stats.top_designation) {
+                            $('#topCategory').text(data.stats.top_designation.designation_article);
                         }
-                    });
-                    tr.style.display = show ? '' : 'none';
-                    if (show) total++;
-                });
-                if (exportFilteredBtn) exportFilteredBtn.style.display = total > 0 ? '' : 'none';
-                if (deleteBtn) deleteBtn.style.display = document.querySelectorAll('.rgm-checkbox:checked').length > 0 ? '' : 'none';
-            }
 
-            filterInputs.forEach(input => {
-                input.addEventListener('input', filterTable);
-                input.addEventListener('change', filterTable);
-            });
-            filterTable();
-
-            // Sélectionner tout
-            if (selectAll) {
-                selectAll.addEventListener('change', function() {
-                    checkboxes.forEach(cb => {
-                        if (cb.closest('tr').style.display !== 'none') {
-                            cb.checked = selectAll.checked;
+                        if (data.stats.top_unite) {
+                            $('#topUnite').text(data.stats.top_unite.unite);
                         }
-                    });
-                    filterTable();
-                });
-            }
 
-            // Mise à jour bouton suppression sur chaque case
-            checkboxes.forEach(cb => {
-                cb.addEventListener('change', filterTable);
-            });
+                        // Charger les options d'unités dans le filtre
+                        const $uniteFilter = $('#filterUnite');
+                        $uniteFilter.empty().append('<option value="">Toutes les unités</option>');
 
-            // Export sélection filtrée
-            if (exportFilteredBtn) {
-                exportFilteredBtn.addEventListener('click', function() {
-                    const rows = Array.from(document.querySelectorAll('table.table tbody tr'))
-                        .filter(tr => tr.style.display !== 'none');
-                    if (rows.length === 0) {
-                        alert("Aucune donnée à exporter !");
-                        return;
-                    }
-                    const data = rows.map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
-                    const columnLabels = [
-                        "Repère équipement", "Code article", "Désignation article", "Quantité", "Unité", "Date import", "Source"
-                    ];
-                    const filters = [];
-                    filterInputs.forEach((input, idx) => {
-                        if (input.value && input.value.trim() !== '') {
-                            filters.push({
-                                col: idx,
-                                label: columnLabels[idx],
-                                value: input.value
+                        if (data.stats.unites) {
+                            data.stats.unites.forEach(function(unite) {
+                                $uniteFilter.append(`<option value="${unite.unite}">${unite.unite} (${unite.count})</option>`);
                             });
                         }
-                    });
-
-                    // Affiche le modal de chargement
-                    const exportModal = new bootstrap.Modal(document.getElementById('exportLoadingModalRgm'));
-                    const exportProgressBar = document.getElementById('exportProgressBarRgm');
-                    const progressText = document.getElementById('exportProgressTextRgm');
-                    const closeBtn = document.getElementById('closeExportModalBtnRgm');
-                    exportProgressBar.style.width = "0%";
-                    exportProgressBar.textContent = "0%";
-                    progressText.textContent = "Préparation de l’export, veuillez patienter...";
-                    closeBtn.style.display = "none";
-                    closeBtn.disabled = true;
-                    exportModal.show();
-
-                    // Animation de progression fictive
-                    let percent = 0;
-                    const interval = setInterval(() => {
-                        percent += Math.random() * 10 + 5;
-                        if (percent > 90) percent = 90;
-                        exportProgressBar.style.width = percent + "%";
-                        exportProgressBar.textContent = Math.round(percent) + "%";
-                    }, 200);
-
-                    setTimeout(() => {
-                        clearInterval(interval);
-                        exportProgressBar.style.width = "100%";
-                        exportProgressBar.textContent = "100%";
-                        progressText.textContent = "Téléchargement en cours...";
-
-                        // Création et soumission du formulaire caché
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = 'request/export_rgm.php?filtered=1';
-                        form.style.display = 'none';
-                        const inputData = document.createElement('input');
-                        inputData.type = 'hidden';
-                        inputData.name = 'filtered_data';
-                        inputData.value = JSON.stringify(data);
-                        form.appendChild(inputData);
-                        const inputFilters = document.createElement('input');
-                        inputFilters.type = 'hidden';
-                        inputFilters.name = 'filters';
-                        inputFilters.value = JSON.stringify(filters);
-                        form.appendChild(inputFilters);
-                        document.body.appendChild(form);
-                        form.submit();
-
-                        setTimeout(() => {
-                            closeBtn.style.display = "";
-                            closeBtn.disabled = false;
-                        }, 10000);
-
-                    }, 1200);
-
-                    closeBtn.onclick = function() {
-                        exportModal.hide();
-                    };
-                });
-            }
-
-            // Suppression de masse
-            if (deleteBtn) {
-                deleteBtn.addEventListener('click', function() {
-                    const checked = Array.from(document.querySelectorAll('.rgm-checkbox:checked'));
-                    if (checked.length === 0) return;
-                    if (!confirm(`Voulez-vous vraiment supprimer ${checked.length} ligne(s) ? Cette action est irréversible.`)) return;
-                    const ids = checked.map(cb => cb.value);
-                    fetch('request/rgm_delete.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                ids
-                            })
-                        })
-                        .then(r => r.json())
-                        .then(res => {
-                            if (res.success) {
-                                checked.forEach(cb => cb.closest('tr').remove());
-                                filterTable();
-                                alert(res.message || "Suppression réussie !");
-                            } else {
-                                alert(res.message || "Erreur lors de la suppression.");
-                            }
-                        })
-                        .catch(() => alert("Erreur réseau lors de la suppression."));
-                });
-            }
-
-            // Réinitialisation des filtres
-            if (resetBtn) {
-                resetBtn.addEventListener('click', function() {
-                    filterInputs.forEach(input => input.value = '');
-                    filterTable();
-                });
-            }
-
-            // Importation
-            const importForm = document.getElementById('importRgmForm');
-            const importBtn = document.getElementById('importBtnRgm');
-            const importSpinner = document.getElementById('importSpinnerRgm');
-            const fileInput = document.getElementById('rgm_file');
-            const importMsg = document.getElementById('importRgmMsg');
-
-            importForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                if (!fileInput.files.length) return;
-                importBtn.disabled = true;
-                importSpinner.classList.remove('d-none');
-                importBtn.textContent = " Importation...";
-                importBtn.prepend(importSpinner);
-                importMsg.innerHTML = "";
-
-                const formData = new FormData(importForm);
-
-                // Affiche une jauge fictive
-                importMsg.innerHTML = `
-                    <div class="progress my-2">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="importProgressBarRgm" style="width:0%">0%</div>
-                    </div>
-                    <div id="importProgressTextRgm" class="mb-2">Importation en cours...</div>
-                `;
-                let percent = 0;
-                const progressBar = document.getElementById('importProgressBarRgm');
-                const progressText = document.getElementById('importProgressTextRgm');
-                const interval = setInterval(() => {
-                    percent += Math.random() * 10 + 5;
-                    if (percent > 90) percent = 90;
-                    progressBar.style.width = percent + "%";
-                    progressBar.textContent = Math.round(percent) + "%";
-                }, 200);
-
-                fetch('request/rgm_import.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(r => r.json())
-                    .then(res => {
-                        clearInterval(interval);
-                        progressBar.style.width = "100%";
-                        progressBar.textContent = "100%";
-                        progressText.textContent = "Import terminé.";
-
-                        let html = `<div class="alert alert-success my-2">Importation terminée.<br>
-                        <b>${res.imported}</b> lignes importées.<br>
-                        <b>${res.duplicates.length}</b> doublons ignorés.<br>
-                        <b>${res.errors.length}</b> erreurs.<br>`;
-                        if (res.residualFile) {
-                            html += `<a href="${res.residualFile}" class="btn btn-warning btn-sm mt-2" download>Télécharger le fichier résiduel</a>`;
-                        }
-                        html += `</div>`;
-
-                        if (res.duplicates.length > 0) {
-                            html += `<details class="mt-2"><summary>Voir les doublons</summary><ul>`;
-                            res.duplicates.forEach(d => html += `<li>${d.message} (ligne ${d.ligne ?? ''})</li>`);
-                            html += `</ul></details>`;
-                        }
-                        if (res.errors.length > 0) {
-                            html += `<details class="mt-2"><summary>Voir les erreurs</summary><ul>`;
-                            res.errors.forEach(e => html += `<li>${e.message} (ligne ${e.ligne ?? ''})</li>`);
-                            html += `</ul></details>`;
-                        }
-                        importMsg.innerHTML = html;
-                        importBtn.disabled = false;
-                        importBtn.textContent = "Importer";
-                        importSpinner.classList.add('d-none');
-                    })
-                    .catch(() => {
-                        clearInterval(interval);
-                        importMsg.innerHTML = '<div class="alert alert-danger">Erreur lors de l\'importation.</div>';
-                        importBtn.disabled = false;
-                        importBtn.textContent = "Importer";
-                        importSpinner.classList.add('d-none');
-                    });
-            });
-
-            document.getElementById('importRgmModal').addEventListener('show.bs.modal', function() {
-                importBtn.disabled = false;
-                importBtn.classList.remove('btn-success');
-                importBtn.classList.add('btn-primary');
-                importBtn.textContent = "Importer";
-                importBtn.removeAttribute('data-bs-dismiss');
-                importSpinner.classList.add('d-none');
-                fileInput.value = "";
-            });
-
-            const dropzone = document.getElementById('dropzoneRgm');
-
-            dropzone.addEventListener('click', () => fileInput.click());
-            dropzone.addEventListener('dragover', e => {
-                e.preventDefault();
-                dropzone.classList.add('bg-light');
-            });
-            dropzone.addEventListener('dragleave', e => {
-                e.preventDefault();
-                dropzone.classList.remove('bg-light');
-            });
-            dropzone.addEventListener('drop', e => {
-                e.preventDefault();
-                dropzone.classList.remove('bg-light');
-                if (e.dataTransfer.files.length) {
-                    fileInput.files = e.dataTransfer.files;
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des statistiques');
                 }
             });
-            fileInput.addEventListener('change', () => {
-                if (fileInput.files.length) {
-                    dropzone.innerHTML = `<span class="material-icons" style="font-size:2.5em;color:#1976d2;">cloud_done</span><br>${fileInput.files[0].name}`;
-                }
-            });
+        }
 
-            // Synchronisation RGM → Nomenclature
-            const syncBtn = document.getElementById('syncRgmBtn');
-            const syncProgress = document.getElementById('syncRgmProgress');
-            const syncBar = document.getElementById('syncRgmBar');
-            const syncText = document.getElementById('syncRgmText');
+        // Chargement initial des données
+        function loadInitialData() {
+            loadedCount = 0;
+            $('#rgmTableBody').empty();
+            loadMoreData(true);
+        }
 
-            if (syncBtn) {
-                syncBtn.addEventListener('click', function() {
-                    const progressDiv = document.getElementById('syncRgmProgress');
-                    const bar = document.getElementById('syncRgmBar');
-                    const text = document.getElementById('syncRgmText');
-                    progressDiv.style.display = '';
-                    bar.style.width = '0%';
-                    bar.textContent = '0%';
-                    text.textContent = 'Synchronisation en cours...';
+        // Chargement de données supplémentaires
+        function loadMoreData(isInitial = false) {
+            if (isLoading || (!hasMoreData && !isInitial)) return;
 
-                    // Animation fictive de la jauge
-                    let percent = 0;
-                    const interval = setInterval(() => {
-                        percent += Math.random() * 10 + 5;
-                        if (percent > 90) percent = 90;
-                        bar.style.width = percent + "%";
-                        bar.textContent = Math.round(percent) + "%";
-                    }, 200);
+            isLoading = true;
+            $('#loadingIndicator').show();
 
-                    fetch('request/sync_rgm.php')
-                        .then(r => r.json())
-                        .then(res => {
-                            clearInterval(interval);
-                            bar.style.width = "100%";
-                            bar.textContent = "100%";
-                            if (res.success) {
-                                text.innerHTML = `<span class="text-success">Synchronisation terminée : <b>${res.inserted}</b> lignes ajoutées.</span>`;
-                            } else {
-                                text.innerHTML = `<span class="text-danger">Erreur lors de la synchronisation.</span>`;
-                            }
-                        })
-                        .catch(() => {
-                            clearInterval(interval);
-                            text.innerHTML = `<span class="text-danger">Erreur réseau.</span>`;
+            const params = {
+                page: currentPage,
+                limit: 50,
+                ...currentFilters
+            };
+
+            $.ajax({
+                url: 'api/rgm_pagination.php',
+                method: 'GET',
+                data: params,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        totalCount = response.total;
+                        hasMoreData = response.has_more;
+
+                        // Ajouter les nouvelles lignes
+                        response.data.forEach(function(item, index) {
+                            const row = createTableRow(item, loadedCount + index + 1);
+                            $('#rgmTableBody').append(row);
                         });
-                });
+
+                        loadedCount += response.data.length;
+                        currentPage++;
+
+                        // Mettre à jour les indicateurs
+                        updateTableInfo();
+
+                        // Animation d'apparition pour les nouvelles lignes
+                        $('#rgmTableBody tr').slice(-response.data.length).each(function(index) {
+                            $(this).css('opacity', '0').delay(index * 50).animate({
+                                opacity: 1
+                            }, 300);
+                        });
+                    } else {
+                        console.error('Erreur:', response.message);
+                    }
+                },
+                error: function() {
+                    console.error('Erreur lors du chargement des données');
+                },
+                complete: function() {
+                    isLoading = false;
+                    $('#loadingIndicator').hide();
+                }
+            });
+        }
+
+        // Création d'une ligne de tableau
+        function createTableRow(item, index) {
+            const syncStatus = item.in_nomenclature ?
+                '<span class="badge badge-success">Synchronisé</span>' :
+                '<span class="badge badge-warning">Non synchronisé</span>';
+
+            return `
+                <tr>
+                    <td class="font-weight-bold">${item.repere_equipement || '-'}</td>
+                    <td><code>${item.code_article || '-'}</code></td>
+                    <td>${item.designation_article || '-'}</td>
+                    <td class="text-right font-weight-bold">${item.quantite || 0}</td>
+                    <td><span class="badge badge-rgm">${item.unite || '-'}</span></td>
+                    <td>${syncStatus}</td>
+                </tr>
+            `;
+        }
+
+        // Mise à jour des informations du tableau
+        function updateTableInfo() {
+            const start = Math.min(1, loadedCount);
+            const end = loadedCount;
+            $('#currentRange').text(`${start}-${end}`);
+            $('#totalItems').text(`Total: ${totalCount} éléments`);
+        }
+
+        // Configuration du scroll infini
+        function setupInfiniteScroll() {
+            const container = document.getElementById('tableContainer');
+
+            container.addEventListener('scroll', function() {
+                // Masquer l'hint de scroll après le premier scroll
+                container.classList.add('scrolled');
+
+                // Vérifier si on approche du bas
+                if (this.scrollTop + this.clientHeight >= this.scrollHeight - 100) {
+                    loadMoreData();
+                }
+            });
+        }
+
+        // Initialisation des filtres
+        function initializeFilters() {
+            // Débounce pour les champs de texte
+            let filterTimeout;
+
+            $('#filterRepere, #filterCode, #filterDesignation').on('input', function() {
+                clearTimeout(filterTimeout);
+                filterTimeout = setTimeout(applyFilters, 500);
+            });
+
+            $('#filterUnite').on('change', applyFilters);
+        }
+
+        // Application des filtres
+        function applyFilters() {
+            currentFilters = {
+                repere: $('#filterRepere').val(),
+                code: $('#filterCode').val(),
+                designation: $('#filterDesignation').val(),
+                unite: $('#filterUnite').val()
+            };
+
+            // Reset pagination
+            currentPage = 1;
+            hasMoreData = true;
+            loadedCount = 0;
+            $('#rgmTableBody').empty();
+
+            loadMoreData(true);
+        }
+
+        // Effacement des filtres
+        function clearFilters() {
+            $('#filterRepere, #filterCode, #filterDesignation').val('');
+            $('#filterUnite').val('');
+            currentFilters = {};
+
+            // Reset pagination
+            currentPage = 1;
+            hasMoreData = true;
+            loadedCount = 0;
+            $('#rgmTableBody').empty();
+
+            loadMoreData(true);
+        }
+
+        // Configuration de la zone de drop
+        function setupDropZone() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileSelection(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    handleFileSelection(e.target.files[0]);
+                }
+            });
+        }
+
+        // Gestion de la sélection de fichier
+        function handleFileSelection(file) {
+            $('#fileName').text(file.name);
+            $('#fileSize').text(formatFileSize(file.size));
+            $('#fileInfo').show();
+            $('#importBtn').prop('disabled', false);
+        }
+
+        // Formatage de la taille de fichier
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Functions pour les actions
+        function showImportModal() {
+            $('#importModal').modal('show');
+        }
+
+        function startImport() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            showProgress('Import en cours...', 'Traitement du fichier RGM');
+
+            $.ajax({
+                url: 'api/import_rgm.php',
+                method: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    hideProgress();
+                    $('#importModal').modal('hide');
+
+                    if (response.success) {
+                        alert('Import réussi ! ' + response.imported + ' éléments importés.');
+                        loadStatistics();
+                        loadInitialData();
+                    } else {
+                        alert('Erreur lors de l\'import: ' + response.message);
+                    }
+                },
+                error: function() {
+                    hideProgress();
+                    alert('Erreur lors de l\'import');
+                }
+            });
+        }
+
+        function exportRgmData() {
+            showProgress('Export en cours...', 'Génération du fichier Excel');
+
+            const params = new URLSearchParams(currentFilters);
+            window.location.href = 'api/export_rgm.php?' + params.toString();
+
+            setTimeout(hideProgress, 2000);
+        }
+
+        function syncToNomenclature() {
+            showProgress('Synchronisation...', 'Mise à jour de la nomenclature');
+
+            $.ajax({
+                url: 'api/sync_rgm_nomenclature.php',
+                method: 'POST',
+                success: function(response) {
+                    hideProgress();
+                    if (response.success) {
+                        alert('Synchronisation réussie ! ' + response.synced + ' éléments synchronisés.');
+                        loadStatistics();
+                        loadInitialData();
+                        updateLastSyncTime();
+                    } else {
+                        alert('Erreur lors de la synchronisation: ' + response.message);
+                    }
+                },
+                error: function() {
+                    hideProgress();
+                    alert('Erreur lors de la synchronisation');
+                }
+            });
+        }
+
+        function forceSyncToNomenclature() {
+            if (confirm('Forcer la synchronisation complète ? Cette opération peut prendre du temps.')) {
+                syncToNomenclature();
             }
-        });
+        }
+
+        // Gestion de l'overlay de progression
+        function showProgress(title, message) {
+            $('#progressTitle').text(title);
+            $('#progressMessage').text(message);
+            $('#progressOverlay').css('display', 'flex');
+        }
+
+        function hideProgress() {
+            $('#progressOverlay').hide();
+        }
+
+        // Scroll vers le haut
+        function scrollToTop() {
+            document.getElementById('tableContainer').scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Mise à jour de l'heure de dernière synchro
+        function updateLastSyncTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('fr-FR');
+            $('#lastSync').text(timeStr);
+        }
     </script>
 </body>
 
