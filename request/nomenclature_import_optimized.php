@@ -40,23 +40,23 @@ try {
     // La première ligne contient les entêtes
     $header = array_shift($rows);
 
-    // Mapping des colonnes (adaptable selon votre format Excel)
+    // Mapping des colonnes (corrigé selon votre structure Excel)
     $columnMap = [
-        'A' => 'code_equipement',
-        'B' => 'code_article',
-        'C' => 'repere_equipement',
-        'D' => 'designation_equipement',
-        'E' => 'fabricant',
-        'F' => 'type',
-        'G' => 'numero_serie_fabricant',
-        'H' => 'designation_article',
-        'I' => 'numero_poste',
-        'J' => 'quantite',
-        'K' => 'unite',
-        'L' => 'poste_technique',
-        'M' => 'metier',
-        'N' => 'date_creation',
-        'O' => 'source'
+        'A' => 'code_equipement',        // Code Equipement
+        'B' => 'repere_equipement',      // Repère équipement
+        'C' => 'designation_equipement', // Désignation équipement
+        'D' => 'fabricant',              // Fabricant
+        'E' => 'type',                   // Type
+        'F' => 'numero_serie_fabricant', // N° série fabr.
+        'G' => 'code_article',           // Code Article
+        'H' => 'designation_article',    // Désignation article
+        'I' => 'numero_poste',           // N° Poste
+        'J' => 'quantite',               // Quantité installée
+        'K' => 'unite',                  // Unité de quantité
+        'L' => 'poste_technique',        // Poste technique
+        'M' => 'metier',                 // Métier
+        'N' => 'date_creation',          // Créé le
+        'O' => 'source'                  // Source
     ];
 
     $stats = [
@@ -77,6 +77,7 @@ try {
     $pdo->beginTransaction();
 
     $lineNumber = 1; // Commence à 1 car on a enlevé l'en-tête
+    $debugInfo = []; // Pour debug des premières lignes
 
     foreach ($rows as $row) {
         $lineNumber++;
@@ -87,6 +88,15 @@ try {
             foreach ($columnMap as $col => $field) {
                 $value = isset($row[$col]) ? trim($row[$col]) : null;
                 $data[$field] = empty($value) ? null : $value;
+            }
+
+            // Debug : capturer les 3 premières lignes
+            if ($lineNumber <= 4) {
+                $debugInfo[] = [
+                    'line_number' => $lineNumber,
+                    'raw_row' => $row,
+                    'mapped_data' => $data
+                ];
             }
 
             // Validation des champs obligatoires
@@ -200,7 +210,8 @@ try {
         'message' => 'Importation terminée avec succès',
         'stats' => $stats,
         'details' => $details,
-        'filename' => $fileName
+        'filename' => $fileName,
+        'debug' => $debugInfo  // Infos de debug pour vérifier le mapping
     ]);
 } catch (Exception $e) {
     if (isset($pdo)) {

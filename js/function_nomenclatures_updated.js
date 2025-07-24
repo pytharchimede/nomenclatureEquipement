@@ -1017,6 +1017,34 @@ function generateImportReport(result) {
     </div>
   `;
 
+  // Debug des premières lignes (pour vérifier le mapping)
+  if (result.debug && result.debug.length > 0) {
+    html += `
+      <div class="alert alert-secondary">
+        <h6><strong>Debug - Vérification du mapping (premières lignes) :</strong></h6>
+        <small class="text-muted">Pour vérifier que les colonnes sont bien mappées</small>
+    `;
+
+    result.debug.forEach((debugLine) => {
+      html += `
+        <div class="mt-2 p-2 border rounded">
+          <strong>Ligne ${debugLine.line_number} :</strong><br>
+          <small class="text-muted">Données brutes :</small> ${JSON.stringify(
+            debugLine.raw_row
+          ).substring(0, 200)}...<br>
+          <small class="text-success">Repère équipement :</small> <strong>${
+            debugLine.mapped_data.repere_equipement || "VIDE"
+          }</strong> |
+          <small class="text-primary">Code article :</small> <strong>${
+            debugLine.mapped_data.code_article || "VIDE"
+          }</strong>
+        </div>
+      `;
+    });
+
+    html += `</div>`;
+  }
+
   // Détails des doublons
   if (stats.duplicates > 0 && result.details.duplicates.length > 0) {
     html += `

@@ -46,11 +46,21 @@ $map = [
 $imported = 0;
 $duplicates = [];
 $errors = [];
+$debugInfo = []; // Pour debug
 
-foreach ($rows as $row) {
+foreach ($rows as $rowIndex => $row) {
     $data = [];
     foreach ($map as $col => $field) {
         $data[$field] = isset($row[$col]) ? trim($row[$col]) : null;
+    }
+
+    // Debug : capturer les premières lignes pour vérification
+    if ($rowIndex <= 3) {
+        $debugInfo[] = [
+            'row_number' => $rowIndex + 2, // +2 car ligne 1 = header et on commence à 0
+            'raw_row' => $row,
+            'mapped_data' => $data
+        ];
     }
 
     $ligneInfo = [
@@ -140,5 +150,6 @@ echo json_encode([
     'imported' => $imported,
     'duplicates' => $duplicates,
     'errors' => $errors, // rapport détaillé
-    'residual' => $residualRows // lignes non importées
+    'residual' => $residualRows, // lignes non importées
+    'debug' => $debugInfo // Infos de debug pour vérifier le mapping
 ]);
