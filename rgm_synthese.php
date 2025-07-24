@@ -601,6 +601,97 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </button>
     </div>
 
+    <!-- Modal Résultats Import -->
+    <div class="modal fade" id="importResultModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="material-icons" style="vertical-align: middle;">assignment_turned_in</i>
+                        Résultats de l'Import RGM
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row text-center mb-4">
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-success" id="importedCount">0</div>
+                                <div class="text-muted">Nouvelles entrées</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-info" id="updatedCount">0</div>
+                                <div class="text-muted">Mises à jour</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-warning" id="skippedCount">0</div>
+                                <div class="text-muted">Ignorées</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-card">
+                                <div class="stat-number text-primary" id="totalProcessed">0</div>
+                                <div class="text-muted">Total traité</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-success">
+                        <i class="material-icons">timer</i>
+                        <strong>Temps de traitement:</strong> <span id="processingTime">0s</span>
+                    </div>
+
+                    <div id="errorsSection" style="display: none;">
+                        <h6 class="text-danger">
+                            <i class="material-icons">warning</i>
+                            Erreurs rencontrées:
+                        </h6>
+                        <ul id="importErrors" class="list-unstyled" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Erreurs ajoutées dynamiquement -->
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success" onclick="closeImportResult()">
+                        <i class="material-icons">check</i>
+                        Terminer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Erreur Import -->
+    <div class="modal fade" id="importErrorModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="material-icons" style="vertical-align: middle;">error</i>
+                        Erreur d'Import
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="material-icons">error_outline</i>
+                        <span id="errorMessage">Une erreur est survenue</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="material-icons">close</i>
+                        Fermer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     </div> <!-- container-fluid -->
     </div> <!-- content -->
     </div> <!-- d-flex -->
@@ -652,9 +743,14 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             console.log('startImport: FormData créé avec fichier:', fileInput.files[0].name);
 
-            showProgress('Import en cours...', 'Traitement du fichier RGM');
+            // Afficher la progression avec estimation
+            showProgressWithSteps('Import en cours...', 'Analyse du fichier RGM');
 
-            fetch('api/import_rgm.php', {
+            // Cacher le modal d'import et afficher l'overlay de progression
+            const modal = bootstrap.Modal.getInstance(document.getElementById('importModal'));
+            modal.hide();
+
+            fetch('api/import_rgm_batch.php', {
                     method: 'POST',
                     body: formData
                 })
@@ -665,25 +761,69 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 .then(data => {
                     console.log('startImport: Données reçues:', data);
                     hideProgress();
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('importModal'));
-                    modal.hide();
 
                     if (data.success) {
-                        alert('Import réussi ! ' + data.imported + ' éléments importés.');
+                        showImportResult(data);
                         loadStatistics();
                         loadInitialData();
                     } else {
-                        alert('Erreur lors de l\'import: ' + data.message);
+                        showImportError(data.message);
                     }
                 })
                 .catch(error => {
                     console.error('startImport: Erreur complète:', error);
                     hideProgress();
-                    alert('Erreur lors de l\'import: ' + error.message);
+                    showImportError('Erreur lors de l\'import: ' + error.message);
                 });
         }
 
-        // Gestion de l'overlay de progression
+        // Gestion de l'overlay de progression avec étapes
+        function showProgressWithSteps(title, message) {
+            document.getElementById('progressTitle').textContent = title;
+            document.getElementById('progressMessage').textContent = message;
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressOverlay').style.display = 'flex';
+
+            // Simulation d'étapes pour l'utilisateur
+            updateProgressSteps();
+        }
+
+        function updateProgressSteps() {
+            const steps = [{
+                    progress: 20,
+                    message: 'Lecture du fichier...'
+                },
+                {
+                    progress: 40,
+                    message: 'Validation des données...'
+                },
+                {
+                    progress: 60,
+                    message: 'Vérification des doublons...'
+                },
+                {
+                    progress: 80,
+                    message: 'Insertion en base de données...'
+                },
+                {
+                    progress: 95,
+                    message: 'Finalisation...'
+                }
+            ];
+
+            let currentStep = 0;
+            const stepInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    const step = steps[currentStep];
+                    document.getElementById('progressBar').style.width = step.progress + '%';
+                    document.getElementById('progressMessage').textContent = step.message;
+                    currentStep++;
+                } else {
+                    clearInterval(stepInterval);
+                }
+            }, 1000);
+        }
+
         function showProgress(title, message) {
             document.getElementById('progressTitle').textContent = title;
             document.getElementById('progressMessage').textContent = message;
@@ -692,6 +832,49 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function hideProgress() {
             document.getElementById('progressOverlay').style.display = 'none';
+        }
+
+        // Affichage des résultats d'import
+        function showImportResult(data) {
+            const resultModal = document.getElementById('importResultModal');
+
+            // Mise à jour du contenu
+            document.getElementById('importedCount').textContent = data.imported || 0;
+            document.getElementById('updatedCount').textContent = data.updated || 0;
+            document.getElementById('skippedCount').textContent = data.skipped || 0;
+            document.getElementById('totalProcessed').textContent = data.total_processed || 0;
+            document.getElementById('processingTime').textContent = (data.processing_time || 0) + 's';
+
+            // Affichage des erreurs
+            const errorsList = document.getElementById('importErrors');
+            errorsList.innerHTML = '';
+            if (data.errors && data.errors.length > 0) {
+                document.getElementById('errorsSection').style.display = 'block';
+                data.errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    li.className = 'text-danger';
+                    errorsList.appendChild(li);
+                });
+            } else {
+                document.getElementById('errorsSection').style.display = 'none';
+            }
+
+            // Afficher le modal
+            const modal = new bootstrap.Modal(resultModal);
+            modal.show();
+        }
+
+        function showImportError(message) {
+            const errorModal = document.getElementById('importErrorModal');
+            document.getElementById('errorMessage').textContent = message;
+            const modal = new bootstrap.Modal(errorModal);
+            modal.show();
+        }
+
+        function closeImportResult() {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('importResultModal'));
+            if (modal) modal.hide();
         }
 
         // Gestion de la sélection de fichier
