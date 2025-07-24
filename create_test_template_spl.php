@@ -12,7 +12,7 @@ $sheet->setTitle('SPL');
 // En-têtes selon la structure fournie
 $headers = [
     'A1' => 'N°',
-    'B1' => 'CODE SAP',  
+    'B1' => 'CODE SAP',
     'C1' => '',
     'D1' => 'Code Article',
     'E1' => 'Qte',
@@ -80,4 +80,3 @@ echo "- Structure conforme à l'import SPL\n";
 echo "- Métiers: MECANIQUE, ELECTRICITE, INSTRUMENTATION\n";
 echo "- Fabricants: SKF, SIEMENS, FAG, SCHNEIDER\n";
 echo "\nVous pouvez utiliser ce fichier pour tester l'import!\n";
-?>
