@@ -897,30 +897,91 @@ $quantitatif = Quantitatif::getAll();
         async function viewDetails(id) {
             try {
                 const response = await fetch(`api/quantitatif_details.php?id=${id}`);
+
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
                     const detailContent = document.getElementById('detailContent');
+
+                    // Gestion des colonnes additionnelles (déjà parsées côté serveur)
+                    let autresColonnesHtml = 'Aucune donnée additionnelle';
+                    if (data.item.autres_colonnes) {
+                        try {
+                            // Les autres_colonnes sont déjà un objet depuis l'API
+                            const autresColonnes = data.item.autres_colonnes;
+
+                            if (autresColonnes && typeof autresColonnes === 'object') {
+                                autresColonnesHtml = Object.entries(autresColonnes)
+                                    .filter(([key, value]) => value !== null && value !== '' && key !== 'famille' && key !== 'repere' && key !== 'unite' && key !== 'quantite')
+                                    .map(([key, value]) => `
+                                        <div class="mb-2 p-2 bg-white rounded border-start border-3 border-primary">
+                                            <strong class="text-primary">${key}:</strong> 
+                                            <span class="ms-2">${value || 'Non renseigné'}</span>
+                                        </div>
+                                    `).join('');
+
+                                if (autresColonnesHtml === '') {
+                                    autresColonnesHtml = 'Aucune donnée additionnelle disponible';
+                                }
+                            }
+                        } catch (parseError) {
+                            console.error('Erreur traitement autres_colonnes:', parseError);
+                            autresColonnesHtml = `<div class="alert alert-warning">Erreur lors du traitement des données additionnelles</div>`;
+                        }
+                    }
+
+                    // Affichage des erreurs de parsing JSON si présentes côté serveur
+                    if (data.item.autres_colonnes_error) {
+                        autresColonnesHtml = `<div class="alert alert-warning">${data.item.autres_colonnes_error}</div>`;
+                    }
+
                     detailContent.innerHTML = `
                         <div class="row">
                             <div class="col-md-6">
-                                <h6 class="fw-bold text-primary mb-3">Informations Principales</h6>
-                                <table class="table table-sm">
-                                    <tr><td class="fw-bold">Famille:</td><td>${data.item.famille || 'Non définie'}</td></tr>
-                                    <tr><td class="fw-bold">Repère:</td><td>${data.item.repere || 'Non défini'}</td></tr>
-                                    <tr><td class="fw-bold">Unité:</td><td>${data.item.unite || 'Non définie'}</td></tr>
-                                    <tr><td class="fw-bold">Quantité:</td><td>${data.item.quantite || 'Non définie'}</td></tr>
-                                </table>
+                                <h6 class="fw-bold text-primary mb-3">
+                                    <span class="material-icons me-2" style="vertical-align: middle;">info</span>
+                                    Informations Principales
+                                </h6>
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body">
+                                        <table class="table table-sm mb-0">
+                                            <tr>
+                                                <td class="fw-bold text-muted" style="width: 30%;">ID:</td>
+                                                <td><span class="badge bg-secondary">${data.item.id}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-muted">Famille:</td>
+                                                <td><span class="badge bg-primary">${data.item.famille || 'Non définie'}</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-muted">Repère:</td>
+                                                <td><strong class="text-dark">${data.item.repere || 'Non défini'}</strong></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-muted">Unité:</td>
+                                                <td>${data.item.unite || 'Non définie'}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="fw-bold text-muted">Quantité:</td>
+                                                <td><span class="badge bg-success">${data.item.quantite || 'Non définie'}</span></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-6">
-                                <h6 class="fw-bold text-primary mb-3">Données Additionnelles</h6>
-                                <div class="bg-light p-3 rounded">
-                                    ${data.item.autres_colonnes ? 
-                                        Object.entries(JSON.parse(data.item.autres_colonnes))
-                                            .map(([key, value]) => `<div><strong>${key}:</strong> ${value}</div>`)
-                                            .join('') 
-                                        : 'Aucune donnée additionnelle'
-                                    }
+                                <h6 class="fw-bold text-primary mb-3">
+                                    <span class="material-icons me-2" style="vertical-align: middle;">extension</span>
+                                    Données de Suivi
+                                </h6>
+                                <div class="card border-0 bg-light">
+                                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                                        ${autresColonnesHtml}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -928,14 +989,14 @@ $quantitatif = Quantitatif::getAll();
 
                     const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
                     detailModal.show();
+                } else {
+                    throw new Error(data.error || 'Erreur inconnue');
                 }
             } catch (error) {
                 console.error('Erreur lors du chargement des détails:', error);
-                alert('Erreur lors du chargement des détails');
+                alert(`❌ Erreur lors du chargement des détails: ${error.message}`);
             }
-        }
-
-        // Normalisation des repères
+        } // Normalisation des repères
         async function normalizeReperes() {
             const rows = document.querySelectorAll('.table-quantitatif tbody tr');
             const updates = [];
