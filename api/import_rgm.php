@@ -12,9 +12,20 @@ try {
         throw new Exception('Méthode non autorisée');
     }
 
+    // Debug: Log des informations de requête
+    error_log("DEBUG: Méthode REQUEST: " . $_SERVER['REQUEST_METHOD']);
+    error_log("DEBUG: FILES reçus: " . json_encode($_FILES));
+    error_log("DEBUG: POST reçu: " . json_encode($_POST));
+
     // Vérification du fichier uploadé
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception('Erreur lors de l\'upload du fichier');
+        $errorMsg = 'Erreur lors de l\'upload du fichier';
+        if (isset($_FILES['file'])) {
+            $errorMsg .= ' - Code erreur: ' . $_FILES['file']['error'];
+        } else {
+            $errorMsg .= ' - Aucun fichier reçu';
+        }
+        throw new Exception($errorMsg);
     }
 
     $file = $_FILES['file'];
@@ -245,6 +256,27 @@ function insertNewRgmEntry($data)
 {
     try {
         $pdo = Database::getConnection();
+
+        // D'abord, vérifier si l'article existe, sinon le créer
+        $stmt = $pdo->prepare("SELECT id FROM articles WHERE code_article = ?");
+        $stmt->execute([$data['code_article']]);
+        $existingArticle = $stmt->fetch();
+
+        if (!$existingArticle) {
+            // L'article n'existe pas, on le crée
+            $insertArticle = $pdo->prepare("
+                INSERT INTO articles (code_article, designation_article, date_creation, cree_par) 
+                VALUES (?, ?, ?, ?)
+            ");
+            $insertArticle->execute([
+                $data['code_article'],
+                $data['designation_article'],
+                $data['date_creation'],
+                'RGM_IMPORT'
+            ]);
+        }
+
+        // Maintenant insérer dans nomenclatures
         $stmt = $pdo->prepare("
             INSERT INTO nomenclatures (
                 repere_equipement, code_article, designation_article, 

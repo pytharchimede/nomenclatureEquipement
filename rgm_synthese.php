@@ -573,7 +573,7 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                    <button type="button" class="btn btn-primary" onclick="startImport()" id="importBtn" disabled>
+                    <button type="button" class="btn btn-primary" onclick="console.log('Bouton cliqué!'); startImport();" id="importBtn" disabled>
                         <i class="material-icons">upload</i>
                         Importer
                     </button>
@@ -605,7 +605,7 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div> <!-- content -->
     </div> <!-- d-flex -->
 
-    <script src="plugins/js/jquery.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
     <script>
         // Variables globales pour la pagination infinie
@@ -638,10 +638,19 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         function startImport() {
             const fileInput = document.getElementById('fileInput');
-            if (!fileInput.files[0]) return;
+            console.log('startImport: fileInput =', fileInput);
+            console.log('startImport: fileInput.files =', fileInput.files);
+            console.log('startImport: fileInput.files.length =', fileInput.files.length);
+
+            if (!fileInput.files[0]) {
+                alert('Aucun fichier sélectionné');
+                return;
+            }
 
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
+
+            console.log('startImport: FormData créé avec fichier:', fileInput.files[0].name);
 
             showProgress('Import en cours...', 'Traitement du fichier RGM');
 
@@ -649,8 +658,12 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    console.log('startImport: Réponse reçue, status:', response.status);
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('startImport: Données reçues:', data);
                     hideProgress();
                     const modal = bootstrap.Modal.getInstance(document.getElementById('importModal'));
                     modal.hide();
@@ -664,9 +677,9 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
                 })
                 .catch(error => {
+                    console.error('startImport: Erreur complète:', error);
                     hideProgress();
-                    alert('Erreur lors de l\'import');
-                    console.error('Erreur:', error);
+                    alert('Erreur lors de l\'import: ' + error.message);
                 });
         }
 
@@ -683,10 +696,12 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Gestion de la sélection de fichier
         function handleFileSelection(file) {
+            console.log('handleFileSelection: Fichier sélectionné =', file.name);
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('fileSize').textContent = formatFileSize(file.size);
             document.getElementById('fileInfo').style.display = 'block';
             document.getElementById('importBtn').disabled = false;
+            console.log('handleFileSelection: Bouton import activé');
         }
 
         // Formatage de la taille de fichier
@@ -740,6 +755,14 @@ $initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Initialisation avec jQuery une fois le DOM chargé
         $(document).ready(function() {
+            console.log('DOM ready - Initialisation RGM Synthèse');
+            console.log('Functions check:', {
+                'showImportModal': typeof showImportModal,
+                'startImport': typeof startImport,
+                'handleFileSelection': typeof handleFileSelection,
+                'setupDropZone': typeof setupDropZone
+            });
+
             initializeFilters();
             loadStatistics();
             loadInitialData();

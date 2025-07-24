@@ -90,11 +90,8 @@ function getRgmPaginatedData($page, $limit, $filters)
         FROM nomenclatures 
         {$whereClause}
         ORDER BY date_creation DESC, id DESC
-        LIMIT ? OFFSET ?
+        LIMIT {$limit} OFFSET {$offset}
     ";
-
-    $params[] = $limit;
-    $params[] = $offset;
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
