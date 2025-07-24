@@ -1,12 +1,14 @@
 <?php
 session_start();
 require_once 'model/Database.php';
-require_once 'model/RgmSynthese.php';
 require_once 'model/Nomenclature.php';
 require_once 'includes/auth.php';
 
-// Chargement initial des premières données (pour éviter l'écran vide)
-$initialRgmData = RgmSynthese::getPaginated(1, 50);
+// Chargement initial des premières données RGM (pour éviter l'écran vide)
+$pdo = Database::getConnection();
+$stmt = $pdo->prepare("SELECT * FROM nomenclatures WHERE source = 'RGM' ORDER BY date_creation DESC LIMIT 50");
+$stmt->execute();
+$initialRgmData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -388,9 +390,9 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
                                 <i class="material-icons">get_app</i>
                                 Exporter Excel
                             </a>
-                            <a href="#" class="btn-outline-modern" onclick="syncToNomenclature()">
-                                <i class="material-icons">sync</i>
-                                Synchroniser
+                            <a href="nomenclatures.php" class="btn-outline-modern">
+                                <i class="material-icons">view_list</i>
+                                Voir Nomenclature Complète
                             </a>
                         </div>
                     </div>
@@ -424,29 +426,29 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="syncedCount">0</div>
-                        <div class="text-muted font-weight-bold">Synchro Nomenclature</div>
+                        <div class="text-muted font-weight-bold">Total Données RGM</div>
                         <small class="text-success">
-                            <i class="material-icons" style="font-size: 16px;">check_circle</i>
-                            Correspondances trouvées
+                            <i class="material-icons" style="font-size: 16px;">storage</i>
+                            Dans nomenclature globale
                         </small>
                     </div>
                 </div>
 
-                <!-- Synchronization Panel -->
+                <!-- Information Panel -->
                 <div class="sync-panel">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h5 class="mb-1">
-                                <i class="material-icons text-success" style="vertical-align: middle;">sync</i>
-                                État de Synchronisation
+                                <i class="material-icons text-success" style="vertical-align: middle;">info</i>
+                                Données RGM dans Nomenclature
                             </h5>
-                            <p class="mb-0 text-muted">Dernière synchronisation : <span id="lastSync">En cours...</span></p>
+                            <p class="mb-0 text-muted">Les données RGM sont intégrées directement dans la nomenclature globale avec source = "RGM"</p>
                         </div>
                         <div>
-                            <button class="btn btn-success btn-sm" onclick="forceSyncToNomenclature()">
-                                <i class="material-icons">refresh</i>
-                                Forcer la synchro
-                            </button>
+                            <a href="nomenclatures.php" class="btn btn-info btn-sm">
+                                <i class="material-icons">view_list</i>
+                                Voir tout
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -514,7 +516,7 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
                                     <th style="width: 35%;">Désignation Article</th>
                                     <th style="width: 12%;">Quantité</th>
                                     <th style="width: 10%;">Unité</th>
-                                    <th style="width: 13%;">Statut Synchro</th>
+                                    <th style="width: 13%;">Date Import</th>
                                 </tr>
                             </thead>
                             <tbody id="rgmTableBody">
@@ -622,6 +624,21 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
             updateLastSyncTime();
         });
 
+        // Fonctions pour les modals
+        function showImportModal() {
+            $('#importModal').modal('show');
+        }
+
+        function showEditModal(id) {
+            // Code pour charger les données et afficher le modal d'édition
+            $('#editModal').modal('show');
+        }
+
+        function showDeleteModal(id) {
+            // Code pour afficher le modal de confirmation de suppression
+            $('#deleteModal').modal('show');
+        }
+
         // Chargement des statistiques
         function loadStatistics() {
             $.ajax({
@@ -724,9 +741,8 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
 
         // Création d'une ligne de tableau
         function createTableRow(item, index) {
-            const syncStatus = item.in_nomenclature ?
-                '<span class="badge badge-success">Synchronisé</span>' :
-                '<span class="badge badge-warning">Non synchronisé</span>';
+            const dateFormat = item.date_creation ?
+                new Date(item.date_creation).toLocaleDateString('fr-FR') : '-';
 
             return `
                 <tr>
@@ -735,7 +751,7 @@ $initialRgmData = RgmSynthese::getPaginated(1, 50);
                     <td>${item.designation_article || '-'}</td>
                     <td class="text-right font-weight-bold">${item.quantite || 0}</td>
                     <td><span class="badge badge-rgm">${item.unite || '-'}</span></td>
-                    <td>${syncStatus}</td>
+                    <td class="text-muted">${dateFormat}</td>
                 </tr>
             `;
         }

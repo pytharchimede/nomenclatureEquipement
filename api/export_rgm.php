@@ -1,6 +1,5 @@
 <?php
 require_once '../model/Database.php';
-require_once '../model/RgmSynthese.php';
 
 try {
     // Récupération des filtres depuis les paramètres GET
@@ -16,8 +15,8 @@ try {
         return !empty(trim($value));
     });
 
-    // Récupération de toutes les données avec filtres
-    $data = RgmSynthese::getPaginated(1, 10000, $filters); // Grande limite pour export complet
+    // Récupération de toutes les données RGM depuis la table nomenclatures
+    $data = getRgmExportData($filters);
 
     // Nom du fichier avec timestamp
     $filename = 'export_rgm_' . date('Y-m-d_H-i-s') . '.csv';
@@ -55,7 +54,7 @@ try {
             $row['quantite'] ?? 0,
             $row['unite'] ?? '',
             $row['source'] ?? 'RGM',
-            isset($row['created_at']) ? date('d/m/Y H:i', strtotime($row['created_at'])) : ''
+            isset($row['date_creation']) ? date('d/m/Y', strtotime($row['date_creation'])) : ''
         ];
         fputcsv($output, $csvRow, ';');
     }
@@ -65,4 +64,46 @@ try {
     // En cas d'erreur, redirection vers la page avec message
     header('Location: ../rgm_synthese.php?error=' . urlencode($e->getMessage()));
     exit;
+}
+
+// Fonction pour récupérer les données RGM à exporter
+function getRgmExportData($filters)
+{
+    $pdo = Database::getConnection();
+
+    $whereConditions = ["source = 'RGM'"];
+    $params = [];
+
+    // Construction des conditions WHERE
+    if (!empty($filters['repere_equipement'])) {
+        $whereConditions[] = "repere_equipement LIKE ?";
+        $params[] = '%' . $filters['repere_equipement'] . '%';
+    }
+    if (!empty($filters['code_article'])) {
+        $whereConditions[] = "code_article LIKE ?";
+        $params[] = '%' . $filters['code_article'] . '%';
+    }
+    if (!empty($filters['designation_article'])) {
+        $whereConditions[] = "designation_article LIKE ?";
+        $params[] = '%' . $filters['designation_article'] . '%';
+    }
+    if (!empty($filters['unite'])) {
+        $whereConditions[] = "unite = ?";
+        $params[] = $filters['unite'];
+    }
+
+    $whereClause = "WHERE " . implode(" AND ", $whereConditions);
+
+    $sql = "
+        SELECT repere_equipement, code_article, designation_article, 
+               quantite, unite, source, date_creation
+        FROM nomenclatures 
+        {$whereClause}
+        ORDER BY date_creation DESC, repere_equipement ASC
+    ";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

@@ -5,7 +5,7 @@ header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
 require_once '../model/Database.php';
-require_once '../model/RgmSynthese.php';
+require_once '../model/Nomenclature.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -30,21 +30,26 @@ try {
     }
 
     $importedCount = 0;
+    $duplicatesCount = 0;
     $errors = [];
 
     // Traitement selon le type de fichier
     if ($extension === 'csv') {
-        $importedCount = importFromCSV($tmpName, $errors);
+        $result = importFromCSV($tmpName, $errors);
     } else {
-        $importedCount = importFromExcel($tmpName, $errors);
+        $result = importFromExcel($tmpName, $errors);
     }
+
+    $importedCount = $result['imported'];
+    $duplicatesCount = $result['duplicates'];
 
     // Réponse de succès
     echo json_encode([
         'success' => true,
         'imported' => $importedCount,
+        'duplicates' => $duplicatesCount,
         'errors' => $errors,
-        'message' => "Import réussi: {$importedCount} éléments importés"
+        'message' => "Import RGM réussi: {$importedCount} nouveaux éléments, {$duplicatesCount} doublons mis à jour"
     ]);
 } catch (Exception $e) {
     echo json_encode([
@@ -57,12 +62,13 @@ try {
 function importFromCSV($filePath, &$errors)
 {
     $importedCount = 0;
+    $duplicatesCount = 0;
 
     if (($handle = fopen($filePath, "r")) !== FALSE) {
         $headerSkipped = false;
         $lineNumber = 0;
 
-        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+        while (($data = fgetcsv($handle, 1000, "\t")) !== FALSE) { // Utilisation de tab comme séparateur
             $lineNumber++;
 
             // Ignorer la première ligne (en-têtes)
@@ -78,26 +84,40 @@ function importFromCSV($filePath, &$errors)
             }
 
             try {
-                // Mapping des colonnes (ajustez selon votre format CSV)
-                $rgmData = [
-                    'repere_equipement' => trim($data[0]),
-                    'code_article' => trim($data[1]),
-                    'designation_article' => trim($data[2]),
-                    'quantite' => floatval($data[3]),
-                    'unite' => trim($data[4])
+                // Mapping des colonnes selon le format RGM fourni
+                $nomenclatureData = [
+                    'repere_equipement' => trim($data[0]), // Repère équipement
+                    'code_article' => trim($data[1]),      // Code Article  
+                    'designation_article' => trim($data[2]), // Designation Article
+                    'quantite' => intval($data[3]),        // Quantité installée
+                    'unite' => trim($data[4]),             // Unité de quantité
+                    'source' => 'RGM',
+                    'date_creation' => date('Y-m-d')
                 ];
 
                 // Validation des données obligatoires
-                if (empty($rgmData['repere_equipement']) || empty($rgmData['code_article'])) {
+                if (empty($nomenclatureData['repere_equipement']) || empty($nomenclatureData['code_article'])) {
                     $errors[] = "Ligne {$lineNumber}: Repère équipement et code article obligatoires";
                     continue;
                 }
 
-                // Insertion en base
-                if (RgmSynthese::insertOrUpdate($rgmData)) {
-                    $importedCount++;
+                // Vérifier si l'entrée existe déjà (même repère + code article + source RGM)
+                $existingId = checkExistingRgmEntry($nomenclatureData['repere_equipement'], $nomenclatureData['code_article']);
+
+                if ($existingId) {
+                    // Mise à jour de l'entrée existante
+                    if (updateRgmEntry($existingId, $nomenclatureData)) {
+                        $duplicatesCount++;
+                    } else {
+                        $errors[] = "Ligne {$lineNumber}: Erreur lors de la mise à jour";
+                    }
                 } else {
-                    $errors[] = "Ligne {$lineNumber}: Erreur lors de l'insertion";
+                    // Insertion nouvelle entrée
+                    if (insertNewRgmEntry($nomenclatureData)) {
+                        $importedCount++;
+                    } else {
+                        $errors[] = "Ligne {$lineNumber}: Erreur lors de l'insertion";
+                    }
                 }
             } catch (Exception $e) {
                 $errors[] = "Ligne {$lineNumber}: " . $e->getMessage();
@@ -108,7 +128,7 @@ function importFromCSV($filePath, &$errors)
         throw new Exception('Impossible de lire le fichier CSV');
     }
 
-    return $importedCount;
+    return ['imported' => $importedCount, 'duplicates' => $duplicatesCount];
 }
 
 function importFromExcel($filePath, &$errors)
@@ -126,37 +146,122 @@ function importFromExcel($filePath, &$errors)
         $highestRow = $worksheet->getHighestRow();
 
         $importedCount = 0;
+        $duplicatesCount = 0;
 
         // Commencer à la ligne 2 (ignorer les en-têtes)
         for ($row = 2; $row <= $highestRow; $row++) {
             try {
-                $rgmData = [
-                    'repere_equipement' => trim($worksheet->getCell('A' . $row)->getValue()),
-                    'code_article' => trim($worksheet->getCell('B' . $row)->getValue()),
-                    'designation_article' => trim($worksheet->getCell('C' . $row)->getValue()),
-                    'quantite' => floatval($worksheet->getCell('D' . $row)->getValue()),
-                    'unite' => trim($worksheet->getCell('E' . $row)->getValue())
+                $nomenclatureData = [
+                    'repere_equipement' => trim($worksheet->getCell('A' . $row)->getValue()), // Repère équipement
+                    'code_article' => trim($worksheet->getCell('B' . $row)->getValue()),      // Code Article
+                    'designation_article' => trim($worksheet->getCell('C' . $row)->getValue()), // Designation Article
+                    'quantite' => intval($worksheet->getCell('D' . $row)->getValue()),        // Quantité
+                    'unite' => trim($worksheet->getCell('E' . $row)->getValue()),             // Unité
+                    'source' => 'RGM',
+                    'date_creation' => date('Y-m-d')
                 ];
 
                 // Validation des données obligatoires
-                if (empty($rgmData['repere_equipement']) || empty($rgmData['code_article'])) {
+                if (empty($nomenclatureData['repere_equipement']) || empty($nomenclatureData['code_article'])) {
                     $errors[] = "Ligne {$row}: Repère équipement et code article obligatoires";
                     continue;
                 }
 
-                // Insertion en base
-                if (RgmSynthese::insertOrUpdate($rgmData)) {
-                    $importedCount++;
+                // Vérifier si l'entrée existe déjà (même repère + code article + source RGM)
+                $existingId = checkExistingRgmEntry($nomenclatureData['repere_equipement'], $nomenclatureData['code_article']);
+
+                if ($existingId) {
+                    // Mise à jour de l'entrée existante
+                    if (updateRgmEntry($existingId, $nomenclatureData)) {
+                        $duplicatesCount++;
+                    } else {
+                        $errors[] = "Ligne {$row}: Erreur lors de la mise à jour";
+                    }
                 } else {
-                    $errors[] = "Ligne {$row}: Erreur lors de l'insertion";
+                    // Insertion nouvelle entrée
+                    if (insertNewRgmEntry($nomenclatureData)) {
+                        $importedCount++;
+                    } else {
+                        $errors[] = "Ligne {$row}: Erreur lors de l'insertion";
+                    }
                 }
             } catch (Exception $e) {
                 $errors[] = "Ligne {$row}: " . $e->getMessage();
             }
         }
 
-        return $importedCount;
+        return ['imported' => $importedCount, 'duplicates' => $duplicatesCount];
     } catch (Exception $e) {
         throw new Exception('Erreur lors de la lecture du fichier Excel: ' . $e->getMessage());
+    }
+}
+
+// Fonctions utilitaires pour gérer les données RGM dans la table nomenclatures
+
+function checkExistingRgmEntry($repereEquipement, $codeArticle)
+{
+    try {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            SELECT id FROM nomenclatures 
+            WHERE repere_equipement = ? AND code_article = ? AND source = 'RGM'
+            LIMIT 1
+        ");
+        $stmt->execute([$repereEquipement, $codeArticle]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['id'] : null;
+    } catch (Exception $e) {
+        error_log("Erreur checkExistingRgmEntry: " . $e->getMessage());
+        return null;
+    }
+}
+
+function updateRgmEntry($id, $data)
+{
+    try {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            UPDATE nomenclatures SET 
+                designation_article = ?,
+                quantite = ?,
+                unite = ?,
+                date_creation = ?
+            WHERE id = ?
+        ");
+        return $stmt->execute([
+            $data['designation_article'],
+            $data['quantite'],
+            $data['unite'],
+            $data['date_creation'],
+            $id
+        ]);
+    } catch (Exception $e) {
+        error_log("Erreur updateRgmEntry: " . $e->getMessage());
+        return false;
+    }
+}
+
+function insertNewRgmEntry($data)
+{
+    try {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            INSERT INTO nomenclatures (
+                repere_equipement, code_article, designation_article, 
+                quantite, unite, source, date_creation
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        return $stmt->execute([
+            $data['repere_equipement'],
+            $data['code_article'],
+            $data['designation_article'],
+            $data['quantite'],
+            $data['unite'],
+            $data['source'],
+            $data['date_creation']
+        ]);
+    } catch (Exception $e) {
+        error_log("Erreur insertNewRgmEntry: " . $e->getMessage());
+        return false;
     }
 }
