@@ -86,6 +86,40 @@ require_once __DIR__ . '/includes/auth.php';
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link <?php echo isActive('elements_non_sap.php'); ?>" href="elements_non_sap.php">
+                <span class="material-icons">error_outline</span>
+                Éléments Non SAP
+                <?php
+                // Comptage des éléments non SAP
+                try {
+                    $stmt = $pdo->query("
+                        SELECT 
+                            (SELECT COUNT(DISTINCT e.repere_equipement) 
+                             FROM equipements e 
+                             WHERE e.repere_equipement NOT IN (
+                                 SELECT DISTINCT n.repere_equipement 
+                                 FROM nomenclatures n 
+                                 WHERE n.source = 'SAP' AND n.repere_equipement IS NOT NULL
+                             )) +
+                            (SELECT COUNT(DISTINCT a.code_article) 
+                             FROM articles a 
+                             WHERE a.code_article NOT IN (
+                                 SELECT DISTINCT n.code_article 
+                                 FROM nomenclatures n 
+                                 WHERE n.source = 'SAP' AND n.code_article IS NOT NULL
+                             )) as total_non_sap
+                    ");
+                    $nbNonSAP = $stmt->fetchColumn();
+                    if ($nbNonSAP > 0): ?>
+                        <span class="badge bg-danger ms-2"><?= $nbNonSAP ?></span>
+                <?php endif;
+                } catch (Exception $e) {
+                    // Silencieux en cas d'erreur
+                }
+                ?>
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <?php echo isActive('validation_doublons_import.php'); ?>" href="validation_doublons_import.php">
                 <span class="material-icons">rule</span>
                 Validation Import
