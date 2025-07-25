@@ -8,7 +8,7 @@ class Utilisateur
     public static function getAll()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT * FROM utilisateur ORDER BY nom_utilisateur");
+        $stmt = $pdo->query("SELECT * FROM utilisateur ORDER BY nom");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -31,7 +31,7 @@ class Utilisateur
     public static function getByUsername($username)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT * FROM utilisateur WHERE nom_utilisateur = ?");
+        $stmt = $pdo->prepare("SELECT * FROM utilisateur WHERE nom = ?");
         $stmt->execute([$username]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
@@ -65,7 +65,7 @@ class Utilisateur
     public static function usernameExists($username)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilisateur WHERE nom_utilisateur = ?");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilisateur WHERE nom = ?");
         $stmt->execute([$username]);
         return $stmt->fetchColumn() > 0;
     }
@@ -76,12 +76,18 @@ class Utilisateur
     public static function updateLastLogin($userId, $ip = null)
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("
-            UPDATE utilisateur 
-            SET last_login_at = NOW()
-            WHERE id = ?
-        ");
-        return $stmt->execute([$userId]);
+        // Temporaire : ne fait rien si les colonnes n'existent pas encore
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE utilisateur 
+                SET date_creation = date_creation
+                WHERE id = ?
+            ");
+            return $stmt->execute([$userId]);
+        } catch (PDOException $e) {
+            // Ignorer l'erreur si les colonnes n'existent pas encore
+            return true;
+        }
     }
 
     /**

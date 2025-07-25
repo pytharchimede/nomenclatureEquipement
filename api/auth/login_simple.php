@@ -24,7 +24,7 @@ try {
 
     // Récupération des données
     $input = json_decode(file_get_contents('php://input'), true);
-    
+
     if (!$input || empty($input['email']) || empty($input['password'])) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Email et mot de passe requis']);
@@ -40,13 +40,13 @@ try {
 
     // Limitation de taux basique via session
     $sessionKey = 'login_attempts_' . $_SERVER['REMOTE_ADDR'];
-    
+
     if (!isset($_SESSION[$sessionKey])) {
         $_SESSION[$sessionKey] = [];
     }
 
     // Nettoyer les tentatives anciennes (plus de 1 heure)
-    $_SESSION[$sessionKey] = array_filter($_SESSION[$sessionKey], function($time) {
+    $_SESSION[$sessionKey] = array_filter($_SESSION[$sessionKey], function ($time) {
         return (time() - $time) < 3600;
     });
 
@@ -59,13 +59,13 @@ try {
 
     // Tentative d'authentification
     $user = Utilisateur::authenticate($email, $input['password']);
-    
+
     if ($user) {
         // Vérifier si l'utilisateur est actif
         if (!$user['actif']) {
             // Ajouter la tentative échouée
             $_SESSION[$sessionKey][] = time();
-            
+
             http_response_code(401);
             echo json_encode(['success' => false, 'message' => 'Compte désactivé']);
             exit;
@@ -76,10 +76,10 @@ try {
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_nom'] = $user['nom_utilisateur'] ?? $user['nom'];
         $_SESSION['groupe_id'] = $user['groupe_id'];
-        
+
         // Nettoyer les tentatives de connexion
         unset($_SESSION[$sessionKey]);
-        
+
         // Mettre à jour la dernière connexion si possible
         try {
             $pdo = Database::getConnection();
@@ -92,7 +92,7 @@ try {
         } catch (Exception $e) {
             // Ignorer l'erreur si la colonne n'existe pas encore
         }
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Connexion réussie',
@@ -104,15 +104,13 @@ try {
             ],
             'redirect' => 'dashboard.php'
         ]);
-        
     } else {
         // Ajouter la tentative échouée
         $_SESSION[$sessionKey][] = time();
-        
+
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Email ou mot de passe incorrect']);
     }
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
@@ -120,4 +118,3 @@ try {
         'message' => 'Erreur serveur: ' . $e->getMessage()
     ]);
 }
-?>

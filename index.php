@@ -1,4 +1,4 @@
 <?php
 
-header('Location: login.php');
+header('Location: auth.php');
 // This file redirects all requests to the login page.
