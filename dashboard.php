@@ -646,7 +646,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <div class="chart-container">
                         <h5 class="chart-title">
                             <span class="material-icons">family_restroom</span>
-                            Familles d'Équipements : Articles & Pièces
+                            Familles d'Équipements
+                            <small class="text-muted ms-2">(Quantité vs Diversité)</small>
                         </h5>
                         <canvas id="famillesChart"></canvas>
                     </div>
@@ -656,7 +657,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <div class="chart-container">
                         <h5 class="chart-title">
                             <span class="material-icons">trending_up</span>
-                            Évolution des Équipements
+                            Croissance des Équipements
+                            <small class="text-muted ms-2">(7 derniers mois)</small>
                         </h5>
                         <canvas id="evolutionChart"></canvas>
                     </div>
@@ -666,7 +668,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <div class="chart-container">
                         <h5 class="chart-title">
                             <span class="material-icons">device_hub</span>
-                            Types d'Équipements : Complexité & Articles
+                            Types d'Équipements
+                            <small class="text-muted ms-2">(Pompes, Compresseurs, etc.)</small>
                         </h5>
                         <canvas id="typesChart"></canvas>
                     </div>
@@ -676,7 +679,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     <div class="chart-container small">
                         <h5 class="chart-title">
                             <span class="material-icons">category</span>
-                            Articles par Métier
+                            Métiers des Articles
+                            <small class="text-muted ms-2">(Par domaine)</small>
                         </h5>
                         <canvas id="metiersChart"></canvas>
                     </div>
@@ -753,8 +757,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             });
         }
 
-        // Chargement des données complètes et intuitives
-        fetch('request/dashboard_stats_comprehensive.php')
+        // Chargement des données SIMPLES et PERFORMANTES
+        fetch('request/dashboard_stats_simple.php')
             .then(response => response.json())
             .then(result => {
                 if (!result.success) {
@@ -766,24 +770,34 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                 const data = result.data;
                 console.log('Données reçues:', data);
 
-                // 1. Graphique des familles : Articles vs Équipements (plus intuitif)
+                // 1. FAMILLES : Graphique en barres SIMPLE et CLAIR
                 const famillesCtx = document.getElementById('famillesChart').getContext('2d');
                 new Chart(famillesCtx, {
-                    type: 'scatter',
+                    type: 'bar',
                     data: {
+                        labels: data.familles.map(item => item.famille),
                         datasets: [{
-                            label: 'Familles d\'équipements',
-                            data: data.familles_complete.map(item => ({
-                                x: item.nb_equipements,
-                                y: item.nb_articles_differents,
-                                famille: item.famille,
-                                pieces: item.nb_pieces_totales
-                            })),
-                            backgroundColor: modernColors.map(color => color + '80'),
-                            borderColor: modernColors,
-                            borderWidth: 3,
-                            pointRadius: 8,
-                            pointHoverRadius: 12
+                            label: 'Équipements',
+                            data: data.familles.map(item => item.nb_equipements),
+                            backgroundColor: modernColors[0] + '80',
+                            borderColor: modernColors[0],
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            yAxisID: 'y'
+                        }, {
+                            label: 'Articles différents',
+                            data: data.familles.map(item => item.nb_articles_differents),
+                            backgroundColor: modernColors[2] + '80',
+                            borderColor: modernColors[2],
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            yAxisID: 'y1',
+                            type: 'line',
+                            tension: 0.4,
+                            pointBackgroundColor: modernColors[2],
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 3,
+                            pointRadius: 6
                         }]
                     },
                     options: {
@@ -799,7 +813,14 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         },
                         plugins: {
                             legend: {
-                                display: false
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    font: {
+                                        weight: '600'
+                                    }
+                                }
                             },
                             tooltip: {
                                 backgroundColor: 'rgba(0,0,0,0.9)',
@@ -809,71 +830,75 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 borderWidth: 1,
                                 cornerRadius: 8,
                                 callbacks: {
-                                    title: function(context) {
-                                        return context[0].raw.famille;
-                                    },
-                                    label: function(context) {
-                                        const point = context.raw;
-                                        return [
-                                            `${point.x} équipements`,
-                                            `${point.y} articles différents`,
-                                            `${point.pieces} pièces au total`,
-                                            `Moy: ${(point.pieces / point.x).toFixed(1)} pièces/équip.`
-                                        ];
+                                    afterLabel: function(context) {
+                                        const famille = data.familles[context.dataIndex];
+                                        if (context.datasetIndex === 0) {
+                                            return `Diversité: ${famille.nb_articles_differents} articles`;
+                                        }
+                                        return `Total: ${famille.nb_equipements} équipements`;
                                     }
                                 }
                             }
                         },
                         scales: {
                             x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    font: {
+                                        weight: '500'
+                                    }
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
                                 title: {
                                     display: true,
                                     text: 'Nombre d\'équipements',
                                     font: {
-                                        weight: '600',
-                                        size: 14
+                                        weight: '600'
                                     }
                                 },
                                 grid: {
                                     color: 'rgba(0,0,0,0.1)'
                                 }
                             },
-                            y: {
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
                                 title: {
                                     display: true,
-                                    text: 'Nombre d\'articles différents',
+                                    text: 'Articles différents',
                                     font: {
-                                        weight: '600',
-                                        size: 14
+                                        weight: '600'
                                     }
                                 },
                                 grid: {
-                                    color: 'rgba(0,0,0,0.1)'
+                                    drawOnChartArea: false
                                 }
                             }
                         },
                         animation: {
-                            duration: 2500,
+                            duration: 2000,
                             easing: 'easeOutQuart'
                         }
                     }
                 });
 
-                // 2. Graphique d'évolution réaliste
+                // 2. ÉVOLUTION : Ligne claire avec nouveaux vs cumulé
                 const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
                 new Chart(evolutionCtx, {
                     type: 'line',
                     data: {
-                        labels: data.evolution_simulee.map(item => {
-                            const date = new Date(item.mois + '-01');
-                            return date.toLocaleDateString('fr-FR', {
-                                month: 'short',
-                                year: '2-digit'
-                            });
-                        }),
+                        labels: data.evolution.map(item => item.mois),
                         datasets: [{
-                            label: 'Équipements cumulés',
-                            data: data.evolution_simulee.map(item => item.equipements_cumules),
+                            label: 'Total cumulé',
+                            data: data.evolution.map(item => item.cumule),
                             borderColor: modernColors[0],
                             backgroundColor: modernColors[0] + '20',
                             tension: 0.4,
@@ -882,20 +907,20 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 3,
                             pointRadius: 6,
-                            pointHoverRadius: 8
+                            borderWidth: 3
                         }, {
-                            label: 'Nouveaux équipements',
-                            data: data.evolution_simulee.map(item => item.equipements_ajoutes),
-                            borderColor: modernColors[2],
-                            backgroundColor: modernColors[2] + '40',
+                            label: 'Nouveaux ajouts',
+                            data: data.evolution.map(item => item.nouveaux_equipements),
+                            borderColor: modernColors[3],
+                            backgroundColor: modernColors[3] + '40',
                             tension: 0.3,
                             fill: false,
-                            pointBackgroundColor: modernColors[2],
+                            pointBackgroundColor: modernColors[3],
                             pointBorderColor: '#ffffff',
                             pointBorderWidth: 2,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            borderDash: [5, 5]
+                            pointRadius: 5,
+                            borderDash: [8, 4],
+                            borderWidth: 2
                         }]
                     },
                     options: {
@@ -949,6 +974,13 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                     font: {
                                         weight: '500'
                                     }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Nombre d\'équipements',
+                                    font: {
+                                        weight: '600'
+                                    }
                                 }
                             }
                         },
@@ -959,24 +991,26 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     }
                 });
 
-                // 3. Types d'équipements avec complexité (bubble chart)
+                // 3. TYPES : Graphique en barres horizontales SIMPLE
                 const typesCtx = document.getElementById('typesChart').getContext('2d');
                 new Chart(typesCtx, {
-                    type: 'bubble',
+                    type: 'bar',
                     data: {
+                        labels: data.types_equipements.map(item => item.type_equipement),
                         datasets: [{
-                            label: 'Types d\'équipements',
-                            data: data.types_complete.map((item, index) => ({
-                                x: item.nombre,
-                                y: item.articles_differents,
-                                r: Math.max(5, Math.min(25, item.pieces_totales / 100)),
-                                type: item.type_equipement,
-                                pieces: item.pieces_totales,
-                                moyenne: item.pieces_moyenne,
-                                backgroundColor: modernColors[index % modernColors.length] + '60',
-                                borderColor: modernColors[index % modernColors.length],
-                                borderWidth: 2
-                            }))
+                            label: 'Nombre d\'équipements',
+                            data: data.types_equipements.map(item => item.nombre_equipements),
+                            backgroundColor: modernColors.slice(0, data.types_equipements.length).map(color => color + '80'),
+                            borderColor: modernColors.slice(0, data.types_equipements.length),
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }, {
+                            label: 'Variétés d\'articles',
+                            data: data.types_equipements.map(item => item.varietes_articles),
+                            backgroundColor: modernColors.slice(1, data.types_equipements.length + 1).map(color => color + '60'),
+                            borderColor: modernColors.slice(1, data.types_equipements.length + 1),
+                            borderWidth: 2,
+                            borderRadius: 8
                         }]
                     },
                     options: {
@@ -992,7 +1026,14 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         },
                         plugins: {
                             legend: {
-                                display: false
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    font: {
+                                        weight: '600'
+                                    }
+                                }
                             },
                             tooltip: {
                                 backgroundColor: 'rgba(0,0,0,0.9)',
@@ -1002,68 +1043,61 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 borderWidth: 1,
                                 cornerRadius: 8,
                                 callbacks: {
-                                    title: function(context) {
-                                        return context[0].raw.type;
-                                    },
-                                    label: function(context) {
-                                        const point = context.raw;
-                                        return [
-                                            `${point.x} équipements`,
-                                            `${point.y} articles différents`,
-                                            `${point.pieces} pièces au total`,
-                                            `Moyenne: ${point.moyenne} pièces/équip.`
-                                        ];
+                                    afterLabel: function(context) {
+                                        const item = data.types_equipements[context.dataIndex];
+                                        if (context.datasetIndex === 0) {
+                                            return `Utilise ${item.varietes_articles} types d'articles`;
+                                        } else {
+                                            return `Pour ${item.nombre_equipements} équipements`;
+                                        }
                                     }
                                 }
                             }
                         },
                         scales: {
                             x: {
-                                title: {
-                                    display: true,
-                                    text: 'Nombre d\'équipements',
-                                    font: {
-                                        weight: '600',
-                                        size: 14
-                                    }
-                                },
                                 grid: {
-                                    color: 'rgba(0,0,0,0.1)'
+                                    display: false
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    font: {
+                                        weight: '500'
+                                    }
                                 }
                             },
                             y: {
-                                title: {
-                                    display: true,
-                                    text: 'Articles différents utilisés',
-                                    font: {
-                                        weight: '600',
-                                        size: 14
-                                    }
-                                },
+                                beginAtZero: true,
                                 grid: {
                                     color: 'rgba(0,0,0,0.1)'
+                                },
+                                ticks: {
+                                    font: {
+                                        weight: '500'
+                                    }
                                 }
                             }
                         },
                         animation: {
-                            duration: 2500,
+                            duration: 2000,
                             easing: 'easeOutQuart'
                         }
                     }
                 });
 
-                // 4. Métiers avec répartition SAP/RGM
+                // 4. MÉTIERS : Doughnut simple et clair
                 const metiersCtx = document.getElementById('metiersChart').getContext('2d');
                 new Chart(metiersCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: data.metiers_complete.map(item => item.metier),
+                        labels: data.metiers.map(item => item.metier),
                         datasets: [{
-                            label: 'Articles SAP',
-                            data: data.metiers_complete.map(item => item.articles_sap),
-                            backgroundColor: modernColors.slice(0, data.metiers_complete.length).map(color => color + '80'),
-                            borderColor: modernColors.slice(0, data.metiers_complete.length),
-                            borderWidth: 2
+                            data: data.metiers.map(item => item.nb_articles),
+                            backgroundColor: modernColors.slice(0, data.metiers.length).map(color => color + '80'),
+                            borderColor: modernColors.slice(0, data.metiers.length),
+                            borderWidth: 2,
+                            hoverBorderWidth: 4,
+                            hoverBorderColor: '#ffffff'
                         }]
                     },
                     options: {
@@ -1098,14 +1132,9 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 cornerRadius: 8,
                                 callbacks: {
                                     label: function(context) {
-                                        const metier = data.metiers_complete[context.dataIndex];
-                                        const total = metier.nb_articles;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                         const percentage = ((context.parsed * 100) / total).toFixed(1);
-                                        return [
-                                            `${metier.metier}:`,
-                                            `${context.parsed} articles SAP (${percentage}%)`,
-                                            `${metier.nb_equipements_concernes} équipements concernés`
-                                        ];
+                                        return `${context.label}: ${context.parsed.toLocaleString()} articles (${percentage}%)`;
                                     }
                                 }
                             }

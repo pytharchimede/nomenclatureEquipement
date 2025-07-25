@@ -6,6 +6,10 @@ header('Content-Type: application/json');
 try {
     $pdo = Database::getConnection();
 
+    // Configuration pour éviter les timeouts
+    set_time_limit(60);
+    $pdo->setAttribute(PDO::ATTR_TIMEOUT, 30);
+
     // 1. Comptage des équipements non SAP
     $stmt = $pdo->query("
         SELECT COUNT(DISTINCT e.repere_equipement) as total

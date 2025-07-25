@@ -107,8 +107,8 @@ try {
     // 5. Évolution des données (simulation car pas de dates réelles)
     $evolutionData = [];
     $months = ['2024-07', '2024-08', '2024-09', '2024-10', '2024-11', '2024-12', '2025-01', '2025-02', '2025-03', '2025-04', '2025-05', '2025-06'];
-    
-    foreach($months as $month) {
+
+    foreach ($months as $month) {
         // Simulation basée sur les IDs des équipements pour créer une évolution réaliste
         $stmt = $pdo->prepare("
             SELECT COUNT(*) 
@@ -118,12 +118,12 @@ try {
         $monthIndex = array_search($month, $months) + 1;
         $stmt->execute([$monthIndex]);
         $count = $stmt->fetchColumn();
-        
+
         $evolutionData[] = [
             'mois' => $month,
             'equipements_cumules' => $count,
-            'equipements_ajoutes' => $monthIndex === 1 ? $count : ($count - ($monthIndex > 1 ? 
-                (function($idx) use ($pdo) {
+            'equipements_ajoutes' => $monthIndex === 1 ? $count : ($count - ($monthIndex > 1 ?
+                (function ($idx) use ($pdo) {
                     $stmt = $pdo->prepare("SELECT COUNT(*) FROM equipements WHERE id <= (SELECT MAX(id) FROM equipements) * ? / 12");
                     $stmt->execute([$idx - 1]);
                     return $stmt->fetchColumn();
@@ -169,7 +169,6 @@ try {
             'metiers_complete' => $metiersComplete
         ]
     ], JSON_PRETTY_PRINT);
-
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
@@ -178,4 +177,3 @@ try {
         'line' => __LINE__
     ]);
 }
-?>
