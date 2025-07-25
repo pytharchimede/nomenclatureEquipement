@@ -176,6 +176,91 @@ require_once 'includes/auth.php';
                 background-position: 20px 20px, 20px 30px, 30px 10px, 10px 20px;
             }
         }
+
+        /* Styles pour la section de statut de chargement */
+        #loadingStatusSection {
+            transition: opacity 0.5s ease;
+        }
+
+        #quickPreviewSection {
+            transition: opacity 0.5s ease;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+
+        /* Animation pour les éléments de statut */
+        .status-item {
+            transition: all 0.3s ease;
+        }
+
+        .status-item.completed {
+            background: rgba(40, 167, 69, 0.1);
+            border-radius: 8px;
+            padding: 0.25rem;
+        }
+
+        /* Amélioration des badges de progression */
+        .badge {
+            transition: all 0.3s ease;
+        }
+
+        /* Animation pour les cartes de preview */
+        .stat-card-non-sap .spinner-border {
+            transition: opacity 0.3s ease;
+        }
+
+        /* Style pour les sections qui se cachent */
+        .fade-out {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.5s ease;
+        }
+
+        /* Responsive pour les nouveaux éléments */
+        @media (max-width: 768px) {
+            .progress-ring {
+                width: 100px;
+                height: 100px;
+            }
+
+            .progress-ring circle {
+                r: 40;
+                cx: 50;
+                cy: 50;
+            }
+
+            #loadingStatusSection .row>div {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* Styles pour la section de préparation des graphiques */
+        #chartsPreparationSection {
+            transition: opacity 0.5s ease;
+        }
+
+        #chartsPreparationSection .alert {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        #chartsPreparationSection .alert.border-success {
+            border-left-color: var(--success-color);
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+
+        /* Animation pour les éléments qui disparaissent progressivement */
+        .fade-out-slow {
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 1s ease-out;
+        }
     </style>
 </head>
 
@@ -257,6 +342,186 @@ require_once 'includes/auth.php';
                         <a href="request/export_articles_non_sap.php" class="btn btn-outline-danger btn-sm">
                             <span class="material-icons me-1" style="font-size: 16px;">download</span>Exporter
                         </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section de statut de chargement - s'affiche immédiatement -->
+            <div class="non-sap-container mb-4" id="loadingStatusSection">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-3" style="color: var(--primary-color); font-weight: 700;">
+                            <span class="material-icons me-2">data_usage</span>
+                            État du Chargement des Données
+                        </h4>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div id="statusStats" class="spinner-border spinner-border-sm text-success me-2" role="status">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <span id="statusStatsText">Statistiques générales</span>
+                                    <span id="statusStatsIcon" class="material-icons ms-auto text-muted" style="display: none;">check_circle</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div id="statusEquipements" class="spinner-border spinner-border-sm text-warning me-2" role="status" style="display: none;">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <span id="statusEquipementsText" class="text-muted">Équipements détaillés</span>
+                                    <span id="statusEquipementsIcon" class="material-icons ms-auto text-muted" style="display: none;">check_circle</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div id="statusArticles" class="spinner-border spinner-border-sm text-info me-2" role="status" style="display: none;">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <span id="statusArticlesText" class="text-muted">Articles détaillés</span>
+                                    <span id="statusArticlesIcon" class="material-icons ms-auto text-muted" style="display: none;">check_circle</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <div id="statusCharts" class="spinner-border spinner-border-sm text-danger me-2" role="status" style="display: none;">
+                                        <span class="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <span id="statusChartsText" class="text-muted">Graphiques d'analyse</span>
+                                    <span id="statusChartsIcon" class="material-icons ms-auto text-muted" style="display: none;">check_circle</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="position-relative d-inline-block">
+                            <svg width="120" height="120" class="progress-ring">
+                                <circle cx="60" cy="60" r="50" stroke="#e9ecef" stroke-width="8" fill="transparent"></circle>
+                                <circle id="progressRingCircle" cx="60" cy="60" r="50" stroke="var(--danger-color)" stroke-width="8"
+                                    fill="transparent" stroke-dasharray="314" stroke-dashoffset="314"
+                                    style="transform-origin: center; transform: rotate(-90deg); transition: stroke-dashoffset 0.5s ease;"></circle>
+                            </svg>
+                            <div class="position-absolute top-50 start-50 translate-middle">
+                                <h4 id="globalProgress" class="mb-0 text-danger">0%</h4>
+                                <small class="text-muted">Terminé</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aperçu rapide des données - s'affiche pendant le chargement -->
+            <div id="quickPreviewSection" class="mb-4">
+                <div class="row">
+                    <div class="col-lg-3 mb-3">
+                        <div class="stat-card-non-sap">
+                            <div class="h4 text-info mb-2" id="previewFamilles">
+                                <div class="spinner-border text-info" role="status">
+                                    <span class="visually-hidden">Calcul...</span>
+                                </div>
+                            </div>
+                            <h6 class="mb-0">Familles d'Équipements</h6>
+                            <small class="text-muted">Types identifiés</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 mb-3">
+                        <div class="stat-card-non-sap">
+                            <div class="h4 text-warning mb-2" id="previewMetiers">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">Calcul...</span>
+                                </div>
+                            </div>
+                            <h6 class="mb-0">Métiers d'Articles</h6>
+                            <small class="text-muted">Catégories identifiées</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 mb-3">
+                        <div class="stat-card-non-sap">
+                            <div class="h4 text-success mb-2" id="previewSources">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Calcul...</span>
+                                </div>
+                            </div>
+                            <h6 class="mb-0">Sources Actives</h6>
+                            <small class="text-muted">Systèmes détectés</small>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 mb-3">
+                        <div class="stat-card-non-sap">
+                            <div class="h4 text-primary mb-2" id="previewStatus">
+                                <span class="material-icons">hourglass_empty</span>
+                            </div>
+                            <h6 class="mb-0">Statut Global</h6>
+                            <small class="text-muted" id="previewStatusText">En cours d'analyse...</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section de préparation des graphiques - visible immédiatement -->
+            <div class="non-sap-container mb-4" id="chartsPreparationSection">
+                <h4 class="mb-4" style="color: var(--primary-color); font-weight: 700;">
+                    <span class="material-icons me-2">timeline</span>
+                    Analyse Graphique en Préparation
+                </h4>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-light border">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-info me-3" role="status">
+                                    <span class="visually-hidden">Préparation...</span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Répartition par Famille</h6>
+                                    <small class="text-muted">Classification des équipements en cours...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-light border">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-warning me-3" role="status">
+                                    <span class="visually-hidden">Préparation...</span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Analyse par Métier</h6>
+                                    <small class="text-muted">Catégorisation des articles en cours...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-light border">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-success me-3" role="status">
+                                    <span class="visually-hidden">Préparation...</span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Sources d'Équipements</h6>
+                                    <small class="text-muted">Identification des sources en cours...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="alert alert-light border">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-danger me-3" role="status">
+                                    <span class="visually-hidden">Préparation...</span>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">Sources d'Articles</h6>
+                                    <small class="text-muted">Traçabilité des articles en cours...</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <div class="text-muted">
+                        <span class="material-icons me-1" style="vertical-align: middle; font-size: 18px;">info</span>
+                        Les graphiques apparaîtront automatiquement une fois les données analysées
                     </div>
                 </div>
             </div>
@@ -538,50 +803,159 @@ require_once 'includes/auth.php';
 
         // Variables de statistiques
         let statsCalculated = false;
+        let globalProgressSteps = 0;
+        let totalSteps = 8; // Augmenté pour inclure tous les graphiques
 
         // Fonction principale de chargement progressif
         async function loadDataProgressively() {
             showProgressBar();
+            updateGlobalProgress(0);
 
             try {
                 // Étape 1: Charger les statistiques générales
                 updateProgressMessage("Chargement des statistiques générales...");
+                updateLoadingStatus('stats', 'loading');
                 await loadGeneralStats();
-                updateProgress(1, 6);
+                updateLoadingStatus('stats', 'complete');
+                updateGlobalProgress(1);
+
+                // Mise à jour immédiate de l'aperçu
+                updateQuickPreview();
 
                 // Étape 2: Charger les équipements (premier lot)
                 updateProgressMessage("Chargement des équipements (premier lot)...");
+                updateLoadingStatus('equipements', 'loading');
                 await loadEquipementsBatch();
-                updateProgress(2, 6);
+                updateLoadingStatus('equipements', 'complete');
+                updateGlobalProgress(2);
 
                 // Étape 3: Charger les articles (premier lot)  
                 updateProgressMessage("Chargement des articles (premier lot)...");
+                updateLoadingStatus('articles', 'loading');
                 await loadArticlesBatch();
-                updateProgress(3, 6);
+                updateLoadingStatus('articles', 'complete');
+                updateGlobalProgress(3);
 
                 // Étape 4: Charger les graphiques famille
                 updateProgressMessage("Analyse des familles d'équipements...");
+                updateLoadingStatus('charts', 'loading');
                 await loadEquipementsFamilleChart();
-                updateProgress(4, 6);
+                updateGlobalProgress(4);
 
                 // Étape 5: Charger les graphiques métier
                 updateProgressMessage("Classification des articles par métier...");
                 await loadArticlesMetierChart();
-                updateProgress(5, 6);
+                updateGlobalProgress(5);
 
-                // Étape 6: Calcul des statistiques avancées
+                // Étape 6: Charger les graphiques équipements par source
+                updateProgressMessage("Analyse des sources d'équipements...");
+                await loadEquipementsSourceChart();
+                updateGlobalProgress(6);
+
+                // Étape 7: Charger les graphiques articles par source
+                updateProgressMessage("Analyse des sources d'articles...");
+                await loadArticlesSourceChart();
+                updateGlobalProgress(7);
+
+                // Étape 8: Calcul des statistiques avancées
                 updateProgressMessage("Finalisation des analyses...");
                 calculateAdvancedStats();
-                updateProgress(6, 6);
+                updateLoadingStatus('charts', 'complete');
+                updateGlobalProgress(8);
 
-                hideProgressBar();
-                showAllCharts();
+                // Finalisation
+                setTimeout(() => {
+                    hideProgressBar();
+                    hideLoadingStatus();
+                    showAllCharts();
+                    updateFinalStatus();
+                }, 1000);
 
             } catch (error) {
                 console.error('Erreur lors du chargement:', error);
                 hideProgressBar();
                 showError('Erreur lors du chargement des données');
             }
+        }
+
+        // Mettre à jour le statut de chargement
+        function updateLoadingStatus(section, status) {
+            const spinner = document.getElementById(`status${section.charAt(0).toUpperCase() + section.slice(1)}`);
+            const text = document.getElementById(`status${section.charAt(0).toUpperCase() + section.slice(1)}Text`);
+            const icon = document.getElementById(`status${section.charAt(0).toUpperCase() + section.slice(1)}Icon`);
+
+            if (status === 'loading') {
+                spinner.style.display = 'inline-block';
+                text.classList.remove('text-muted');
+                text.classList.add('text-primary');
+            } else if (status === 'complete') {
+                spinner.style.display = 'none';
+                icon.style.display = 'inline-block';
+                icon.classList.add('text-success');
+                text.classList.remove('text-muted', 'text-primary');
+                text.classList.add('text-success');
+            }
+        }
+
+        // Mettre à jour le progrès global
+        function updateGlobalProgress(step) {
+            globalProgressSteps = step;
+            const percentage = Math.round((step / totalSteps) * 100);
+
+            // Mettre à jour le cercle de progression
+            const circle = document.getElementById('progressRingCircle');
+            const circumference = 2 * Math.PI * 50; // r = 50
+            const offset = circumference - (percentage / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+
+            // Mettre à jour le texte
+            document.getElementById('globalProgress').textContent = percentage + '%';
+        }
+
+        // Mettre à jour l'aperçu rapide
+        function updateQuickPreview() {
+            if (!window.statsData) return;
+
+            // Estimer les familles (basé sur des moyennes)
+            animateCounter('previewFamilles', 8, 800);
+
+            // Estimer les métiers
+            animateCounter('previewMetiers', 7, 1000);
+
+            // Sources connues
+            animateCounter('previewSources', 3, 600);
+
+            // Mettre à jour le statut
+            document.getElementById('previewStatus').innerHTML = '<span class="material-icons">trending_up</span>';
+            document.getElementById('previewStatusText').textContent = 'Données chargées';
+        }
+
+        // Masquer la section de statut de chargement
+        function hideLoadingStatus() {
+            const section = document.getElementById('loadingStatusSection');
+            section.style.opacity = '0';
+            setTimeout(() => {
+                section.style.display = 'none';
+            }, 500);
+        }
+
+        // Mettre à jour le statut final
+        function updateFinalStatus() {
+            const quickPreview = document.getElementById('quickPreviewSection');
+            const statusElement = document.getElementById('previewStatus');
+            const statusText = document.getElementById('previewStatusText');
+
+            statusElement.innerHTML = '<span class="material-icons text-success">check_circle</span>';
+            statusText.textContent = 'Analyse terminée';
+            statusText.classList.add('text-success');
+
+            // Cacher l'aperçu après un délai
+            setTimeout(() => {
+                quickPreview.style.opacity = '0';
+                setTimeout(() => {
+                    quickPreview.style.display = 'none';
+                }, 500);
+            }, 3000);
         }
 
         // Charger les statistiques générales
@@ -830,6 +1204,46 @@ require_once 'includes/auth.php';
             }
         }
 
+        // Charger le graphique équipements par source
+        async function loadEquipementsSourceChart() {
+            try {
+                const response = await fetch('request/stats_non_sap_progressive.php?batch=4');
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                loadedData.equipements_par_source = result.data.data;
+                hideLoading('loadingEquipSource');
+                createEquipementsSourceChart();
+
+            } catch (error) {
+                console.error('Erreur graphique équipements source:', error);
+                throw error;
+            }
+        }
+
+        // Charger le graphique articles par source
+        async function loadArticlesSourceChart() {
+            try {
+                const response = await fetch('request/stats_non_sap_progressive.php?batch=5');
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error);
+                }
+
+                loadedData.articles_par_source = result.data.data;
+                hideLoading('loadingArticlesSource');
+                createArticlesSourceChart();
+
+            } catch (error) {
+                console.error('Erreur graphique articles source:', error);
+                throw error;
+            }
+        }
+
         // Calculer les statistiques avancées
         function calculateAdvancedStats() {
             if (statsCalculated || !window.statsData) return;
@@ -998,6 +1412,90 @@ require_once 'includes/auth.php';
                     animation: {
                         duration: 2000,
                         easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        function createEquipementsSourceChart() {
+            const ctx = document.getElementById('equipementsSourceChart').getContext('2d');
+            charts.equipementsSource = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: loadedData.equipements_par_source.map(item => item.source_actuelle),
+                    datasets: [{
+                        data: loadedData.equipements_par_source.map(item => item.nombre),
+                        backgroundColor: dangerColors.slice(0, loadedData.equipements_par_source.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        duration: 2000
+                    }
+                }
+            });
+        }
+
+        function createArticlesSourceChart() {
+            const ctx = document.getElementById('articlesSourceChart').getContext('2d');
+            charts.articlesSource = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: loadedData.articles_par_source.map(item => item.source_actuelle),
+                    datasets: [{
+                        data: loadedData.articles_par_source.map(item => item.nombre),
+                        backgroundColor: dangerColors.slice(0, loadedData.articles_par_source.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        duration: 2000
                     }
                 }
             });
