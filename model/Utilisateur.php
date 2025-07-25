@@ -3,12 +3,12 @@ require_once __DIR__ . '/../model/Database.php';
 
 class Utilisateur
 {
-    public $id, $nom, $email, $mot_de_passe, $groupe_id, $actif, $date_creation, $photo_profil, $telephone, $empreinte_numerique;
+    public $id, $nom_utilisateur, $email, $mot_de_passe, $groupe_id, $actif, $date_creation, $photo_profil, $telephone, $empreinte_numerique;
 
     public static function getAll()
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->query("SELECT * FROM utilisateur");
+        $stmt = $pdo->query("SELECT * FROM utilisateur ORDER BY nom_utilisateur");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -28,50 +28,138 @@ class Utilisateur
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public static function getByUsername($username)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT * FROM utilisateur WHERE nom_utilisateur = ?");
+        $stmt->execute([$username]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Authentification moderne avec vérification de mot de passe
+     */
+    public static function authenticate($email, $password)
+    {
+        $user = self::getByEmail($email);
+        if ($user && password_verify($password, $user['mot_de_passe'])) {
+            return $user;
+        }
+        return false;
+    }
+
+    /**
+     * Vérification de l'existence d'un email
+     */
+    public static function emailExists($email)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilisateur WHERE email = ?");
+        $stmt->execute([$email]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Vérification de l'existence d'un nom d'utilisateur
+     */
+    public static function usernameExists($username)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM utilisateur WHERE nom_utilisateur = ?");
+        $stmt->execute([$username]);
+        return $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Mise à jour de la dernière connexion
+     */
+    public static function updateLastLogin($userId, $ip = null)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("
+            UPDATE utilisateur 
+            SET last_login_at = NOW()
+            WHERE id = ?
+        ");
+        return $stmt->execute([$userId]);
+    }
+
+    /**
+     * Création d'un nouvel utilisateur avec support des nouveaux champs
+     */
     public static function create($data)
     {
         $pdo = Database::getConnection();
-        $sql = "INSERT INTO utilisateur (nom, email, mot_de_passe, groupe_id, actif, date_creation, photo_profil, telephone, empreinte_numerique) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO utilisateur (
+            nom, nom_utilisateur, email, mot_de_passe, telephone, actif, 
+            groupe_id, date_creation
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+
         $stmt = $pdo->prepare($sql);
-        return $stmt->execute([
-            $data['nom'],
+        $result = $stmt->execute([
+            $data['nom_utilisateur'], // Utiliser nom_utilisateur pour le champ nom aussi
+            $data['nom_utilisateur'],
             $data['email'],
             $data['mot_de_passe'],
-            $data['groupe_id'],
-            $data['actif'] ?? 1,
-            $data['date_creation'] ?? date('Y-m-d H:i:s'),
-            $data['photo_profil'] ?? null,
             $data['telephone'] ?? null,
-            $data['empreinte_numerique'] ?? null
+            $data['actif'] ?? 1,
+            $data['groupe_id'] ?? 1
         ]);
+
+        if ($result) {
+            return $pdo->lastInsertId();
+        }
+        return false;
     }
 
+    /**
+     * Mise à jour d'un utilisateur
+     */
     public static function update($id, $data)
     {
         $pdo = Database::getConnection();
-        $sql = "UPDATE utilisateur SET 
-            nom = :nom, 
-            email = :email, 
-            mot_de_passe = :mot_de_passe, 
-            groupe_id = :groupe_id, 
-            actif = :actif, 
-            photo_profil = :photo_profil, 
-            telephone = :telephone, 
-            empreinte_numerique = :empreinte_numerique
-            WHERE id = :id";
-        $stmt = $pdo->prepare($sql);
-        $params = [
-            'nom' => $data['nom'],
-            'email' => $data['email'],
-            'mot_de_passe' => $data['mot_de_passe'],
-            'groupe_id' => $data['groupe_id'],
-            'actif' => $data['actif'],
-            'photo_profil' => $data['photo_profil'] ?? null,
-            'telephone' => $data['telephone'] ?? null,
-            'empreinte_numerique' => $data['empreinte_numerique'] ?? null,
-            'id' => $id
+
+        // Construction dynamique de la requête selon les champs fournis
+        $fields = [];
+        $params = [];
+
+        $allowedFields = [
+            'nom',
+            'nom_utilisateur',
+            'email',
+            'telephone',
+            'actif',
+            'photo_profil',
+            'empreinte_numerique',
+            'groupe_id'
         ];
+
+        foreach ($allowedFields as $field) {
+            if (isset($data[$field])) {
+                $fields[] = "$field = ?";
+                $params[] = $data[$field];
+            }
+        }
+
+        if (empty($fields)) {
+            return false;
+        }
+
+        $params[] = $id;
+        $sql = "UPDATE utilisateur SET " . implode(', ', $fields) . " WHERE id = ?";
+
+        $stmt = $pdo->prepare($sql);
         return $stmt->execute($params);
+    }
+
+    /**
+     * Mise à jour du mot de passe
+     */
+    public static function updatePassword($id, $newPassword)
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE utilisateur SET mot_de_passe = ? WHERE id = ?");
+        return $stmt->execute([password_hash($newPassword, PASSWORD_DEFAULT), $id]);
     }
 
     public static function delete($id)

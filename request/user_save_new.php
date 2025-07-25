@@ -1,6 +1,6 @@
 <?php
 require_once '../model/Utilisateur.php';
-require_once '../model/Database.php';
+require_once '../includes/db.php';
 session_start();
 
 header('Content-Type: application/json');
@@ -66,13 +66,10 @@ try {
     // Ajouter la tentative
     $_SESSION[$sessionKey][] = time();
 
-    // Connexion à la base de données
-    $pdo = Database::getConnection();
-
     $userId = isset($input['id']) ? intval($input['id']) : null;
 
     // Vérifier si l'email existe déjà (sauf pour l'utilisateur actuel en édition)
-    $emailCheck = "SELECT id FROM utilisateur WHERE email = ?";
+    $emailCheck = "SELECT id FROM utilisateurs WHERE email = ?";
     if ($userId) {
         $emailCheck .= " AND id != ?";
         $stmt = $pdo->prepare($emailCheck);
@@ -89,7 +86,7 @@ try {
     }
 
     // Vérifier si le nom d'utilisateur existe déjà
-    $usernameCheck = "SELECT id FROM utilisateur WHERE nom_utilisateur = ?";
+    $usernameCheck = "SELECT id FROM utilisateurs WHERE nom_utilisateur = ?";
     if ($userId) {
         $usernameCheck .= " AND id != ?";
         $stmt = $pdo->prepare($usernameCheck);
@@ -98,6 +95,7 @@ try {
         $stmt = $pdo->prepare($usernameCheck);
         $stmt->execute([$input['nom_utilisateur']]);
     }
+
     if ($stmt->fetch()) {
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'Ce nom d\'utilisateur est déjà utilisé']);
@@ -107,7 +105,6 @@ try {
     if ($userId) {
         // Mise à jour d'un utilisateur existant
         $updateFields = [
-            'nom = ?',
             'nom_utilisateur = ?',
             'email = ?',
             'telephone = ?',
@@ -115,7 +112,6 @@ try {
         ];
 
         $params = [
-            $input['nom_utilisateur'], // Utiliser nom_utilisateur pour nom aussi
             $input['nom_utilisateur'],
             $input['email'],
             $input['telephone'] ?? null,
@@ -135,9 +131,10 @@ try {
 
         $params[] = $userId;
 
-        $sql = "UPDATE utilisateur SET " . implode(', ', $updateFields) . " WHERE id = ?";
+        $sql = "UPDATE utilisateurs SET " . implode(', ', $updateFields) . " WHERE id = ?";
         $stmt = $pdo->prepare($sql);
         $result = $stmt->execute($params);
+
         if ($result) {
             echo json_encode(['success' => true, 'message' => 'Utilisateur mis à jour avec succès']);
         } else {
@@ -159,19 +156,18 @@ try {
 
         $hashedPassword = password_hash($input['mot_de_passe'], PASSWORD_DEFAULT);
 
-        $sql = "INSERT INTO utilisateur (nom, nom_utilisateur, email, telephone, mot_de_passe, actif, groupe_id, date_creation) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
+        $sql = "INSERT INTO utilisateurs (nom_utilisateur, email, telephone, mot_de_passe, actif, date_creation) 
+                VALUES (?, ?, ?, ?, ?, NOW())";
 
         $stmt = $pdo->prepare($sql);
         $result = $stmt->execute([
-            $input['nom_utilisateur'], // Utiliser nom_utilisateur pour nom aussi
             $input['nom_utilisateur'],
             $input['email'],
             $input['telephone'] ?? null,
             $hashedPassword,
-            isset($input['actif']) ? 1 : 0,
-            1 // groupe_id par défaut
+            isset($input['actif']) ? 1 : 0
         ]);
+
         if ($result) {
             echo json_encode(['success' => true, 'message' => 'Utilisateur créé avec succès']);
         } else {
@@ -184,44 +180,4 @@ try {
         'success' => false,
         'message' => 'Erreur serveur: ' . $e->getMessage()
     ]);
-}
-
-try {
-    $data = [
-        'nom' => $_POST['nom'] ?? '',
-        'email' => $_POST['email'] ?? '',
-        'groupe_id' => $_POST['groupe_id'] ?? 1,
-        'actif' => isset($_POST['actif']) ? 1 : 0
-    ];
-
-    if (!empty($_POST['mot_de_passe'])) {
-        $data['mot_de_passe'] = password_hash($_POST['mot_de_passe'], PASSWORD_DEFAULT);
-    }
-
-    if (!empty($_POST['id'])) {
-        // Edition
-        if (empty($_POST['mot_de_passe'])) {
-            $user = Utilisateur::getById($_POST['id']);
-            if ($user) {
-                $data['mot_de_passe'] = $user['mot_de_passe'];
-            }
-        }
-        // Ajoute les champs manquants pour l'update
-        $user = Utilisateur::getById($_POST['id']);
-        $data['photo_profil'] = $user['photo_profil'] ?? null;
-        $data['telephone'] = $user['telephone'] ?? null;
-        $data['empreinte_numerique'] = $user['empreinte_numerique'] ?? null;
-
-        $ok = Utilisateur::update($_POST['id'], $data);
-    } else {
-        // Ajout
-        if (empty($data['mot_de_passe'])) {
-            echo json_encode(['success' => false, 'message' => 'Mot de passe requis']);
-            exit;
-        }
-        $ok = Utilisateur::create($data);
-    }
-    echo json_encode(['success' => $ok]);
-} catch (Throwable $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
