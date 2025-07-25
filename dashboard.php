@@ -143,14 +143,14 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
         .stat-card {
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 1) 100%);
             border-radius: 24px;
-            padding: 2rem;
+            padding: 1.75rem;
             box-shadow: var(--shadow-md);
             border: none;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-            height: 180px;
-            /* Hauteur fixe pour toutes les cartes de stats */
+            height: 200px;
+            /* Hauteur augmentée pour accommoder les grands nombres */
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -180,22 +180,77 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
         }
 
         .stat-number {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
-            line-height: 1;
-            margin-bottom: 0.5rem;
+            line-height: 1.1;
+            margin-bottom: 0.75rem;
             background: var(--gradient-primary);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            word-break: break-all;
+            overflow-wrap: break-word;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 60px;
+        }
+
+        /* Styles responsive pour optimiser l'affichage */
+        @media (max-width: 992px) {
+            .stat-card {
+                height: 180px;
+                padding: 1.5rem;
+            }
+
+            .stat-number {
+                font-size: 2.2rem;
+                min-height: 55px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stat-card {
+                height: 170px;
+                padding: 1.25rem;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+                min-height: 50px;
+            }
+
+            .chart-container {
+                height: 400px;
+                padding: 2.5rem 2rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .stat-card {
+                height: 160px;
+                padding: 1rem;
+            }
+
+            .stat-number {
+                font-size: 1.8rem;
+                min-height: 45px;
+            }
+
+            .chart-container {
+                height: 350px;
+                padding: 2rem 1.5rem;
+            }
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 600;
             color: var(--secondary-color);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            line-height: 1.3;
         }
 
         .alert-modern {
@@ -588,42 +643,42 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             <!-- Graphiques Avancés -->
             <div class="row">
                 <div class="col-lg-6 mb-4">
-                    <div class="chart-container small">
+                    <div class="chart-container">
                         <h5 class="chart-title">
-                            <span class="material-icons">device_hub</span>
-                            Répartition par Type d'Équipement
+                            <span class="material-icons">family_restroom</span>
+                            Familles d'Équipements : Articles & Pièces
                         </h5>
-                        <canvas id="typesChart"></canvas>
+                        <canvas id="famillesChart"></canvas>
                     </div>
                 </div>
 
                 <div class="col-lg-6 mb-4">
-                    <div class="chart-container small">
+                    <div class="chart-container">
                         <h5 class="chart-title">
-                            <span class="material-icons">category</span>
-                            Articles par Métier
+                            <span class="material-icons">trending_up</span>
+                            Évolution des Équipements
                         </h5>
-                        <canvas id="metiersChart"></canvas>
+                        <canvas id="evolutionChart"></canvas>
                     </div>
                 </div>
 
                 <div class="col-lg-8 mb-4">
                     <div class="chart-container">
                         <h5 class="chart-title">
-                            <span class="material-icons">family_restroom</span>
-                            Familles d'Équipements et leurs Pièces
+                            <span class="material-icons">device_hub</span>
+                            Types d'Équipements : Complexité & Articles
                         </h5>
-                        <canvas id="famillesChart"></canvas>
+                        <canvas id="typesChart"></canvas>
                     </div>
                 </div>
 
                 <div class="col-lg-4 mb-4">
                     <div class="chart-container small">
                         <h5 class="chart-title">
-                            <span class="material-icons">trending_up</span>
-                            Évolution Mensuelle
+                            <span class="material-icons">category</span>
+                            Articles par Métier
                         </h5>
-                        <canvas id="evolutionChart"></canvas>
+                        <canvas id="metiersChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -698,29 +753,37 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             });
         }
 
-        // Chargement des données avancées
-        fetch('request/dashboard_stats_advanced.php')
+        // Chargement des données complètes et intuitives
+        fetch('request/dashboard_stats_comprehensive.php')
             .then(response => response.json())
             .then(result => {
                 if (!result.success) {
                     console.error('Erreur:', result.error);
+                    createFallbackCharts();
                     return;
                 }
 
                 const data = result.data;
+                console.log('Données reçues:', data);
 
-                // 1. Graphique des types d'équipements selon codification
-                const typesCtx = document.getElementById('typesChart').getContext('2d');
-                new Chart(typesCtx, {
-                    type: 'doughnut',
+                // 1. Graphique des familles : Articles vs Équipements (plus intuitif)
+                const famillesCtx = document.getElementById('famillesChart').getContext('2d');
+                new Chart(famillesCtx, {
+                    type: 'scatter',
                     data: {
-                        labels: data.types_codification.map(item => item.type_codification),
                         datasets: [{
-                            data: data.types_codification.map(item => item.nombre),
-                            backgroundColor: modernColors.slice(0, data.types_codification.length),
-                            borderWidth: 0,
-                            hoverBorderWidth: 3,
-                            hoverBorderColor: '#ffffff'
+                            label: 'Familles d\'équipements',
+                            data: data.familles_complete.map(item => ({
+                                x: item.nb_equipements,
+                                y: item.nb_articles_differents,
+                                famille: item.famille,
+                                pieces: item.nb_pieces_totales
+                            })),
+                            backgroundColor: modernColors.map(color => color + '80'),
+                            borderColor: modernColors,
+                            borderWidth: 3,
+                            pointRadius: 8,
+                            pointHoverRadius: 12
                         }]
                     },
                     options: {
@@ -728,69 +791,111 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         maintainAspectRatio: false,
                         layout: {
                             padding: {
-                                top: 20,
-                                right: 20,
-                                bottom: 30,
-                                left: 20
+                                top: 30,
+                                right: 30,
+                                bottom: 40,
+                                left: 30
                             }
                         },
                         plugins: {
                             legend: {
-                                position: 'right',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 20,
-                                    font: {
-                                        size: 11,
-                                        weight: '500'
-                                    }
-                                }
+                                display: false
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                backgroundColor: 'rgba(0,0,0,0.9)',
                                 titleColor: '#ffffff',
                                 bodyColor: '#ffffff',
                                 borderColor: '#ffffff',
                                 borderWidth: 1,
                                 cornerRadius: 8,
                                 callbacks: {
+                                    title: function(context) {
+                                        return context[0].raw.famille;
+                                    },
                                     label: function(context) {
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                        const percentage = ((context.parsed * 100) / total).toFixed(1);
-                                        return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                        const point = context.raw;
+                                        return [
+                                            `${point.x} équipements`,
+                                            `${point.y} articles différents`,
+                                            `${point.pieces} pièces au total`,
+                                            `Moy: ${(point.pieces / point.x).toFixed(1)} pièces/équip.`
+                                        ];
                                     }
                                 }
                             }
                         },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Nombre d\'équipements',
+                                    font: {
+                                        weight: '600',
+                                        size: 14
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Nombre d\'articles différents',
+                                    font: {
+                                        weight: '600',
+                                        size: 14
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        },
                         animation: {
-                            animateRotate: true,
-                            duration: 2000
+                            duration: 2500,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
 
-                // 2. Graphique des métiers
-                const metiersCtx = document.getElementById('metiersChart').getContext('2d');
-                new Chart(metiersCtx, {
-                    type: 'bar',
+                // 2. Graphique d'évolution réaliste
+                const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
+                new Chart(evolutionCtx, {
+                    type: 'line',
                     data: {
-                        labels: data.metiers.map(item => item.metier),
+                        labels: data.evolution_simulee.map(item => {
+                            const date = new Date(item.mois + '-01');
+                            return date.toLocaleDateString('fr-FR', {
+                                month: 'short',
+                                year: '2-digit'
+                            });
+                        }),
                         datasets: [{
-                            label: 'Articles',
-                            data: data.metiers.map(item => item.nb_articles),
-                            backgroundColor: modernColors[0] + '80',
+                            label: 'Équipements cumulés',
+                            data: data.evolution_simulee.map(item => item.equipements_cumules),
                             borderColor: modernColors[0],
-                            borderWidth: 2,
-                            borderRadius: 8,
-                            borderSkipped: false,
+                            backgroundColor: modernColors[0] + '20',
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: modernColors[0],
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 3,
+                            pointRadius: 6,
+                            pointHoverRadius: 8
                         }, {
-                            label: 'Équipements liés',
-                            data: data.metiers.map(item => item.nb_equipements_lies),
-                            backgroundColor: modernColors[1] + '80',
-                            borderColor: modernColors[1],
-                            borderWidth: 2,
-                            borderRadius: 8,
-                            borderSkipped: false,
+                            label: 'Nouveaux équipements',
+                            data: data.evolution_simulee.map(item => item.equipements_ajoutes),
+                            borderColor: modernColors[2],
+                            backgroundColor: modernColors[2] + '40',
+                            tension: 0.3,
+                            fill: false,
+                            pointBackgroundColor: modernColors[2],
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            borderDash: [5, 5]
                         }]
                     },
                     options: {
@@ -798,15 +903,14 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         maintainAspectRatio: false,
                         layout: {
                             padding: {
-                                top: 25,
-                                right: 25,
-                                bottom: 35,
-                                left: 25
+                                top: 30,
+                                right: 30,
+                                bottom: 40,
+                                left: 30
                             }
                         },
                         plugins: {
                             legend: {
-                                display: true,
                                 position: 'top',
                                 labels: {
                                     usePointStyle: true,
@@ -817,7 +921,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 }
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                backgroundColor: 'rgba(0,0,0,0.9)',
                                 titleColor: '#ffffff',
                                 bodyColor: '#ffffff',
                                 borderColor: '#ffffff',
@@ -828,7 +932,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                         scales: {
                             x: {
                                 grid: {
-                                    display: false
+                                    color: 'rgba(0,0,0,0.1)'
                                 },
                                 ticks: {
                                     font: {
@@ -849,38 +953,30 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                             }
                         },
                         animation: {
-                            duration: 2000,
+                            duration: 2500,
                             easing: 'easeOutQuart'
                         }
                     }
                 });
 
-                // 3. Graphique des familles avec pièces
-                const famillesCtx = document.getElementById('famillesChart').getContext('2d');
-                new Chart(famillesCtx, {
-                    type: 'bar',
+                // 3. Types d'équipements avec complexité (bubble chart)
+                const typesCtx = document.getElementById('typesChart').getContext('2d');
+                new Chart(typesCtx, {
+                    type: 'bubble',
                     data: {
-                        labels: data.familles.map(item => item.famille),
                         datasets: [{
-                            label: 'Équipements',
-                            data: data.familles.map(item => item.nb_equipements),
-                            backgroundColor: modernColors[0] + '60',
-                            borderColor: modernColors[0],
-                            borderWidth: 2,
-                            yAxisID: 'y',
-                        }, {
-                            label: 'Pièces totales',
-                            data: data.familles.map(item => item.nb_pieces),
-                            backgroundColor: modernColors[2] + '60',
-                            borderColor: modernColors[2],
-                            borderWidth: 2,
-                            yAxisID: 'y1',
-                            type: 'line',
-                            tension: 0.4,
-                            pointBackgroundColor: modernColors[2],
-                            pointBorderColor: '#ffffff',
-                            pointBorderWidth: 2,
-                            pointRadius: 6
+                            label: 'Types d\'équipements',
+                            data: data.types_complete.map((item, index) => ({
+                                x: item.nombre,
+                                y: item.articles_differents,
+                                r: Math.max(5, Math.min(25, item.pieces_totales / 100)),
+                                type: item.type_equipement,
+                                pieces: item.pieces_totales,
+                                moyenne: item.pieces_moyenne,
+                                backgroundColor: modernColors[index % modernColors.length] + '60',
+                                borderColor: modernColors[index % modernColors.length],
+                                borderWidth: 2
+                            }))
                         }]
                     },
                     options: {
@@ -894,62 +990,59 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 left: 30
                             }
                         },
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
                         plugins: {
                             legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 20,
-                                    font: {
-                                        weight: '600'
-                                    }
-                                }
+                                display: false
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                backgroundColor: 'rgba(0,0,0,0.9)',
                                 titleColor: '#ffffff',
                                 bodyColor: '#ffffff',
                                 borderColor: '#ffffff',
                                 borderWidth: 1,
-                                cornerRadius: 8
+                                cornerRadius: 8,
+                                callbacks: {
+                                    title: function(context) {
+                                        return context[0].raw.type;
+                                    },
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        return [
+                                            `${point.x} équipements`,
+                                            `${point.y} articles différents`,
+                                            `${point.pieces} pièces au total`,
+                                            `Moyenne: ${point.moyenne} pièces/équip.`
+                                        ];
+                                    }
+                                }
                             }
                         },
                         scales: {
                             x: {
-                                grid: {
-                                    display: false
-                                }
-                            },
-                            y: {
-                                type: 'linear',
-                                display: true,
-                                position: 'left',
                                 title: {
                                     display: true,
                                     text: 'Nombre d\'équipements',
                                     font: {
-                                        weight: '600'
-                                    }
-                                }
-                            },
-                            y1: {
-                                type: 'linear',
-                                display: true,
-                                position: 'right',
-                                title: {
-                                    display: true,
-                                    text: 'Nombre de pièces',
-                                    font: {
-                                        weight: '600'
+                                        weight: '600',
+                                        size: 14
                                     }
                                 },
                                 grid: {
-                                    drawOnChartArea: false,
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Articles différents utilisés',
+                                    font: {
+                                        weight: '600',
+                                        size: 14
+                                    }
                                 },
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
                             }
                         },
                         animation: {
@@ -959,81 +1052,74 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     }
                 });
 
-                // 4. Graphique d'évolution
-                if (data.evolution && data.evolution.length > 0) {
-                    const evolutionCtx = document.getElementById('evolutionChart').getContext('2d');
-                    new Chart(evolutionCtx, {
-                        type: 'line',
-                        data: {
-                            labels: data.evolution.map(item => {
-                                const date = new Date(item.mois + '-01');
-                                return date.toLocaleDateString('fr-FR', {
-                                    month: 'short',
-                                    year: '2-digit'
-                                });
-                            }),
-                            datasets: [{
-                                label: 'Nouveaux équipements',
-                                data: data.evolution.map(item => item.ajouts_equipements),
-                                borderColor: modernColors[0],
-                                backgroundColor: modernColors[0] + '20',
-                                tension: 0.4,
-                                fill: true,
-                                pointBackgroundColor: modernColors[0],
-                                pointBorderColor: '#ffffff',
-                                pointBorderWidth: 2,
-                                pointRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            layout: {
-                                padding: {
-                                    top: 25,
-                                    right: 25,
-                                    bottom: 35,
-                                    left: 25
-                                }
-                            },
-                            plugins: {
-                                legend: {
-                                    display: false
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(0,0,0,0.8)',
-                                    titleColor: '#ffffff',
-                                    bodyColor: '#ffffff',
-                                    borderColor: '#ffffff',
-                                    borderWidth: 1,
-                                    cornerRadius: 8
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
-                                },
-                                y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                        color: 'rgba(0,0,0,0.1)'
-                                    }
-                                }
-                            },
-                            animation: {
-                                duration: 2000,
-                                easing: 'easeOutQuart'
+                // 4. Métiers avec répartition SAP/RGM
+                const metiersCtx = document.getElementById('metiersChart').getContext('2d');
+                new Chart(metiersCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.metiers_complete.map(item => item.metier),
+                        datasets: [{
+                            label: 'Articles SAP',
+                            data: data.metiers_complete.map(item => item.articles_sap),
+                            backgroundColor: modernColors.slice(0, data.metiers_complete.length).map(color => color + '80'),
+                            borderColor: modernColors.slice(0, data.metiers_complete.length),
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                top: 25,
+                                right: 25,
+                                bottom: 35,
+                                left: 25
                             }
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 11,
+                                        weight: '500'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.9)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: '#ffffff',
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    label: function(context) {
+                                        const metier = data.metiers_complete[context.dataIndex];
+                                        const total = metier.nb_articles;
+                                        const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                        return [
+                                            `${metier.metier}:`,
+                                            `${context.parsed} articles SAP (${percentage}%)`,
+                                            `${metier.nb_equipements_concernes} équipements concernés`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            duration: 2000
                         }
-                    });
-                }
+                    }
+                });
+
             })
             .catch(error => {
                 console.error('Erreur lors du chargement des données:', error);
-
-                // Graphiques de fallback si l'API ne répond pas
                 createFallbackCharts();
             });
 
