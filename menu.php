@@ -198,6 +198,28 @@ require_once __DIR__ . '/includes/auth.php';
         animation: bounce 2s ease-in-out infinite;
     }
 
+    .badge-warning {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        margin-left: auto;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
+    .badge-danger {
+        background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.2rem 0.5rem;
+        border-radius: 10px;
+        margin-left: auto;
+        animation: bounce 2s ease-in-out infinite;
+    }
+
     @keyframes bounce {
 
         0%,
@@ -312,22 +334,6 @@ require_once __DIR__ . '/includes/auth.php';
     </div>
 
     <div class="nav-section">
-        <div class="nav-title">Gestion des accès</div>
-        <a href="utilisateurs_modern.php" class="nav-link <?= isActive(['utilisateurs.php', 'utilisateurs_modern.php', 'utilisateurs_simple.php']) ?>">
-            <span class="material-icons nav-icon">people</span>
-            Utilisateurs
-        </a>
-        <a href="groupes_modern.php" class="nav-link <?= isActive(['groupes.php', 'groupes_modern.php']) ?>">
-            <span class="material-icons nav-icon">groups</span>
-            Groupes
-        </a>
-        <a href="profil_modern.php" class="nav-link <?= isActive(['profil.php', 'profil_modern.php']) ?>">
-            <span class="material-icons nav-icon">account_circle</span>
-            Mon Profil
-        </a>
-    </div>
-
-    <div class="nav-section">
         <div class="nav-title">Données</div>
         <a href="equipements.php" class="nav-link <?= isActive('equipements.php') ?>">
             <span class="material-icons nav-icon">precision_manufacturing</span>
@@ -351,6 +357,65 @@ require_once __DIR__ . '/includes/auth.php';
     </div>
 
     <div class="nav-section">
+        <div class="nav-title">Gestion des problèmes</div>
+        <a href="gestion_doublons_nomenclature.php" class="nav-link <?= isActive('gestion_doublons_nomenclature.php') ?>">
+            <span class="material-icons nav-icon">content_copy</span>
+            Gestion doublons
+            <?php if ($nbDoublons > 0): ?>
+                <span class="badge-notification"><?= $nbDoublons ?></span>
+            <?php endif; ?>
+        </a>
+        <a href="elements_non_sap.php" class="nav-link <?= isActive('elements_non_sap.php') ?>">
+            <span class="material-icons nav-icon">error_outline</span>
+            Éléments Non SAP
+            <?php
+            // Comptage des éléments non SAP
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        (SELECT COUNT(DISTINCT e.repere_equipement) 
+                         FROM equipements e 
+                         WHERE e.repere_equipement NOT IN (
+                             SELECT DISTINCT n.repere_equipement 
+                             FROM nomenclatures n 
+                             WHERE n.source = 'SAP' AND n.repere_equipement IS NOT NULL
+                         )) +
+                        (SELECT COUNT(DISTINCT a.code_article) 
+                         FROM articles a 
+                         WHERE a.code_article NOT IN (
+                             SELECT DISTINCT n.code_article 
+                             FROM nomenclatures n 
+                             WHERE n.source = 'SAP' AND n.code_article IS NOT NULL
+                         )) as total_non_sap
+                ");
+                $nbNonSAP = $stmt->fetchColumn();
+                if ($nbNonSAP > 0): ?>
+                    <span class="badge-danger"><?= $nbNonSAP ?></span>
+            <?php endif;
+            } catch (Exception $e) {
+                // Silencieux en cas d'erreur
+            }
+            ?>
+        </a>
+        <a href="validation_doublons_import.php" class="nav-link <?= isActive('validation_doublons_import.php') ?>">
+            <span class="material-icons nav-icon">rule</span>
+            Validation Import
+            <?php
+            // Comptage des doublons d'import en attente
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) FROM nomenclatures_doublons_import WHERE statut = 'en_attente'");
+                $nbDoublonsImport = $stmt->fetchColumn();
+                if ($nbDoublonsImport > 0): ?>
+                    <span class="badge-warning"><?= $nbDoublonsImport ?></span>
+            <?php endif;
+            } catch (Exception $e) {
+                // Silencieux si la table n'existe pas encore
+            }
+            ?>
+        </a>
+    </div>
+
+    <div class="nav-section">
         <div class="nav-title">Outils</div>
         <a href="import_quantitatif.php" class="nav-link <?= isActive('import_quantitatif.php') ?>">
             <span class="material-icons nav-icon">file_upload</span>
@@ -360,12 +425,29 @@ require_once __DIR__ . '/includes/auth.php';
             <span class="material-icons nav-icon">file_download</span>
             Exportations
         </a>
-        <a href="gestion_doublons_nomenclature.php" class="nav-link <?= isActive('gestion_doublons_nomenclature.php') ?>">
-            <span class="material-icons nav-icon">content_copy</span>
-            Gestion doublons
-            <?php if ($nbDoublons > 0): ?>
-                <span class="badge-notification"><?= $nbDoublons ?></span>
-            <?php endif; ?>
+        <a href="rgm_synthese.php" class="nav-link <?= isActive('rgm_synthese.php') ?>">
+            <span class="material-icons nav-icon">table_view</span>
+            Synthèse RGM
+        </a>
+        <a href="compilation_template.php" class="nav-link <?= isActive('compilation_template.php') ?>">
+            <span class="material-icons nav-icon">table_view</span>
+            Compilation Template SPL
+        </a>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-title">Gestion des accès</div>
+        <a href="utilisateurs.php" class="nav-link <?= isActive(['utilisateurs.php', 'utilisateurs_modern.php', 'utilisateurs_simple.php']) ?>">
+            <span class="material-icons nav-icon">people</span>
+            Utilisateurs
+        </a>
+        <a href="groupes.php" class="nav-link <?= isActive(['groupes.php', 'groupes_modern.php']) ?>">
+            <span class="material-icons nav-icon">groups</span>
+            Groupes
+        </a>
+        <a href="profil.php" class="nav-link <?= isActive(['profil.php', 'profil_modern.php']) ?>">
+            <span class="material-icons nav-icon">account_circle</span>
+            Mon Profil
         </a>
     </div>
 
