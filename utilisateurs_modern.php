@@ -36,6 +36,92 @@ $groupes = GroupeUtilisateur::getAll();
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
+            position: relative;
+        }
+
+        /* Arrière-plan animé avec particules */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.4), rgba(118, 75, 162, 0.4));
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px) rotate(0deg);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translateY(-120px) rotate(180deg);
+                opacity: 0.8;
+            }
+        }
+
+        .users-container {
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+            backdrop-filter: blur(25px);
+            border-radius: var(--border-radius);
+            padding: 3rem 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-strong);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: slideInDown 0.8s ease-out;
+        }
+
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: var(--primary-gradient);
+        }
+
+        .page-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+            animation: rotate 25s linear infinite;
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .users-container {
@@ -435,6 +521,13 @@ $groupes = GroupeUtilisateur::getAll();
 </head>
 
 <body>
+    <!-- Arrière-plan animé avec particules -->
+    <div class="animated-bg">
+        <?php for ($i = 0; $i < 25; $i++): ?>
+            <div class="particle" style="left: <?= rand(0, 100) ?>%; top: <?= rand(0, 100) ?>%; animation-delay: <?= rand(0, 80) / 10 ?>s; animation-duration: <?= rand(6, 12) ?>s;"></div>
+        <?php endfor; ?>
+    </div>
+
     <div class="d-flex">
         <!-- Sidebar -->
         <?php include 'menu.php'; ?>
@@ -529,11 +622,11 @@ $groupes = GroupeUtilisateur::getAll();
                                     <?php if (!empty($user['photo_profil'])): ?>
                                         <img src="<?= htmlspecialchars($user['photo_profil']) ?>" alt="Avatar">
                                     <?php else: ?>
-                                        <?= strtoupper(substr($user['nom_utilisateur'], 0, 2)) ?>
+                                        <?= strtoupper(substr($user['nom'], 0, 2)) ?>
                                     <?php endif; ?>
                                 </div>
                                 <div class="user-info">
-                                    <h3><?= htmlspecialchars($user['nom_utilisateur']) ?></h3>
+                                    <h3><?= htmlspecialchars($user['nom']) ?></h3>
                                     <div class="user-email"><?= htmlspecialchars($user['email']) ?></div>
                                 </div>
                             </div>
@@ -594,7 +687,7 @@ $groupes = GroupeUtilisateur::getAll();
                         <input type="hidden" id="userId" name="id">
                         <div class="mb-3">
                             <label class="form-label">Nom d'utilisateur</label>
-                            <input type="text" class="form-control" id="nomUtilisateur" required>
+                            <input type="text" class="form-control" id="nom" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Email</label>
@@ -679,7 +772,7 @@ $groupes = GroupeUtilisateur::getAll();
 
             if (user) {
                 document.getElementById('userModalTitle').textContent = 'Modifier l\'Utilisateur';
-                document.getElementById('nomUtilisateur').value = user.nom_utilisateur;
+                document.getElementById('nom').value = user.nom;
                 document.getElementById('email').value = user.email;
                 document.getElementById('telephone').value = user.telephone || '';
                 document.getElementById('motDePasse').value = '';
@@ -692,7 +785,7 @@ $groupes = GroupeUtilisateur::getAll();
         // Sauvegarde d'un utilisateur
         async function saveUser() {
             const formData = {
-                nom_utilisateur: document.getElementById('nomUtilisateur').value,
+                nom: document.getElementById('nom').value,
                 email: document.getElementById('email').value,
                 telephone: document.getElementById('telephone').value,
                 mot_de_passe: document.getElementById('motDePasse').value,
@@ -700,7 +793,7 @@ $groupes = GroupeUtilisateur::getAll();
             };
 
             // Validation côté client
-            if (!formData.nom_utilisateur || !formData.email) {
+            if (!formData.nom || !formData.email) {
                 showAlert('Veuillez remplir tous les champs obligatoires', 'warning');
                 return;
             }

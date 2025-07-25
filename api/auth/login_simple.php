@@ -74,7 +74,7 @@ try {
         // Connexion réussie
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_nom'] = $user['nom_utilisateur'] ?? $user['nom'];
+        $_SESSION['user_nom'] = $user['nom'];
         $_SESSION['groupe_id'] = $user['groupe_id'];
 
         // Nettoyer les tentatives de connexion
