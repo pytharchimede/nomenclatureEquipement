@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Dashboard</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .json { background: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Test API Dashboard Simple</h1>
+    
+    <div class="section">
+        <h2>Données de l'API:</h2>
+        <div id="apiData" class="json">Chargement...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Données Familles spécifiquement:</h2>
+        <div id="famillesData" class="json">Chargement...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Status:</h2>
+        <div id="status">Chargement...</div>
+    </div>
+
+    <script>
+        fetch('request/dashboard_stats_simple.php')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('apiData').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    document.getElementById('famillesData').textContent = JSON.stringify(data.data.familles, null, 2);
+                    
+                    let status = '<span class="success">✅ API fonctionne</span><br>';
+                    status += `Nombre de familles: ${data.data.familles ? data.data.familles.length : 0}<br>`;
+                    status += `Types d'équipements: ${data.data.types_equipements ? data.data.types_equipements.length : 0}<br>`;
+                    status += `Métiers: ${data.data.metiers ? data.data.metiers.length : 0}<br>`;
+                    status += `Évolution: ${data.data.evolution ? data.data.evolution.length : 0}<br>`;
+                    
+                    document.getElementById('status').innerHTML = status;
+                } else {
+                    document.getElementById('status').innerHTML = '<span class="error">❌ Erreur API: ' + data.error + '</span>';
+                    document.getElementById('famillesData').textContent = 'Erreur: ' + data.error;
+                }
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = '<span class="error">❌ Erreur réseau: ' + error.message + '</span>';
+                document.getElementById('apiData').textContent = 'Erreur: ' + error.message;
+                document.getElementById('famillesData').textContent = 'Erreur: ' + error.message;
+            });
+    </script>
+</body>
+</html>

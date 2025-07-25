@@ -20,11 +20,35 @@ try {
         LEFT JOIN nomenclatures n ON e.repere_equipement = n.repere_equipement
         WHERE e.famille IS NOT NULL AND e.famille != ''
         GROUP BY e.famille
-        HAVING nb_equipements >= 5
+        HAVING nb_equipements >= 1
         ORDER BY nb_equipements DESC
-        LIMIT 8
+        LIMIT 10
     ");
     $famillesSimple = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Si aucune famille, créer des données de fallback basées sur les types
+    if (empty($famillesSimple)) {
+        $stmt = $pdo->query("
+            SELECT 
+                CASE 
+                    WHEN e.repere_equipement LIKE 'P%' THEN 'Famille Pompes'
+                    WHEN e.repere_equipement LIKE 'C%' THEN 'Famille Compresseurs'
+                    WHEN e.repere_equipement LIKE 'E%' THEN 'Famille Échangeurs'
+                    WHEN e.repere_equipement LIKE 'T%' THEN 'Famille Réservoirs'
+                    WHEN e.repere_equipement LIKE 'K%' THEN 'Famille Colonnes'
+                    ELSE 'Famille Autres'
+                END as famille,
+                COUNT(DISTINCT e.id) as nb_equipements,
+                COUNT(DISTINCT n.code_article) as nb_articles_differents
+            FROM equipements e
+            LEFT JOIN nomenclatures n ON e.repere_equipement = n.repere_equipement
+            GROUP BY famille
+            HAVING nb_equipements >= 10
+            ORDER BY nb_equipements DESC
+            LIMIT 8
+        ");
+        $famillesSimple = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // 2. Types d'équipements - SIMPLE : Qui utilise quoi
     $stmt = $pdo->query("

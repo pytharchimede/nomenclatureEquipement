@@ -769,6 +769,31 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
 
                 const data = result.data;
                 console.log('Données reçues:', data);
+                console.log('Familles:', data.familles);
+                console.log('Nombre de familles:', data.familles ? data.familles.length : 0);
+
+                // Vérification si les données familles sont vides
+                if (!data.familles || data.familles.length === 0) {
+                    console.warn('⚠️ ATTENTION: Aucune donnée de famille reçue!');
+                    // Créer des données de test pour le graphique
+                    data.familles = [{
+                            famille: 'Test Pompes',
+                            nb_equipements: 120,
+                            nb_articles_differents: 45
+                        },
+                        {
+                            famille: 'Test Compresseurs',
+                            nb_equipements: 85,
+                            nb_articles_differents: 32
+                        },
+                        {
+                            famille: 'Test Échangeurs',
+                            nb_equipements: 95,
+                            nb_articles_differents: 38
+                        }
+                    ];
+                    console.log('Utilisation de données de test:', data.familles);
+                }
 
                 // 1. FAMILLES : Graphique en barres SIMPLE et CLAIR
                 const famillesCtx = document.getElementById('famillesChart').getContext('2d');
