@@ -106,6 +106,9 @@ $unites = Article::getDistinctValues('uq_base');
         <?php include 'menu.php'; ?>
         <!-- Main Content -->
         <div class="flex-grow-1 content">
+            <!-- Conteneur d'alertes -->
+            <div id="alerts-container" class="position-fixed" style="top: 20px; right: 20px; z-index: 1050; max-width: 400px;"></div>
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <span class="menu-toggle material-icons d-lg-none" onclick="toggleSidebar()">menu</span>
                 <h2 class="mb-0" style="font-weight:700;color:#1976d2;">Articles</h2>
@@ -214,12 +217,15 @@ $unites = Article::getDistinctValues('uq_base');
                         </div>
                         <div class="col-md-1">
                             <label class="form-label small text-muted mb-1">Actions</label>
-                            <div class="d-flex gap-1">
-                                <button id="exportFilteredBtn" class="btn btn-outline-primary btn-sm" style="display:none;">
+                            <div class="d-flex gap-1 flex-wrap">
+                                <button id="exportFilteredBtn" class="btn btn-outline-primary btn-sm" style="display:none;" title="Exporter la sélection">
                                     <span class="material-icons" style="font-size:16px;">file_download</span>
                                 </button>
-                                <button id="deleteSelectedBtn" class="btn btn-outline-danger btn-sm" style="display:none;">
+                                <button id="deleteSelectedBtn" class="btn btn-outline-danger btn-sm" style="display:none;" title="Supprimer les articles sélectionnés">
                                     <span class="material-icons" style="font-size:16px;">delete</span>
+                                </button>
+                                <button id="deleteFilteredBtn" class="btn btn-outline-warning btn-sm" style="display:none;" title="Supprimer tous les articles de ce filtre">
+                                    <span class="material-icons" style="font-size:16px;">delete_sweep</span>
                                 </button>
                             </div>
                         </div>

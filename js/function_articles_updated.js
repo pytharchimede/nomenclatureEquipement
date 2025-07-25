@@ -65,6 +65,9 @@ async function loadArticles(page = 1, append = false) {
 
     // Mise à jour du message de pagination
     updatePaginationInfo(result.pagination);
+
+    // Mise à jour des boutons basés sur la sélection et les filtres
+    updateSelectionButtons();
   } catch (error) {
     console.error("Erreur lors du chargement des articles:", error);
     showAlert("Erreur lors du chargement des articles", "danger");
@@ -163,6 +166,9 @@ function applyFilters() {
   // Rechargement avec les nouveaux filtres
   hasMoreData = true;
   loadArticles(1, false);
+
+  // Mettre à jour les boutons après application des filtres
+  setTimeout(updateSelectionButtons, 100); // Petit délai pour permettre au chargement de se terminer
 }
 
 /**
@@ -378,13 +384,160 @@ function updateSelectionButtons() {
   const checkboxes = document.querySelectorAll(".article-checkbox:checked");
   const deleteBtn = document.querySelector("#deleteSelectedBtn");
   const exportBtn = document.querySelector("#exportFilteredBtn");
+  const deleteFilteredBtn = document.querySelector("#deleteFilteredBtn");
 
+  // Bouton supprimer sélection - visible si au moins un article est sélectionné
   if (deleteBtn) {
     deleteBtn.style.display = checkboxes.length > 0 ? "inline-block" : "none";
   }
 
+  // Bouton exporter sélection - visible si au moins un article est sélectionné
   if (exportBtn) {
     exportBtn.style.display = checkboxes.length > 0 ? "inline-block" : "none";
+  }
+
+  // Bouton supprimer tous les filtrés - visible si des filtres sont actifs ET qu'il y a des résultats
+  if (deleteFilteredBtn) {
+    const hasActiveFilters = Object.values(currentFilters).some(
+      (value) => value && value.trim() !== ""
+    );
+    const articlesTable = document.querySelector("#articles-table tbody");
+    const hasResults = articlesTable && articlesTable.children.length > 0;
+
+    deleteFilteredBtn.style.display =
+      hasActiveFilters && hasResults ? "inline-block" : "none";
+  }
+}
+
+/**
+ * Supprime les articles sélectionnés
+ */
+async function deleteSelectedArticles() {
+  const checkboxes = document.querySelectorAll(".article-checkbox:checked");
+  const selectedIds = Array.from(checkboxes).map((cb) => cb.value);
+
+  if (selectedIds.length === 0) {
+    showAlert("Aucun article sélectionné", "warning");
+    return;
+  }
+
+  const confirmMessage = `Êtes-vous sûr de vouloir supprimer ${selectedIds.length} article(s) sélectionné(s) ?`;
+
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    showLoadingIndicator();
+
+    const response = await fetch("api/delete_articles.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "selected",
+        ids: selectedIds,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showAlert(result.message, "success");
+      // Recharger la liste
+      await loadArticles(1, false);
+      // Décocher le bouton "tout sélectionner"
+      const selectAllBtn = document.querySelector("#select-all-articles");
+      if (selectAllBtn) selectAllBtn.checked = false;
+      updateSelectionButtons();
+    } else {
+      showAlert(result.message, "danger");
+    }
+  } catch (error) {
+    console.error("Erreur lors de la suppression:", error);
+    showAlert("Erreur lors de la suppression des articles", "danger");
+  } finally {
+    hideLoadingIndicator();
+  }
+}
+
+/**
+ * Supprime tous les articles correspondant aux filtres actuels
+ */
+async function deleteFilteredArticles() {
+  // Vérifier s'il y a des filtres actifs
+  const hasFilters = Object.keys(currentFilters).length > 0;
+
+  if (!hasFilters) {
+    showAlert(
+      "Aucun filtre appliqué. Utilisez la suppression sélective pour supprimer des articles.",
+      "warning"
+    );
+    return;
+  }
+
+  const confirmMessage =
+    "Êtes-vous sûr de vouloir supprimer TOUS les articles correspondant aux filtres actuels ?";
+
+  if (!confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    showLoadingIndicator();
+
+    const response = await fetch("api/delete_articles.php", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "filtered",
+        filters: currentFilters,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.needsConfirmation) {
+      // Demander confirmation pour les suppressions importantes
+      const secondConfirm = confirm(result.message);
+
+      if (secondConfirm) {
+        // Refaire la requête avec confirmation
+        const confirmedResponse = await fetch("api/delete_articles.php", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: "filtered",
+            filters: currentFilters,
+            confirmed: true,
+          }),
+        });
+
+        const confirmedResult = await confirmedResponse.json();
+
+        if (confirmedResult.success) {
+          showAlert(confirmedResult.message, "success");
+          await loadArticles(1, false);
+        } else {
+          showAlert(confirmedResult.message, "danger");
+        }
+      }
+    } else if (result.success) {
+      showAlert(result.message, "success");
+      await loadArticles(1, false);
+    } else {
+      showAlert(result.message, "danger");
+    }
+  } catch (error) {
+    console.error("Erreur lors de la suppression filtrée:", error);
+    showAlert("Erreur lors de la suppression des articles", "danger");
+  } finally {
+    hideLoadingIndicator();
   }
 }
 
@@ -515,6 +668,17 @@ function initArticlesPage() {
       e.preventDefault();
       handleAdvancedArticleImport();
     });
+  }
+
+  // Gestion de la suppression de masse
+  const deleteSelectedBtn = document.querySelector("#deleteSelectedBtn");
+  if (deleteSelectedBtn) {
+    deleteSelectedBtn.addEventListener("click", deleteSelectedArticles);
+  }
+
+  const deleteFilteredBtn = document.querySelector("#deleteFilteredBtn");
+  if (deleteFilteredBtn) {
+    deleteFilteredBtn.addEventListener("click", deleteFilteredArticles);
   }
 
   // Gestion du drag & drop pour l'importation
