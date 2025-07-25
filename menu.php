@@ -327,6 +327,10 @@ require_once __DIR__ . '/includes/auth.php';
     <!-- Navigation -->
     <div class="nav-section">
         <div class="nav-title">Principal</div>
+        <a href="accueil.php" class="nav-link <?= isActive(['accueil.php', 'index.php']) ?>">
+            <span class="material-icons nav-icon">home</span>
+            Accueil
+        </a>
         <a href="dashboard.php" class="nav-link <?= isActive('dashboard.php') ?>">
             <span class="material-icons nav-icon">dashboard</span>
             Tableau de bord
