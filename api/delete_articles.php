@@ -42,10 +42,18 @@ try {
 
             $whereConditions = [];
             $params = [];
+            $joins = "";
+
+            // Si on filtre par source, on doit joindre avec nomenclatures
+            if (!empty($filters['source'])) {
+                $joins = "INNER JOIN nomenclatures n ON articles.code_article = n.code_article";
+                $whereConditions[] = "n.source = ?";
+                $params[] = $filters['source'];
+            }
 
             // Construction des conditions WHERE selon les filtres
             if (!empty($filters['search'])) {
-                $whereConditions[] = "(code_article LIKE ? OR designation_article LIKE ? OR fabricant LIKE ?)";
+                $whereConditions[] = "(articles.code_article LIKE ? OR articles.designation_article LIKE ? OR articles.fabricant LIKE ?)";
                 $searchTerm = '%' . $filters['search'] . '%';
                 $params[] = $searchTerm;
                 $params[] = $searchTerm;
@@ -53,22 +61,22 @@ try {
             }
 
             if (!empty($filters['fabricant'])) {
-                $whereConditions[] = "fabricant = ?";
+                $whereConditions[] = "articles.fabricant = ?";
                 $params[] = $filters['fabricant'];
             }
 
             if (!empty($filters['type_article'])) {
-                $whereConditions[] = "type_article = ?";
+                $whereConditions[] = "articles.type_article = ?";
                 $params[] = $filters['type_article'];
             }
 
             if (!empty($filters['groupe_articles'])) {
-                $whereConditions[] = "groupe_articles = ?";
+                $whereConditions[] = "articles.groupe_articles = ?";
                 $params[] = $filters['groupe_articles'];
             }
 
             if (!empty($filters['uq_base'])) {
-                $whereConditions[] = "uq_base = ?";
+                $whereConditions[] = "articles.uq_base = ?";
                 $params[] = $filters['uq_base'];
             }
 
@@ -78,31 +86,68 @@ try {
 
             $whereClause = 'WHERE ' . implode(' AND ', $whereConditions);
 
-            // Compter d'abord combien d'articles seront supprimés
-            $countStmt = $pdo->prepare("SELECT COUNT(*) FROM articles $whereClause");
-            $countStmt->execute($params);
-            $countToDelete = $countStmt->fetchColumn();
+            // Si on filtre par source, on doit d'abord récupérer les IDs distincts à supprimer
+            if (!empty($filters['source'])) {
+                // Compter d'abord combien d'articles seront supprimés
+                $countStmt = $pdo->prepare("SELECT COUNT(DISTINCT articles.id) FROM articles $joins $whereClause");
+                $countStmt->execute($params);
+                $countToDelete = $countStmt->fetchColumn();
 
-            if ($countToDelete == 0) {
-                throw new Exception('Aucun article ne correspond aux critères de suppression');
+                if ($countToDelete == 0) {
+                    throw new Exception('Aucun article ne correspond aux critères de suppression');
+                }
+
+                // Confirmer si plus de 100 articles
+                if ($countToDelete > 100 && !($input['confirmed'] ?? false)) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        'success' => false,
+                        'needsConfirmation' => true,
+                        'count' => $countToDelete,
+                        'message' => "Vous êtes sur le point de supprimer $countToDelete articles. Confirmez-vous cette action ?"
+                    ]);
+                    exit;
+                }
+
+                // Récupérer les IDs distincts des articles à supprimer
+                $idsStmt = $pdo->prepare("SELECT DISTINCT articles.id FROM articles $joins $whereClause");
+                $idsStmt->execute($params);
+                $articleIds = $idsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+                if (!empty($articleIds)) {
+                    $placeholders = str_repeat('?,', count($articleIds) - 1) . '?';
+                    $deleteStmt = $pdo->prepare("DELETE FROM articles WHERE id IN ($placeholders)");
+                    $deleteStmt->execute($articleIds);
+                    $deleted = $deleteStmt->rowCount();
+                }
+            } else {
+                // Suppression normale sans jointure
+                // Compter d'abord combien d'articles seront supprimés
+                $countStmt = $pdo->prepare("SELECT COUNT(*) FROM articles $whereClause");
+                $countStmt->execute($params);
+                $countToDelete = $countStmt->fetchColumn();
+
+                if ($countToDelete == 0) {
+                    throw new Exception('Aucun article ne correspond aux critères de suppression');
+                }
+
+                // Confirmer si plus de 100 articles
+                if ($countToDelete > 100 && !($input['confirmed'] ?? false)) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        'success' => false,
+                        'needsConfirmation' => true,
+                        'count' => $countToDelete,
+                        'message' => "Vous êtes sur le point de supprimer $countToDelete articles. Confirmez-vous cette action ?"
+                    ]);
+                    exit;
+                }
+
+                // Effectuer la suppression
+                $deleteStmt = $pdo->prepare("DELETE FROM articles $whereClause");
+                $deleteStmt->execute($params);
+                $deleted = $deleteStmt->rowCount();
             }
-
-            // Confirmer si plus de 100 articles
-            if ($countToDelete > 100 && !($input['confirmed'] ?? false)) {
-                $pdo->rollBack();
-                echo json_encode([
-                    'success' => false,
-                    'needsConfirmation' => true,
-                    'count' => $countToDelete,
-                    'message' => "Vous êtes sur le point de supprimer $countToDelete articles. Confirmez-vous cette action ?"
-                ]);
-                exit;
-            }
-
-            // Effectuer la suppression
-            $deleteStmt = $pdo->prepare("DELETE FROM articles $whereClause");
-            $deleteStmt->execute($params);
-            $deleted = $deleteStmt->rowCount();
         }
 
         $pdo->commit();

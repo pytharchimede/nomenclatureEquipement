@@ -37,6 +37,10 @@ try {
         $filters['uq_base'] = trim($_GET['uq_base']);
     }
 
+    if (!empty($_GET['source'])) {
+        $filters['source'] = trim($_GET['source']);
+    }
+
     // Récupération des données paginées
     $result = Article::getPaginated($page, $limit, $filters);
 

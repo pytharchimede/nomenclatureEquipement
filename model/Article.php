@@ -27,9 +27,17 @@ class Article
         // Construction de la requête avec filtres
         $where = [];
         $params = [];
+        $joins = "";
+
+        // Si on filtre par source, on doit joindre avec nomenclatures
+        if (!empty($filters['source'])) {
+            $joins = "INNER JOIN nomenclatures n ON articles.code_article = n.code_article";
+            $where[] = "n.source = ?";
+            $params[] = $filters['source'];
+        }
 
         if (!empty($filters['search'])) {
-            $where[] = "(code_article LIKE ? OR designation_article LIKE ? OR fabricant LIKE ?)";
+            $where[] = "(articles.code_article LIKE ? OR articles.designation_article LIKE ? OR articles.fabricant LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
             $params[] = $searchTerm;
             $params[] = $searchTerm;
@@ -37,35 +45,39 @@ class Article
         }
 
         if (!empty($filters['fabricant'])) {
-            $where[] = "fabricant LIKE ?";
+            $where[] = "articles.fabricant LIKE ?";
             $params[] = '%' . $filters['fabricant'] . '%';
         }
 
         if (!empty($filters['type_article'])) {
-            $where[] = "type_article LIKE ?";
+            $where[] = "articles.type_article LIKE ?";
             $params[] = '%' . $filters['type_article'] . '%';
         }
 
         if (!empty($filters['groupe_articles'])) {
-            $where[] = "groupe_articles = ?";
+            $where[] = "articles.groupe_articles = ?";
             $params[] = $filters['groupe_articles'];
         }
 
         if (!empty($filters['uq_base'])) {
-            $where[] = "uq_base = ?";
+            $where[] = "articles.uq_base = ?";
             $params[] = $filters['uq_base'];
         }
 
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+        // Si on filtre par source, on doit utiliser DISTINCT pour éviter les doublons
+        $selectFields = !empty($filters['source']) ? 'DISTINCT articles.*' : 'articles.*';
+        $countField = !empty($filters['source']) ? 'DISTINCT articles.id' : '*';
+
         // Requête de comptage total
-        $countSql = "SELECT COUNT(*) FROM articles $whereClause";
+        $countSql = "SELECT COUNT($countField) FROM articles $joins $whereClause";
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $total = (int)$countStmt->fetchColumn();
 
         // Requête des données
-        $dataSql = "SELECT * FROM articles $whereClause ORDER BY code_article LIMIT $limit OFFSET $offset";
+        $dataSql = "SELECT $selectFields FROM articles $joins $whereClause ORDER BY articles.code_article LIMIT $limit OFFSET $offset";
 
         $dataStmt = $pdo->prepare($dataSql);
         $dataStmt->execute($params);
@@ -94,6 +106,17 @@ class Article
 
         $pdo = Database::getConnection();
         $stmt = $pdo->query("SELECT DISTINCT $column FROM articles WHERE $column IS NOT NULL AND $column != '' ORDER BY $column");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Récupère les sources distinctes depuis les nomenclatures
+     * @return array
+     */
+    public static function getDistinctSources()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT DISTINCT source FROM nomenclatures WHERE source IS NOT NULL ORDER BY source");
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 

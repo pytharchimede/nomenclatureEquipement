@@ -140,6 +140,7 @@ function applyFilters() {
   const typeFilter = document.querySelector("#type-filter");
   const groupeFilter = document.querySelector("#groupe-filter");
   const uqFilter = document.querySelector("#uq-filter");
+  const sourceFilter = document.querySelector("#source-filter");
 
   currentFilters = {};
 
@@ -161,6 +162,10 @@ function applyFilters() {
 
   if (uqFilter && uqFilter.value) {
     currentFilters.uq_base = uqFilter.value;
+  }
+
+  if (sourceFilter && sourceFilter.value) {
+    currentFilters.source = sourceFilter.value;
   }
 
   // Rechargement avec les nouveaux filtres
@@ -613,6 +618,7 @@ function initArticlesPage() {
     "#type-filter",
     "#groupe-filter",
     "#uq-filter",
+    "#source-filter",
   ];
   filters.forEach((selector) => {
     const element = document.querySelector(selector);
@@ -631,12 +637,14 @@ function initArticlesPage() {
       const typeFilter = document.querySelector("#type-filter");
       const groupeFilter = document.querySelector("#groupe-filter");
       const uqFilter = document.querySelector("#uq-filter");
+      const sourceFilter = document.querySelector("#source-filter");
 
       if (searchInput) searchInput.value = "";
       if (fabricantFilter) fabricantFilter.value = "";
       if (typeFilter) typeFilter.value = "";
       if (groupeFilter) groupeFilter.value = "";
       if (uqFilter) uqFilter.value = "";
+      if (sourceFilter) sourceFilter.value = "";
 
       currentFilters = {};
       hasMoreData = true;

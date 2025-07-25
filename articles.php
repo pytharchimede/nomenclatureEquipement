@@ -55,6 +55,7 @@ $fabricants = Article::getDistinctValues('fabricant');
 $typesArticle = Article::getDistinctValues('type_article');
 $groupes = Article::getDistinctValues('groupe_articles');
 $unites = Article::getDistinctValues('uq_base');
+$sources = Article::getDistinctSources();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -206,6 +207,15 @@ $unites = Article::getDistinctValues('uq_base');
                                 <option value="">Toutes</option>
                                 <?php foreach ($unites as $unite): ?>
                                     <option value="<?= htmlspecialchars($unite) ?>"><?= htmlspecialchars($unite) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted mb-1">Source</label>
+                            <select id="source-filter" class="form-select form-select-sm">
+                                <option value="">Toutes</option>
+                                <?php foreach ($sources as $source): ?>
+                                    <option value="<?= htmlspecialchars($source) ?>"><?= htmlspecialchars($source) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
