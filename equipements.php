@@ -63,6 +63,7 @@ $familleData = array_values($statsFamilles);
 $fabricants = Equipement::getDistinctValues('fabricant');
 $typesObjet = Equipement::getDistinctValues('type_objet');
 $categories = Equipement::getDistinctValues('categorie_equipement');
+$sources = Equipement::getDistinctSources();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -190,7 +191,7 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
             <div class="card shadow-sm mb-3">
                 <div class="card-body py-3">
                     <div class="row g-2 align-items-center">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label small text-muted mb-1">Recherche globale</label>
                             <input type="text" id="search-input" class="form-control form-control-sm" placeholder="Repère, désignation, fabricant..." />
                         </div>
@@ -212,12 +213,21 @@ $categories = Equipement::getDistinctValues('categorie_equipement');
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label small text-muted mb-1">Catégorie</label>
                             <select id="categorie-filter" class="form-select form-select-sm">
                                 <option value="">Toutes</option>
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?= htmlspecialchars($cat) ?>"><?= htmlspecialchars($cat) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted mb-1">Source</label>
+                            <select id="source-filter" class="form-select form-select-sm">
+                                <option value="">Toutes</option>
+                                <?php foreach ($sources as $source): ?>
+                                    <option value="<?= htmlspecialchars($source) ?>"><?= htmlspecialchars($source) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

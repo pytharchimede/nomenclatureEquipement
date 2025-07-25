@@ -31,9 +31,17 @@ class Equipement
         // Construction de la requête avec filtres
         $where = [];
         $params = [];
+        $joins = "";
+
+        // Si on filtre par source, on doit joindre avec nomenclatures
+        if (!empty($filters['source'])) {
+            $joins = "INNER JOIN nomenclatures n ON equipements.code_equipement = n.code_equipement";
+            $where[] = "n.source = ?";
+            $params[] = $filters['source'];
+        }
 
         if (!empty($filters['search'])) {
-            $where[] = "(repere_equipement LIKE ? OR designation_equipement LIKE ? OR fabricant LIKE ?)";
+            $where[] = "(equipements.repere_equipement LIKE ? OR equipements.designation_equipement LIKE ? OR equipements.fabricant LIKE ?)";
             $searchTerm = '%' . $filters['search'] . '%';
             $params[] = $searchTerm;
             $params[] = $searchTerm;
@@ -41,30 +49,37 @@ class Equipement
         }
 
         if (!empty($filters['fabricant'])) {
-            $where[] = "fabricant LIKE ?";
+            $where[] = "equipements.fabricant LIKE ?";
             $params[] = '%' . $filters['fabricant'] . '%';
         }
 
         if (!empty($filters['type_objet'])) {
-            $where[] = "type_objet LIKE ?";
+            $where[] = "equipements.type_objet LIKE ?";
             $params[] = '%' . $filters['type_objet'] . '%';
         }
 
         if (!empty($filters['categorie_equipement'])) {
-            $where[] = "categorie_equipement = ?";
+            $where[] = "equipements.categorie_equipement = ?";
             $params[] = $filters['categorie_equipement'];
         }
 
         $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+        // Si on filtre par source, on doit utiliser DISTINCT pour éviter les doublons
+        $selectFields = !empty($filters['source']) ? 'DISTINCT equipements.*' : 'equipements.*';
+
         // Requête de comptage total
-        $countSql = "SELECT COUNT(*) FROM equipements $whereClause";
+        if (!empty($filters['source'])) {
+            $countSql = "SELECT COUNT(DISTINCT equipements.id) FROM equipements $joins $whereClause";
+        } else {
+            $countSql = "SELECT COUNT(*) FROM equipements $whereClause";
+        }
         $countStmt = $pdo->prepare($countSql);
         $countStmt->execute($params);
         $total = (int)$countStmt->fetchColumn();
 
         // Requête des données
-        $dataSql = "SELECT * FROM equipements $whereClause ORDER BY repere_equipement LIMIT $limit OFFSET $offset";
+        $dataSql = "SELECT $selectFields FROM equipements $joins $whereClause ORDER BY equipements.repere_equipement LIMIT $limit OFFSET $offset";
 
         $dataStmt = $pdo->prepare($dataSql);
         $dataStmt->execute($params);
@@ -274,6 +289,17 @@ class Equipement
 
         $pdo = Database::getConnection();
         $stmt = $pdo->query("SELECT DISTINCT $column FROM equipements WHERE $column IS NOT NULL AND $column != '' ORDER BY $column");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Récupère les sources distinctes depuis les nomenclatures
+     * @return array
+     */
+    public static function getDistinctSources()
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->query("SELECT DISTINCT source FROM nomenclatures WHERE source IS NOT NULL ORDER BY source");
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 }

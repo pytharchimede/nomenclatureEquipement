@@ -140,6 +140,7 @@ function applyFilters() {
   const fabricantFilter = document.querySelector("#fabricant-filter");
   const typeFilter = document.querySelector("#type-filter");
   const categorieFilter = document.querySelector("#categorie-filter");
+  const sourceFilter = document.querySelector("#source-filter");
 
   currentFilters = {};
 
@@ -157,6 +158,10 @@ function applyFilters() {
 
   if (categorieFilter && categorieFilter.value) {
     currentFilters.categorie_equipement = categorieFilter.value;
+  }
+
+  if (sourceFilter && sourceFilter.value) {
+    currentFilters.source = sourceFilter.value;
   }
 
   // Rechargement avec les nouveaux filtres
@@ -940,7 +945,12 @@ function initEquipementsPage() {
   }
 
   // Événements pour les filtres select
-  const filters = ["#fabricant-filter", "#type-filter", "#categorie-filter"];
+  const filters = [
+    "#fabricant-filter",
+    "#type-filter",
+    "#categorie-filter",
+    "#source-filter",
+  ];
   filters.forEach((selector) => {
     const element = document.querySelector(selector);
     if (element) {
@@ -1049,11 +1059,13 @@ function initEquipementsPage() {
       const fabricantFilter = document.querySelector("#fabricant-filter");
       const typeFilter = document.querySelector("#type-filter");
       const categorieFilter = document.querySelector("#categorie-filter");
+      const sourceFilter = document.querySelector("#source-filter");
 
       if (searchInput) searchInput.value = "";
       if (fabricantFilter) fabricantFilter.value = "";
       if (typeFilter) typeFilter.value = "";
       if (categorieFilter) categorieFilter.value = "";
+      if (sourceFilter) sourceFilter.value = "";
 
       currentFilters = {};
       hasMoreData = true;

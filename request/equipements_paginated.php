@@ -33,6 +33,10 @@ try {
         $filters['categorie_equipement'] = trim($_GET['categorie_equipement']);
     }
 
+    if (!empty($_GET['source'])) {
+        $filters['source'] = trim($_GET['source']);
+    }
+
     // Récupération des données paginées
     $result = Equipement::getPaginated($page, $limit, $filters);
 
