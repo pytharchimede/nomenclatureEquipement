@@ -524,7 +524,7 @@ require_once 'includes/auth.php';
 
     <script src="plugins/js/chart.js"></script>
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
-    <script src="js/elements_non_sap.js"></script>
+    <script src="js/elements_non_sap_fast.js"></script>
 </body>
 
 </html>
