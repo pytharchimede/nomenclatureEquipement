@@ -1,4 +1,8 @@
 <?php
+// Supprimer les warnings PHP de la sortie
+error_reporting(E_ERROR | E_PARSE);
+ini_set('display_errors', 0);
+
 require_once __DIR__ . '/../model/Database.php';
 
 header('Content-Type: application/json');
@@ -25,6 +29,7 @@ try {
     ];
 
     switch ($type) {
+        case 'general_stats':
         case 'stats_generales':
             // Statistiques générales - pas de pagination
             $stmt = $pdo->query("
@@ -40,7 +45,7 @@ try {
             ");
             $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            $response['data'] = [
+            $response['stats'] = [
                 'equipements_non_sap' => $stats['equipements_non_sap'] ?? 0,
                 'articles_non_sap' => $stats['articles_non_sap'] ?? 0
             ];
@@ -163,17 +168,65 @@ try {
                         WHEN a.code_article LIKE '8%' THEN 'Sécurité'
                         ELSE 'Autres'
                     END as metier,
-                    COUNT(DISTINCT a.code_article) as nombre
+                    COUNT(DISTINCT a.code_article) as count
                 FROM articles a
                 LEFT JOIN nomenclatures n ON a.code_article = n.code_article AND n.source = 'SAP'
                 WHERE n.id IS NULL
                 GROUP BY metier
-                ORDER BY nombre DESC
+                ORDER BY count DESC
             ");
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $response['data'] = $data;
             $response['has_more'] = false;
+            break;
+
+        case 'equipements_par_source':
+            // Équipements par source - version simplifiée
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        COALESCE(n.source, 'Aucune source') as source_actuelle,
+                        COUNT(DISTINCT e.repere_equipement) as count
+                    FROM equipements e
+                    LEFT JOIN nomenclatures n_sap ON e.repere_equipement = n_sap.repere_equipement AND n_sap.source = 'SAP'
+                    LEFT JOIN nomenclatures n ON e.repere_equipement = n.repere_equipement AND n.source != 'SAP'
+                    WHERE n_sap.id IS NULL
+                    GROUP BY COALESCE(n.source, 'Aucune source')
+                    ORDER BY count DESC
+                ");
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $response['data'] = $data ?: [];
+                $response['has_more'] = false;
+            } catch (Exception $e) {
+                $response['success'] = false;
+                $response['error'] = 'Erreur requête equipements_par_source: ' . $e->getMessage();
+            }
+            break;
+
+        case 'articles_par_source':
+            // Articles par source - version simplifiée
+            try {
+                $stmt = $pdo->query("
+                    SELECT 
+                        COALESCE(n.source, 'Aucune source') as source_actuelle,
+                        COUNT(DISTINCT a.code_article) as count
+                    FROM articles a
+                    LEFT JOIN nomenclatures n_sap ON a.code_article = n_sap.code_article AND n_sap.source = 'SAP'
+                    LEFT JOIN nomenclatures n ON a.code_article = n.code_article AND n.source != 'SAP'
+                    WHERE n_sap.id IS NULL
+                    GROUP BY COALESCE(n.source, 'Aucune source')
+                    ORDER BY count DESC
+                ");
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $response['data'] = $data ?: [];
+                $response['has_more'] = false;
+            } catch (Exception $e) {
+                $response['success'] = false;
+                $response['error'] = 'Erreur requête articles_par_source: ' . $e->getMessage();
+            }
             break;
 
         default:
@@ -182,92 +235,8 @@ try {
             break;
     }
 
-    // Correction pour la pagination des équipements
-    if ($type === 'equipements_details') {
-        $offset = intval($_GET['offset'] ?? 0);
-        $limit = intval($_GET['limit'] ?? 50);
-
-        $sql = "SELECT 
-                    e.repere_equipement,
-                    e.designation,
-                    e.famille,
-                    e.source_actuelle
-                FROM equipements e 
-                WHERE e.code_sap IS NULL 
-                   OR e.code_sap = '' 
-                   OR e.code_sap = 'Non défini'
-                ORDER BY e.repere_equipement
-                LIMIT $limit OFFSET $offset"; // Correction: enlever les guillemets
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $equipements = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Compter le total
-        $countSql = "SELECT COUNT(*) as total 
-                     FROM equipements e 
-                     WHERE e.code_sap IS NULL 
-                        OR e.code_sap = '' 
-                        OR e.code_sap = 'Non défini'";
-        $countStmt = $pdo->prepare($countSql);
-        $countStmt->execute();
-        $totalCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-        echo json_encode([
-            'success' => true,
-            'data' => $equipements,
-            'total_count' => $totalCount,
-            'has_more' => ($offset + $limit) < $totalCount,
-            'current_offset' => $offset,
-            'limit' => $limit
-        ]);
-        exit;
-    }
-
-    // Correction similaire pour les articles
-    if ($type === 'articles_details') {
-        $offset = intval($_GET['offset'] ?? 0);
-        $limit = intval($_GET['limit'] ?? 50);
-
-        $sql = "SELECT 
-                    a.code_article,
-                    a.designation,
-                    a.metier,
-                    a.source_actuelle
-                FROM articles a 
-                WHERE a.code_sap IS NULL 
-                   OR a.code_sap = '' 
-                   OR a.code_sap = 'Non défini'
-                ORDER BY a.code_article
-                LIMIT $limit OFFSET $offset"; // Correction: enlever les guillemets
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute();
-        $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Compter le total
-        $countSql = "SELECT COUNT(*) as total 
-                     FROM articles a 
-                     WHERE a.code_sap IS NULL 
-                        OR a.code_sap = '' 
-                        OR a.code_sap = 'Non défini'";
-        $countStmt = $pdo->prepare($countSql);
-        $countStmt->execute();
-        $totalCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
-
-        echo json_encode([
-            'success' => true,
-            'data' => $articles,
-            'total_count' => $totalCount,
-            'has_more' => ($offset + $limit) < $totalCount,
-            'current_offset' => $offset,
-            'limit' => $limit
-        ]);
-        exit;
-    }
-
     // Simulation d'un délai réaliste
-    if ($type !== 'stats_generales') {
+    if ($type !== 'general_stats' && $type !== 'stats_generales') {
         usleep(300000); // 0.3 seconde
     }
 
