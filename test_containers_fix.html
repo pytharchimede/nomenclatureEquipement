@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Containers - Elements Non-SAP</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        .warning { background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test des Correctifs de Conteneurs</h1>
+    
+    <div class="test-section info">
+        <h3>📋 Améliorations Apportées</h3>
+        <ul>
+            <li>✅ <strong>Largeurs des colonnes fixes</strong> : 40% Repère/Code, 35% Famille/Métier, 25% Source</li>
+            <li>✅ <strong>Overflow contrôlé</strong> : table-responsive avec scrollbars personnalisées</li>
+            <li>✅ <strong>Espacement optimisé</strong> : Marges et paddings ajustés pour éviter débordements</li>
+            <li>✅ <strong>Responsive design</strong> : Adaptation automatique pour tablettes et mobiles</li>
+            <li>✅ <strong>Text wrapping</strong> : Gestion des textes longs avec ellipsis</li>
+            <li>✅ <strong>Graphiques contenus</strong> : Canvas avec tailles fixes pour éviter débordements</li>
+        </ul>
+    </div>
+
+    <div class="test-section warning">
+        <h3>⚠️ Points à Vérifier</h3>
+        <ol>
+            <li><strong>Tables des équipements et articles</strong> : Colonnes bien alignées sans débordement horizontal</li>
+            <li><strong>Responsive sur mobile</strong> : Réduction des tailles automatique</li>
+            <li><strong>Scrollbars</strong> : Apparition automatique si contenu dépasse</li>
+            <li><strong>Graphiques</strong> : Taille contrôlée dans leurs conteneurs</li>
+            <li><strong>Boutons et badges</strong> : Alignement correct sans chevauchement</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>🔗 Test Direct</h3>
+        <p><a href="elements_non_sap.php" target="_blank">▶️ Ouvrir Elements Non-SAP avec Correctifs</a></p>
+    </div>
+
+    <div class="test-section">
+        <h3>📱 Tests Responsive</h3>
+        <p>Utilisez les outils de développement (F12) pour tester :</p>
+        <ul>
+            <li><strong>Desktop (1200px+)</strong> : Affichage normal sur 2 colonnes</li>
+            <li><strong>Tablette (768px-1199px)</strong> : Tableaux plus compacts</li>
+            <li><strong>Mobile (<768px)</strong> : Une colonne, tailles réduites</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>🎯 Fonctionnalités Containers</h3>
+        <ul>
+            <li><strong>Scroll horizontal</strong> : Si le contenu est trop large</li>
+            <li><strong>Scroll vertical</strong> : Si plus de 600px de hauteur</li>
+            <li><strong>Headers fixes</strong> : En-têtes de tableaux restent visibles au scroll</li>
+            <li><strong>Ellipsis</strong> : Textes longs coupés avec "..."</li>
+            <li><strong>Hover effects</strong> : Animation sur survol des lignes</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log("🔧 Page de test des containers chargée");
+        
+        // Test de largeur d'écran
+        function checkScreenSize() {
+            const width = window.innerWidth;
+            let category = "";
+            
+            if (width >= 1200) {
+                category = "Desktop (Large)";
+            } else if (width >= 992) {
+                category = "Desktop (Medium)";
+            } else if (width >= 768) {
+                category = "Tablette";
+            } else {
+                category = "Mobile";
+            }
+            
+            document.body.innerHTML += `
+                <div class="test-section ${width < 768 ? 'warning' : 'success'}">
+                    <h3>📏 Résolution Détectée</h3>
+                    <p><strong>Largeur:</strong> ${width}px</p>
+                    <p><strong>Catégorie:</strong> ${category}</p>
+                    <p><strong>Recommandation:</strong> ${width < 768 ? 'Test du responsive mobile recommandé' : 'Affichage optimal'}</p>
+                </div>
+            `;
+        }
+        
+        // Exécuter au chargement et au redimensionnement
+        checkScreenSize();
+        window.addEventListener('resize', () => {
+            // Nettoyer les anciens résultats
+            const oldResults = document.querySelectorAll('.test-section h3');
+            oldResults.forEach(el => {
+                if (el.textContent.includes('📏 Résolution Détectée')) {
+                    el.parentElement.remove();
+                }
+            });
+            checkScreenSize();
+        });
+    </script>
+</body>
+</html>

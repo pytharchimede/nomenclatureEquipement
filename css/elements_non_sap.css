@@ -245,3 +245,217 @@
             transform: translateY(-20px);
             transition: all 1s ease-out;
         }
+
+        /* CORRECTIFS POUR LES CONTENEURS ET DÉBORDEMENTS */
+        
+        /* Conteneur principal - empêcher débordement horizontal */
+        .content {
+            overflow-x: hidden;
+            padding: 1rem;
+        }
+
+        /* Containers des tableaux - gestion optimisée */
+        .table-responsive {
+            overflow-x: auto;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Tables - largeur et alignement */
+        .table {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            width: 100%;
+            table-layout: fixed; /* Force la largeur des colonnes */
+        }
+
+        .table th,
+        .table td {
+            padding: 0.75rem 0.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            word-wrap: break-word;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Colonnes spécifiques - largeurs fixes */
+        .table th:nth-child(1),
+        .table td:nth-child(1) {
+            width: 40%; /* Repère/Code Article */
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .table th:nth-child(2),
+        .table td:nth-child(2) {
+            width: 35%; /* Famille/Métier */
+        }
+
+        .table th:nth-child(3),
+        .table td:nth-child(3) {
+            width: 25%; /* Source */
+            font-size: 0.8rem;
+        }
+
+        /* Header de table - fixe et stylé */
+        .table-dark th {
+            background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.85rem;
+            padding: 1rem 0.5rem;
+            border: none;
+        }
+
+        /* Lignes de tableau - alternance */
+        .table-striped > tbody > tr:nth-of-type(odd) > td {
+            background-color: rgba(244, 67, 54, 0.02);
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(25, 118, 210, 0.05);
+            transition: background-color 0.2s ease;
+        }
+
+        /* Section des tableaux - conteneurs principaux */
+        .non-sap-container {
+            overflow: hidden; /* Empêche le débordement du container */
+            position: relative;
+        }
+
+        /* Colonnes responsives - ajustement automatique */
+        .col-lg-6 {
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        /* Boutons de chargement - alignement */
+        .btn-outline-danger.btn-sm {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-danger.btn-sm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(244, 67, 54, 0.2);
+        }
+
+        /* Statut et badges - alignement */
+        .d-flex.justify-content-between {
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+        }
+
+        /* Responsive Design - Tablettes */
+        @media (max-width: 992px) {
+            .table th:nth-child(1),
+            .table td:nth-child(1) {
+                width: 35%;
+            }
+            
+            .table th:nth-child(2),
+            .table td:nth-child(2) {
+                width: 40%;
+            }
+            
+            .table th:nth-child(3),
+            .table td:nth-child(3) {
+                width: 25%;
+            }
+            
+            .table-responsive {
+                max-height: 500px;
+            }
+        }
+
+        /* Responsive Design - Mobiles */
+        @media (max-width: 768px) {
+            .content {
+                padding: 0.5rem;
+            }
+            
+            .non-sap-container {
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            .table-responsive {
+                max-height: 400px;
+                font-size: 0.8rem;
+            }
+            
+            .table th,
+            .table td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.8rem;
+            }
+            
+            .table th:nth-child(1),
+            .table td:nth-child(1) {
+                width: 30%;
+                font-size: 0.75rem;
+            }
+            
+            .col-lg-6 {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* Scrollbar personnalisée pour les tables */
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: rgba(244, 67, 54, 0.3);
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: rgba(244, 67, 54, 0.5);
+        }
+
+        /* Correction des débordements dans les graphiques */
+        #graphicsSection .row {
+            margin-left: -0.5rem;
+            margin-right: -0.5rem;
+        }
+
+        #graphicsSection .col-lg-6 {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+        }
+
+        .chart-non-sap {
+            height: 400px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chart-non-sap canvas {
+            max-width: 100%;
+            max-height: 300px;
+        }

@@ -31,20 +31,20 @@ require_once 'includes/auth.php';
     <div class="d-flex">
         <?php include 'menu.php'; ?>
 
-        <div class="flex-grow-1 content" style="background: transparent;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
+        <div class="flex-grow-1 content" style="background: transparent; overflow-x: hidden; padding: 1rem;">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                <div class="mb-3 mb-md-0">
                     <h1 class="mb-1" style="font-weight: 800; color: var(--danger-color); font-size: 2.5rem;">
                         <span class="material-icons me-3" style="font-size: 2.5rem; vertical-align: middle;">error_outline</span>
                         Éléments Non SAP
                     </h1>
                     <p class="mb-0 text-muted" style="font-weight: 500;">Équipements et articles non codifiés dans SAP</p>
                 </div>
-                <div class="d-flex gap-3">
-                    <a href="request/export_equipements_non_sap.php" class="btn btn-export">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="request/export_equipements_non_sap.php" class="btn btn-export btn-sm">
                         <span class="material-icons me-2" style="font-size: 18px;">file_download</span>Exporter Équipements
                     </a>
-                    <a href="request/export_articles_non_sap.php" class="btn btn-export">
+                    <a href="request/export_articles_non_sap.php" class="btn btn-export btn-sm">
                         <span class="material-icons me-2" style="font-size: 18px;">file_download</span>Exporter Articles
                     </a>
                 </div>
@@ -272,9 +272,9 @@ require_once 'includes/auth.php';
 
 
             <!-- Section des détails avec chargement progressif -->
-            <div class="row mb-4">
+            <div class="row mb-4" style="margin-left: -0.5rem; margin-right: -0.5rem;">
                 <!-- Équipements détaillés -->
-                <div class="col-lg-6 mb-4">
+                <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                     <div class="non-sap-container">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h4 style="color: var(--danger-color); font-weight: 700;">
@@ -289,13 +289,13 @@ require_once 'includes/auth.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive" style="max-height: 600px;">
+                        <div class="table-responsive" style="max-height: 600px; overflow-x: auto; overflow-y: auto;">
                             <table class="table table-hover table-striped">
                                 <thead class="table-dark sticky-top">
                                     <tr>
-                                        <th>Repère</th>
-                                        <th>Famille</th>
-                                        <th>Source</th>
+                                        <th style="width: 40%; min-width: 120px;">Repère</th>
+                                        <th style="width: 35%; min-width: 100px;">Famille</th>
+                                        <th style="width: 25%; min-width: 80px;">Source</th>
                                     </tr>
                                 </thead>
                                 <tbody id="equipementsTableBody">
@@ -314,7 +314,7 @@ require_once 'includes/auth.php';
                             </table>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
                             <button id="loadMoreEquipements" class="btn btn-outline-danger btn-sm" style="display: none;">
                                 <span class="material-icons me-1" style="font-size: 16px;">add</span>
                                 Charger plus (50)
@@ -325,7 +325,7 @@ require_once 'includes/auth.php';
                 </div>
 
                 <!-- Articles détaillés -->
-                <div class="col-lg-6 mb-4">
+                <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                     <div class="non-sap-container">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h4 style="color: var(--danger-color); font-weight: 700;">
@@ -340,13 +340,13 @@ require_once 'includes/auth.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive" style="max-height: 600px;">
+                        <div class="table-responsive" style="max-height: 600px; overflow-x: auto; overflow-y: auto;">
                             <table class="table table-hover table-striped">
                                 <thead class="table-dark sticky-top">
                                     <tr>
-                                        <th>Code Article</th>
-                                        <th>Métier</th>
-                                        <th>Source</th>
+                                        <th style="width: 40%; min-width: 120px;">Code Article</th>
+                                        <th style="width: 35%; min-width: 100px;">Métier</th>
+                                        <th style="width: 25%; min-width: 80px;">Source</th>
                                     </tr>
                                 </thead>
                                 <tbody id="articlesTableBody">
@@ -365,7 +365,7 @@ require_once 'includes/auth.php';
                             </table>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
                             <button id="loadMoreArticles" class="btn btn-outline-danger btn-sm" style="display: none;">
                                 <span class="material-icons me-1" style="font-size: 16px;">add</span>
                                 Charger plus (50)
@@ -479,8 +479,8 @@ require_once 'includes/auth.php';
                     </h4>
                 </div>
 
-                <div class="row">
-                    <div class="col-lg-6 mb-4">
+                <div class="row" style="margin-left: -0.5rem; margin-right: -0.5rem;">
+                    <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                         <div class="chart-non-sap">
                             <div class="loading-overlay" id="loadingEquipFamille" style="display: block;">
                                 <div class="spinner"></div>
@@ -490,10 +490,12 @@ require_once 'includes/auth.php';
                                 <span class="material-icons me-2">pie_chart</span>
                                 Équipements Non SAP par Famille
                             </h5>
-                            <canvas id="equipementsFamilleChart"></canvas>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="equipementsFamilleChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 mb-4">
+                    <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                         <div class="chart-non-sap">
                             <div class="loading-overlay" id="loadingArticlesMetier" style="display: block;">
                                 <div class="spinner"></div>
@@ -503,10 +505,12 @@ require_once 'includes/auth.php';
                                 <span class="material-icons me-2">category</span>
                                 Articles Non SAP par Métier
                             </h5>
-                            <canvas id="articlesMetierChart"></canvas>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="articlesMetierChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 mb-4">
+                    <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                         <div class="chart-non-sap">
                             <div class="loading-overlay" id="loadingEquipSource" style="display: block;">
                                 <div class="spinner"></div>
@@ -516,10 +520,12 @@ require_once 'includes/auth.php';
                                 <span class="material-icons me-2">source</span>
                                 Équipements par Source Actuelle
                             </h5>
-                            <canvas id="equipementsSourceChart"></canvas>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="equipementsSourceChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 mb-4">
+                    <div class="col-lg-6 mb-4" style="padding-left: 0.5rem; padding-right: 0.5rem;">
                         <div class="chart-non-sap">
                             <div class="loading-overlay" id="loadingArticlesSource" style="display: block;">
                                 <div class="spinner"></div>
@@ -529,7 +535,9 @@ require_once 'includes/auth.php';
                                 <span class="material-icons me-2">source</span>
                                 Articles par Source Actuelle
                             </h5>
-                            <canvas id="articlesSourceChart"></canvas>
+                            <div style="height: 300px; position: relative;">
+                                <canvas id="articlesSourceChart" style="max-width: 100%; max-height: 100%;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
