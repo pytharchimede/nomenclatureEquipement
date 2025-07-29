@@ -1,8 +1,6 @@
 <?php
-// Démarrer la session si elle n'est pas déjà active
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Utiliser la configuration de session robuste
+require_once __DIR__ . '/session_config.php';
 
 require_once __DIR__ . '/../model/DroitUtilisateur.php';
 

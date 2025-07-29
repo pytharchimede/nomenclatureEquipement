@@ -1,28 +1,18 @@
 <?php
-// Démarrer la session avant tout output HTML
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Utiliser la configuration de session robuste
+require_once 'includes/session_config.php';
+require_once 'includes/auth.php';
 
 // Vérifier l'authentification
-if (!isset($_SESSION['user_id'])) {
-    header('Location: auth.php');
-    exit;
-}
+// if (!isset($_SESSION['user_id'])) {
+//     header('Location: auth.php');
+//     exit;
+// }
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 
-<head>émarrer la session avant tout output HTML
-    if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-    }
-    require_once 'includes/auth.php';
-    ?>
-    <!DOCTYPE html>
-    <html lang="fr"
-
-        <head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EquiNomTech - Accueil</title>

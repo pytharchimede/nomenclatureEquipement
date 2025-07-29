@@ -1,4 +1,7 @@
 <?php
+// Utiliser la configuration de session robuste
+require_once __DIR__ . '/includes/session_config.php';
+
 // Détecte la page active pour le menu
 $currentPage = basename($_SERVER['PHP_SELF']);
 if (!function_exists('isActive')) {
@@ -38,10 +41,7 @@ foreach ($seen as $key => $first) {
 }
 $nbDoublons = count($dups);
 
-// Ajout du contrôle d'accès
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// Contrôle d'accès
 require_once __DIR__ . '/includes/auth.php';
 ?>
 <style>
