@@ -19,12 +19,12 @@ require_once 'includes/auth.php';
 
 <body>
     <!-- Barre de progression -->
-    <div class="progress-container" id="progressContainer" style="display: none;">
+    <div class="progress-container" id="progressContainer" style="display: block;">
         <div class="container-fluid">
             <div class="progress" style="height: 6px; background: #f0f0f0;">
-                <div class="progress-bar-custom" id="progressBar" style="width: 0%;"></div>
+                <div class="progress-bar-custom" id="progressBar" style="width: 0%; background: var(--danger-color); transition: width 0.3s ease;"></div>
             </div>
-            <div class="progress-text" id="progressText">Chargement des données...</div>
+            <div class="progress-text" id="progressText">⚡ Chargement ultra-rapide en cours...</div>
         </div>
     </div>
 
@@ -70,11 +70,9 @@ require_once 'includes/auth.php';
             <!-- Statistiques principales -->
             <div class="row mb-5">
                 <div class="col-lg-6 mb-4">
-                    <div class="stat-card-non-sap stat-card-loading" id="cardEquipements">
+                    <div class="stat-card-non-sap" id="cardEquipements">
                         <div class="h1 text-danger mb-3" id="equipementsNonSAP">
-                            <div class="spinner-border text-danger" role="status">
-                                <span class="visually-hidden">Chargement...</span>
-                            </div>
+                            <span class="text-muted">Calcul...</span>
                         </div>
                         <h5 class="mb-2">Équipements Non SAP</h5>
                         <p class="text-muted mb-3">Équipements sans codification SAP</p>
@@ -84,11 +82,9 @@ require_once 'includes/auth.php';
                     </div>
                 </div>
                 <div class="col-lg-6 mb-4">
-                    <div class="stat-card-non-sap stat-card-loading" id="cardArticles">
+                    <div class="stat-card-non-sap" id="cardArticles">
                         <div class="h1 text-danger mb-3" id="articlesNonSAP">
-                            <div class="spinner-border text-danger" role="status">
-                                <span class="visually-hidden">Chargement...</span>
-                            </div>
+                            <span class="text-muted">Calcul...</span>
                         </div>
                         <h5 class="mb-2">Articles Non SAP</h5>
                         <p class="text-muted mb-3">Articles sans codification SAP</p>
@@ -169,9 +165,7 @@ require_once 'includes/auth.php';
                     <div class="col-lg-3 mb-3">
                         <div class="stat-card-non-sap">
                             <div class="h4 text-info mb-2" id="previewFamilles">
-                                <div class="spinner-border text-info" role="status">
-                                    <span class="visually-hidden">Calcul...</span>
-                                </div>
+                                <span class="text-muted">...</span>
                             </div>
                             <h6 class="mb-0">Familles d'Équipements</h6>
                             <small class="text-muted">Types identifiés</small>
@@ -180,9 +174,7 @@ require_once 'includes/auth.php';
                     <div class="col-lg-3 mb-3">
                         <div class="stat-card-non-sap">
                             <div class="h4 text-warning mb-2" id="previewMetiers">
-                                <div class="spinner-border text-warning" role="status">
-                                    <span class="visually-hidden">Calcul...</span>
-                                </div>
+                                <span class="text-muted">...</span>
                             </div>
                             <h6 class="mb-0">Métiers d'Articles</h6>
                             <small class="text-muted">Catégories identifiées</small>
@@ -191,9 +183,7 @@ require_once 'includes/auth.php';
                     <div class="col-lg-3 mb-3">
                         <div class="stat-card-non-sap">
                             <div class="h4 text-success mb-2" id="previewSources">
-                                <div class="spinner-border text-success" role="status">
-                                    <span class="visually-hidden">Calcul...</span>
-                                </div>
+                                <span class="text-muted">...</span>
                             </div>
                             <h6 class="mb-0">Sources Actives</h6>
                             <small class="text-muted">Systèmes détectés</small>
@@ -205,7 +195,7 @@ require_once 'includes/auth.php';
                                 <span class="material-icons">hourglass_empty</span>
                             </div>
                             <h6 class="mb-0">Statut Global</h6>
-                            <small class="text-muted" id="previewStatusText">En cours d'analyse...</small>
+                            <small class="text-muted" id="previewStatusText">Analyse en cours...</small>
                         </div>
                     </div>
                 </div>
@@ -299,9 +289,9 @@ require_once 'includes/auth.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive" style="max-height: 400px;">
-                            <table class="table table-hover">
-                                <thead class="table-light sticky-top">
+                        <div class="table-responsive" style="max-height: 600px;">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-dark sticky-top">
                                     <tr>
                                         <th>Repère</th>
                                         <th>Famille</th>
@@ -312,10 +302,11 @@ require_once 'includes/auth.php';
                                     <tr>
                                         <td colspan="3" class="text-center text-muted">
                                             <div class="py-3">
-                                                <div class="spinner-border text-danger mb-2" role="status">
+                                                <div class="spinner-border text-danger mb-2" role="status" style="width: 1.5rem; height: 1.5rem;">
                                                     <span class="visually-hidden">Chargement...</span>
                                                 </div>
-                                                <div>Chargement des équipements...</div>
+                                                <div>Préparation des équipements...</div>
+                                                <small class="text-muted">100 premiers éléments en cours de chargement</small>
                                             </div>
                                         </td>
                                     </tr>
@@ -349,9 +340,9 @@ require_once 'includes/auth.php';
                             </div>
                         </div>
 
-                        <div class="table-responsive" style="max-height: 400px;">
-                            <table class="table table-hover">
-                                <thead class="table-light sticky-top">
+                        <div class="table-responsive" style="max-height: 600px;">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-dark sticky-top">
                                     <tr>
                                         <th>Code Article</th>
                                         <th>Métier</th>
@@ -362,10 +353,11 @@ require_once 'includes/auth.php';
                                     <tr>
                                         <td colspan="3" class="text-center text-muted">
                                             <div class="py-3">
-                                                <div class="spinner-border text-danger mb-2" role="status">
+                                                <div class="spinner-border text-danger mb-2" role="status" style="width: 1.5rem; height: 1.5rem;">
                                                     <span class="visually-hidden">Chargement...</span>
                                                 </div>
-                                                <div>Chargement des articles...</div>
+                                                <div>Préparation des articles...</div>
+                                                <small class="text-muted">100 premiers éléments en cours de chargement</small>
                                             </div>
                                         </td>
                                     </tr>
@@ -463,60 +455,11 @@ require_once 'includes/auth.php';
                 </div>
             </div>
 
-            <!-- Graphiques de répartition -->
-            <div class="row">
-                <div class="col-lg-6 mb-4">
-                    <div class="chart-non-sap chart-loaded">
-                        <div class="loading-overlay" id="loadingEquipFamille">
-                            <div class="spinner"></div>
-                            <div class="text-muted">Chargement des équipements par famille...</div>
-                        </div>
-                        <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
-                            <span class="material-icons me-2">pie_chart</span>
-                            Équipements Non SAP par Famille
-                        </h5>
-                        <canvas id="equipementsFamilleChart"></canvas>
-                    </div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="chart-non-sap chart-loaded">
-                        <div class="loading-overlay" id="loadingArticlesMetier">
-                            <div class="spinner"></div>
-                            <div class="text-muted">Chargement des articles par métier...</div>
-                        </div>
-                        <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
-                            <span class="material-icons me-2">category</span>
-                            Articles Non SAP par Métier
-                        </h5>
-                        <canvas id="articlesMetierChart"></canvas>
-                    </div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="chart-non-sap chart-loaded">
-                        <div class="loading-overlay" id="loadingEquipSource">
-                            <div class="spinner"></div>
-                            <div class="text-muted">Chargement des équipements par source...</div>
-                        </div>
-                        <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
-                            <span class="material-icons me-2">source</span>
-                            Équipements par Source Actuelle
-                        </h5>
-                        <canvas id="equipementsSourceChart"></canvas>
-                    </div>
-                </div>
-                <div class="col-lg-6 mb-4">
-                    <div class="chart-non-sap chart-loaded">
-                        <div class="loading-overlay" id="loadingArticlesSource">
-                            <div class="spinner"></div>
-                            <div class="text-muted">Chargement des articles par source...</div>
-                        </div>
-                        <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
-                            <span class="material-icons me-2">source</span>
-                            Articles par Source Actuelle
-                        </h5>
-                        <canvas id="articlesSourceChart"></canvas>
-                    </div>
-                </div>
+            <!-- Section graphiques supprimée pour alléger la page -->
+            <div class="text-center text-muted py-4">
+                <span class="material-icons me-2" style="font-size: 2rem;">analytics_off</span>
+                <h5>Graphiques désactivés pour des performances optimales</h5>
+                <p>Les données sont disponibles dans les tableaux ci-dessus</p>
             </div>
 
         </div>
@@ -524,7 +467,7 @@ require_once 'includes/auth.php';
 
     <script src="plugins/js/chart.js"></script>
     <script src="plugins/js/bootstrap.bundle.min.js"></script>
-    <script src="js/elements_non_sap_fast.js"></script>
+    <script src="js/elements_non_sap_ultra_light.js"></script>
 </body>
 
 </html>
