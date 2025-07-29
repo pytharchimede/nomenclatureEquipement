@@ -7,6 +7,9 @@ async function loadDataLight() {
   try {
     console.log("⚡ Requête API...");
 
+    // Mise à jour de l'état de progression
+    updateLoadingStatus("stats", "Chargement statistiques...", true);
+
     // UNE SEULE requête simple
     const response = await fetch(
       "request/stats_non_sap_ultra_fast.php?type=everything&limit=100"
@@ -16,12 +19,27 @@ async function loadDataLight() {
     console.log("📊 Données reçues:", result);
 
     if (result && result.success !== false) {
+      // Mise à jour des états de progression
+      updateLoadingStatus("stats", "Statistiques chargées", false);
+      updateLoadingStatus("equipements", "Chargement équipements...", true);
+
       // Mise à jour IMMÉDIATE des stats
       updateStatsLight(result.stats || result);
 
+      // Mise à jour de l'aperçu rapide
+      updateQuickPreview(result);
+
       // Affichage simple des tableaux
       displayEquipementsLight(result.equipements || []);
+      updateLoadingStatus("equipements", "Équipements chargés", false);
+      updateLoadingStatus("articles", "Chargement articles...", true);
+
       displayArticlesLight(result.articles || []);
+      updateLoadingStatus("articles", "Articles chargés", false);
+
+      // Finalisation
+      updateGlobalProgress(100);
+      hideLoadingSections();
 
       console.log("✅ Données affichées avec succès");
     } else {
@@ -127,6 +145,80 @@ function showErrorLight(message = "Erreur") {
   if (equipEl) equipEl.textContent = "Erreur";
   if (artEl) artEl.textContent = "Erreur";
   if (totalEl) totalEl.textContent = "Erreur";
+}
+
+// Mise à jour de l'état de progression
+function updateLoadingStatus(type, text, isLoading) {
+  const statusEl = document.getElementById(
+    `status${type.charAt(0).toUpperCase() + type.slice(1)}`
+  );
+  const statusTextEl = document.getElementById(
+    `status${type.charAt(0).toUpperCase() + type.slice(1)}Text`
+  );
+  const statusIconEl = document.getElementById(
+    `status${type.charAt(0).toUpperCase() + type.slice(1)}Icon`
+  );
+
+  if (statusEl) {
+    statusEl.style.display = isLoading ? "block" : "none";
+  }
+  if (statusTextEl) {
+    statusTextEl.textContent = text;
+    statusTextEl.className = isLoading ? "" : "text-success";
+  }
+  if (statusIconEl) {
+    statusIconEl.style.display = isLoading ? "none" : "inline";
+    statusIconEl.className = "material-icons ms-auto text-success";
+  }
+}
+
+// Mise à jour de l'aperçu rapide
+function updateQuickPreview(data) {
+  if (data.equipements_par_famille) {
+    const familles = document.getElementById("previewFamilles");
+    if (familles) familles.textContent = data.equipements_par_famille.length;
+  }
+
+  if (data.articles_par_metier) {
+    const metiers = document.getElementById("previewMetiers");
+    if (metiers) metiers.textContent = data.articles_par_metier.length;
+  }
+
+  if (data.equipements_par_source) {
+    const sources = document.getElementById("previewSources");
+    if (sources) sources.textContent = data.equipements_par_source.length;
+  }
+
+  const status = document.getElementById("previewStatus");
+  const statusText = document.getElementById("previewStatusText");
+  if (status)
+    status.innerHTML =
+      '<span class="material-icons text-success">check_circle</span>';
+  if (statusText) statusText.textContent = "Analyse terminée";
+}
+
+// Mise à jour du progrès global
+function updateGlobalProgress(percent) {
+  const progressEl = document.getElementById("globalProgress");
+  const progressRing = document.getElementById("progressRingCircle");
+
+  if (progressEl) progressEl.textContent = percent + "%";
+  if (progressRing) {
+    const circumference = 314;
+    const offset = circumference - (percent / 100) * circumference;
+    progressRing.style.strokeDashoffset = offset;
+  }
+}
+
+// Masquer les sections de chargement
+function hideLoadingSections() {
+  setTimeout(() => {
+    const loadingSection = document.getElementById("loadingStatusSection");
+    const chartsSection = document.getElementById("chartsPreparationSection");
+
+    if (loadingSection) loadingSection.style.display = "none";
+    if (chartsSection) chartsSection.style.display = "none";
+  }, 2000);
 }
 
 // Démarrage immédiat et simple
