@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Graphiques Elements Non-SAP</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .success { background-color: #d4edda; }
+        .error { background-color: #f8d7da; }
+        .info { background-color: #d1ecf1; }
+        .console-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test des Graphiques Elements Non-SAP</h1>
+    
+    <div class="test-section info">
+        <h3>📋 Tests à effectuer</h3>
+        <ol>
+            <li>Vérifier que la page se charge rapidement (< 2 secondes)</li>
+            <li>Confirmer que les données affichées sont correctes (1581 équipements + 12566 articles)</li>
+            <li>Tester le bouton "Activer les Graphiques"</li>
+            <li>Vérifier que les 4 graphiques se créent correctement</li>
+            <li>Tester le bouton "Désactiver les Graphiques"</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>🔗 Liens de test</h3>
+        <p><a href="elements_non_sap.php" target="_blank">▶️ Ouvrir Elements Non-SAP</a></p>
+        <p><a href="request/stats_non_sap_ultra_fast.php?type=everything&limit=500" target="_blank">🔍 Tester API Backend</a></p>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Données attendues</h3>
+        <ul>
+            <li><strong>Équipements non-SAP :</strong> 1581</li>
+            <li><strong>Articles non-SAP :</strong> 12566</li>
+            <li><strong>Total :</strong> 14147 éléments</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>🎯 Fonctionnalités graphiques</h3>
+        <ul>
+            <li><strong>Graphique 1 :</strong> Équipements par famille (camembert)</li>
+            <li><strong>Graphique 2 :</strong> Articles par métier (barres)</li>
+            <li><strong>Graphique 3 :</strong> Équipements par source (secteurs)</li>
+            <li><strong>Graphique 4 :</strong> Articles par source (camembert)</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h3>⚡ Instructions de test</h3>
+        <ol>
+            <li>Cliquez sur le lien "Ouvrir Elements Non-SAP"</li>
+            <li>Notez le temps de chargement initial</li>
+            <li>Vérifiez que les totaux s'affichent : 1581 + 12566 = 14147</li>
+            <li>Cliquez sur "Activer les Graphiques"</li>
+            <li>Attendez le chargement des graphiques</li>
+            <li>Vérifiez que les 4 graphiques s'affichent correctement</li>
+            <li>Testez le bouton "Désactiver les Graphiques"</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h3>🐛 Points de vérification</h3>
+        <ul>
+            <li>Console du navigateur (F12) pour les erreurs JavaScript</li>
+            <li>Temps de réponse de l'API (doit être < 1 seconde)</li>
+            <li>Rendu correct des graphiques Chart.js</li>
+            <li>Boutons d'activation/désactivation fonctionnels</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log("🧪 Page de test chargée - Prêt pour les tests");
+        
+        // Auto-test de l'API
+        fetch('request/stats_non_sap_ultra_fast.php?type=everything&limit=100')
+            .then(response => response.json())
+            .then(data => {
+                console.log("✅ API Test - Données reçues:", data);
+                
+                if (data && data.stats) {
+                    const equipements = data.stats.equipements_non_sap || 0;
+                    const articles = data.stats.articles_non_sap || 0;
+                    const total = equipements + articles;
+                    
+                    document.body.innerHTML += `
+                        <div class="test-section success">
+                            <h3>✅ Test API Réussi</h3>
+                            <p><strong>Équipements:</strong> ${equipements}</p>
+                            <p><strong>Articles:</strong> ${articles}</p>
+                            <p><strong>Total:</strong> ${total}</p>
+                            <p><strong>Status:</strong> ${data.success !== false ? 'OK' : 'Erreur'}</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error("❌ API Test Error:", error);
+                document.body.innerHTML += `
+                    <div class="test-section error">
+                        <h3>❌ Test API Échoué</h3>
+                        <p><strong>Erreur:</strong> ${error.message}</p>
+                    </div>
+                `;
+            });
+    </script>
+</body>
+</html>

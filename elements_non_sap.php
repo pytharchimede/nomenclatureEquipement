@@ -456,10 +456,83 @@ require_once 'includes/auth.php';
             </div>
 
             <!-- Section graphiques supprimée pour alléger la page -->
-            <div class="text-center text-muted py-4">
+            <div class="text-center text-muted py-4" id="graphicsDisabledSection">
                 <span class="material-icons me-2" style="font-size: 2rem;">analytics_off</span>
                 <h5>Graphiques désactivés pour des performances optimales</h5>
                 <p>Les données sont disponibles dans les tableaux ci-dessus</p>
+                <button id="enableGraphicsBtn" class="btn btn-primary mt-3">
+                    <span class="material-icons me-2">analytics</span>
+                    Activer les Graphiques
+                </button>
+            </div>
+
+            <!-- Section graphiques - masquée par défaut -->
+            <div id="graphicsSection" style="display: none;">
+                <div class="non-sap-container mb-4">
+                    <h4 class="mb-4" style="color: var(--primary-color); font-weight: 700;">
+                        <span class="material-icons me-2">timeline</span>
+                        Analyse Graphique
+                        <button id="disableGraphicsBtn" class="btn btn-outline-secondary btn-sm float-end">
+                            <span class="material-icons me-1" style="font-size: 16px;">close</span>
+                            Masquer
+                        </button>
+                    </h4>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="chart-non-sap">
+                            <div class="loading-overlay" id="loadingEquipFamille" style="display: block;">
+                                <div class="spinner"></div>
+                                <div class="text-muted">Chargement des équipements par famille...</div>
+                            </div>
+                            <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
+                                <span class="material-icons me-2">pie_chart</span>
+                                Équipements Non SAP par Famille
+                            </h5>
+                            <canvas id="equipementsFamilleChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="chart-non-sap">
+                            <div class="loading-overlay" id="loadingArticlesMetier" style="display: block;">
+                                <div class="spinner"></div>
+                                <div class="text-muted">Chargement des articles par métier...</div>
+                            </div>
+                            <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
+                                <span class="material-icons me-2">category</span>
+                                Articles Non SAP par Métier
+                            </h5>
+                            <canvas id="articlesMetierChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="chart-non-sap">
+                            <div class="loading-overlay" id="loadingEquipSource" style="display: block;">
+                                <div class="spinner"></div>
+                                <div class="text-muted">Chargement des équipements par source...</div>
+                            </div>
+                            <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
+                                <span class="material-icons me-2">source</span>
+                                Équipements par Source Actuelle
+                            </h5>
+                            <canvas id="equipementsSourceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="chart-non-sap">
+                            <div class="loading-overlay" id="loadingArticlesSource" style="display: block;">
+                                <div class="spinner"></div>
+                                <div class="text-muted">Chargement des articles par source...</div>
+                            </div>
+                            <h5 class="mb-4" style="color: var(--danger-color); font-weight: 700;">
+                                <span class="material-icons me-2">source</span>
+                                Articles par Source Actuelle
+                            </h5>
+                            <canvas id="articlesSourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>

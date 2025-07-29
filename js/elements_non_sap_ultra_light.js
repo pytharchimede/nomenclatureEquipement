@@ -284,6 +284,230 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Lancer le chargement
   loadDataLight();
+
+  // Gestion du bouton d'activation des graphiques
+  setupGraphicsToggle();
 });
+
+// Configuration des boutons de graphiques
+function setupGraphicsToggle() {
+  const enableBtn = document.getElementById("enableGraphicsBtn");
+  const disableBtn = document.getElementById("disableGraphicsBtn");
+
+  if (enableBtn) {
+    enableBtn.addEventListener("click", enableGraphics);
+  }
+  if (disableBtn) {
+    disableBtn.addEventListener("click", disableGraphics);
+  }
+}
+
+// Activation des graphiques
+async function enableGraphics() {
+  console.log("📊 Activation des graphiques...");
+
+  const enableSection = document.getElementById("graphicsDisabledSection");
+  const graphicsSection = document.getElementById("graphicsSection");
+  const enableBtn = document.getElementById("enableGraphicsBtn");
+
+  // Masquer la section désactivée et afficher les graphiques
+  if (enableSection) enableSection.style.display = "none";
+  if (graphicsSection) graphicsSection.style.display = "block";
+
+  // Désactiver le bouton pendant le chargement
+  if (enableBtn) {
+    enableBtn.disabled = true;
+    enableBtn.innerHTML =
+      '<span class="spinner-border spinner-border-sm me-2"></span>Chargement...';
+  }
+
+  try {
+    // Charger les données graphiques spécifiquement
+    await loadGraphicsData();
+  } catch (error) {
+    console.error("❌ Erreur chargement graphiques:", error);
+    // En cas d'erreur, remettre la section désactivée
+    if (enableSection) enableSection.style.display = "block";
+    if (graphicsSection) graphicsSection.style.display = "none";
+    if (enableBtn) {
+      enableBtn.disabled = false;
+      enableBtn.innerHTML =
+        '<span class="material-icons me-2">analytics</span>Activer les Graphiques';
+    }
+  }
+}
+
+// Désactivation des graphiques
+function disableGraphics() {
+  console.log("📊 Désactivation des graphiques...");
+
+  const enableSection = document.getElementById("graphicsDisabledSection");
+  const graphicsSection = document.getElementById("graphicsSection");
+
+  if (enableSection) enableSection.style.display = "block";
+  if (graphicsSection) graphicsSection.style.display = "none";
+}
+
+// Chargement spécifique des données graphiques
+async function loadGraphicsData() {
+  console.log("📊 Chargement données graphiques...");
+
+  try {
+    // Requête spécifique pour les graphiques (réutilise les données déjà chargées)
+    const response = await fetch(
+      "request/stats_non_sap_ultra_fast.php?type=everything&limit=500"
+    );
+    const result = await response.json();
+
+    if (result && result.success !== false) {
+      // Créer les graphiques avec les données
+      await createAllCharts(result);
+      console.log("✅ Graphiques créés avec succès");
+    } else {
+      throw new Error("Données graphiques invalides");
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors du chargement des graphiques:", error);
+    throw error;
+  }
+}
+
+// Création de tous les graphiques
+async function createAllCharts(data) {
+  console.log("📊 Création des graphiques...");
+
+  // Masquer les overlays de chargement et créer les graphiques
+  hideLoadingOverlay("loadingEquipFamille");
+  hideLoadingOverlay("loadingArticlesMetier");
+  hideLoadingOverlay("loadingEquipSource");
+  hideLoadingOverlay("loadingArticlesSource");
+
+  // Créer les graphiques Chart.js
+  if (window.Chart && data) {
+    createEquipementsFamilleChart(data.equipements_par_famille || []);
+    createArticlesMetierChart(data.articles_par_metier || []);
+    createEquipementsSourceChart(data.equipements_par_source || []);
+    createArticlesSourceChart(data.articles_par_source || []);
+  }
+}
+
+// Masquer l'overlay de chargement
+function hideLoadingOverlay(overlayId) {
+  const overlay = document.getElementById(overlayId);
+  if (overlay) {
+    overlay.style.display = "none";
+  }
+}
+
+// Fonctions de création des graphiques Chart.js
+function createEquipementsFamilleChart(data) {
+  const ctx = document.getElementById("equipementsFamilleChart");
+  if (!ctx || !data.length) return;
+
+  new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: data.map((item) => item.label),
+      datasets: [
+        {
+          data: data.map((item) => item.count),
+          backgroundColor: [
+            "#FF6384",
+            "#36A2EB",
+            "#FFCE56",
+            "#4BC0C0",
+            "#9966FF",
+            "#FF9F40",
+          ],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" },
+      },
+    },
+  });
+}
+
+function createArticlesMetierChart(data) {
+  const ctx = document.getElementById("articlesMetierChart");
+  if (!ctx || !data.length) return;
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: data.map((item) => item.label),
+      datasets: [
+        {
+          label: "Articles",
+          data: data.map((item) => item.count),
+          backgroundColor: "#36A2EB",
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+      },
+    },
+  });
+}
+
+function createEquipementsSourceChart(data) {
+  const ctx = document.getElementById("equipementsSourceChart");
+  if (!ctx || !data.length) return;
+
+  new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: data.map((item) => item.label || "Non définie"),
+      datasets: [
+        {
+          data: data.map((item) => item.count),
+          backgroundColor: [
+            "#FF6384",
+            "#36A2EB",
+            "#FFCE56",
+            "#4BC0C0",
+            "#9966FF",
+          ],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" },
+      },
+    },
+  });
+}
+
+function createArticlesSourceChart(data) {
+  const ctx = document.getElementById("articlesSourceChart");
+  if (!ctx || !data.length) return;
+
+  new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: data.map((item) => item.label || "Non définie"),
+      datasets: [
+        {
+          data: data.map((item) => item.count),
+          backgroundColor: ["#FF9F40", "#FF6384", "#36A2EB", "#FFCE56"],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" },
+      },
+    },
+  });
+}
 
 console.log("🎯 Script ultra-léger chargé");
