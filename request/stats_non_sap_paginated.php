@@ -182,6 +182,90 @@ try {
             break;
     }
 
+    // Correction pour la pagination des équipements
+    if ($type === 'equipements_details') {
+        $offset = intval($_GET['offset'] ?? 0);
+        $limit = intval($_GET['limit'] ?? 50);
+
+        $sql = "SELECT 
+                    e.repere_equipement,
+                    e.designation,
+                    e.famille,
+                    e.source_actuelle
+                FROM equipements e 
+                WHERE e.code_sap IS NULL 
+                   OR e.code_sap = '' 
+                   OR e.code_sap = 'Non défini'
+                ORDER BY e.repere_equipement
+                LIMIT $limit OFFSET $offset"; // Correction: enlever les guillemets
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $equipements = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Compter le total
+        $countSql = "SELECT COUNT(*) as total 
+                     FROM equipements e 
+                     WHERE e.code_sap IS NULL 
+                        OR e.code_sap = '' 
+                        OR e.code_sap = 'Non défini'";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute();
+        $totalCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        echo json_encode([
+            'success' => true,
+            'data' => $equipements,
+            'total_count' => $totalCount,
+            'has_more' => ($offset + $limit) < $totalCount,
+            'current_offset' => $offset,
+            'limit' => $limit
+        ]);
+        exit;
+    }
+
+    // Correction similaire pour les articles
+    if ($type === 'articles_details') {
+        $offset = intval($_GET['offset'] ?? 0);
+        $limit = intval($_GET['limit'] ?? 50);
+
+        $sql = "SELECT 
+                    a.code_article,
+                    a.designation,
+                    a.metier,
+                    a.source_actuelle
+                FROM articles a 
+                WHERE a.code_sap IS NULL 
+                   OR a.code_sap = '' 
+                   OR a.code_sap = 'Non défini'
+                ORDER BY a.code_article
+                LIMIT $limit OFFSET $offset"; // Correction: enlever les guillemets
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute();
+        $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Compter le total
+        $countSql = "SELECT COUNT(*) as total 
+                     FROM articles a 
+                     WHERE a.code_sap IS NULL 
+                        OR a.code_sap = '' 
+                        OR a.code_sap = 'Non défini'";
+        $countStmt = $pdo->prepare($countSql);
+        $countStmt->execute();
+        $totalCount = $countStmt->fetch(PDO::FETCH_ASSOC)['total'];
+
+        echo json_encode([
+            'success' => true,
+            'data' => $articles,
+            'total_count' => $totalCount,
+            'has_more' => ($offset + $limit) < $totalCount,
+            'current_offset' => $offset,
+            'limit' => $limit
+        ]);
+        exit;
+    }
+
     // Simulation d'un délai réaliste
     if ($type !== 'stats_generales') {
         usleep(300000); // 0.3 seconde
