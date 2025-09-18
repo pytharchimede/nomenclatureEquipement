@@ -18,7 +18,7 @@ async function loadDataLight() {
 
     console.log("📊 Données reçues:", result);
 
-  if (result && result.success !== false) {
+    if (result && result.success !== false) {
       // Mise à jour des états de progression
       updateLoadingStatus("stats", "Statistiques chargées", false);
       updateLoadingStatus("equipements", "Chargement équipements...", true);
@@ -575,12 +575,21 @@ console.log("🎯 Script ultra-léger chargé");
 // Fallback: charger les totals depuis l'API familles si l'API principale échoue
 async function fallbackLoadStatsFromFamilles() {
   try {
-    const resp = await fetch('api/familles_repartition_uniques.php');
+    const resp = await fetch("api/familles_repartition_uniques.php");
     const json = await resp.json();
     if (json && json.success && Array.isArray(json.data)) {
-      const equipementsNonSAP = json.data.reduce((acc, row) => acc + (parseInt(row.nb_equipements_non_sap || 0)), 0);
-      const articlesNonSAP = json.data.reduce((acc, row) => acc + (parseInt(row.nb_articles_non_sap || 0)), 0);
-      updateStatsLight({ equipements_non_sap: equipementsNonSAP, articles_non_sap: articlesNonSAP });
+      const equipementsNonSAP = json.data.reduce(
+        (acc, row) => acc + parseInt(row.nb_equipements_non_sap || 0),
+        0
+      );
+      const articlesNonSAP = json.data.reduce(
+        (acc, row) => acc + parseInt(row.nb_articles_non_sap || 0),
+        0
+      );
+      updateStatsLight({
+        equipements_non_sap: equipementsNonSAP,
+        articles_non_sap: articlesNonSAP,
+      });
 
       // Finaliser l'état de chargement minimal
       updateLoadingStatus("stats", "Statistiques chargées (fallback)", false);
@@ -588,7 +597,7 @@ async function fallbackLoadStatsFromFamilles() {
       return;
     }
   } catch (e) {
-    console.warn('Fallback familles indisponible', e);
+    console.warn("Fallback familles indisponible", e);
   }
   // Si tout échoue, afficher 0 pour éviter "Erreur"
   updateStatsLight({ equipements_non_sap: 0, articles_non_sap: 0 });
