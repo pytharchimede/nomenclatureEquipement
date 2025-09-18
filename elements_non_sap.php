@@ -19,14 +19,16 @@ require_once 'includes/auth.php';
 
 <body>
     <!-- Barre de progression -->
-    <div class="progress-container" id="progressContainer" style="display: block;">
+    <!-- <div class="progress-container" id="progressContainer" style="display: block;">
         <div class="container-fluid">
             <div class="progress" style="height: 6px; background: #f0f0f0;">
                 <div class="progress-bar-custom" id="progressBar" style="width: 0%; background: var(--danger-color); transition: width 0.3s ease;"></div>
             </div>
             <div class="progress-text" id="progressText">⚡ Chargement ultra-rapide en cours...</div>
         </div>
-    </div>
+    </div> -->
+
+
 
     <div class="d-flex">
         <?php include 'menu.php'; ?>

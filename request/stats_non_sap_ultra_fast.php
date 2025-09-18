@@ -74,12 +74,22 @@ try {
 
             // NOUVELLE APPROCHE : Charger TOUT en mémoire puis traiter
 
-            // 1. Charger TOUS les équipements non-SAP en une seule fois (MÊME LOGIQUE QUE MENU)
+            // 1. Charger TOUS les équipements non-SAP avec leurs sources réelles de la table nomenclatures
             $stmt = $pdo->query("
                 SELECT 
                     e.repere_equipement,
                     COALESCE(e.famille, 'Non définie') as famille,
-                    COALESCE(e.fabricant, 'Inconnue') as source
+                    CASE 
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.repere_equipement = e.repere_equipement AND n.source = 'RGM') 
+                        THEN 'RGM' 
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.repere_equipement = e.repere_equipement AND n.source = 'Template') 
+                        THEN 'Template'
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.repere_equipement = e.repere_equipement AND n.source = 'SPL') 
+                        THEN 'SPL'
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.repere_equipement = e.repere_equipement AND n.source IS NOT NULL) 
+                        THEN (SELECT DISTINCT n.source FROM nomenclatures n WHERE n.repere_equipement = e.repere_equipement AND n.source IS NOT NULL LIMIT 1)
+                        ELSE 'Aucune source'
+                    END as source_reelle
                 FROM equipements e 
                 WHERE e.repere_equipement NOT IN (
                     SELECT DISTINCT n.repere_equipement 
@@ -90,11 +100,21 @@ try {
             ");
             $all_equipements = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 2. Charger TOUS les articles non-SAP en une seule fois (MÊME LOGIQUE QUE MENU)
+            // 2. Charger TOUS les articles non-SAP avec leurs sources réelles de la table nomenclatures
             $stmt = $pdo->query("
                 SELECT 
                     a.code_article,
-                    COALESCE(a.fabricant, 'Inconnue') as source
+                    CASE 
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source = 'RGM') 
+                        THEN 'RGM' 
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source = 'Template') 
+                        THEN 'Template'
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source = 'SPL') 
+                        THEN 'SPL'
+                        WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source IS NOT NULL) 
+                        THEN (SELECT DISTINCT n.source FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source IS NOT NULL LIMIT 1)
+                        ELSE 'Aucune source'
+                    END as source_reelle
                 FROM articles a 
                 WHERE a.code_article NOT IN (
                     SELECT DISTINCT n.code_article 
@@ -129,7 +149,7 @@ try {
                 $articles_with_metier[] = [
                     'code_article' => $code,
                     'metier' => $metier,
-                    'source' => $article['source']
+                    'source' => $article['source_reelle']
                 ];
             }
             $result['articles'] = array_slice($articles_with_metier, 0, $limit);
@@ -160,10 +180,10 @@ try {
                 $result['articles_par_metier'][] = ['label' => $label, 'count' => $count_val];
             }
 
-            // Équipements par source (groupement en mémoire)
+            // Équipements par source (groupement en mémoire avec sources réelles)
             $source_eq_counts = [];
             foreach ($all_equipements as $eq) {
-                $source = $eq['source'];
+                $source = $eq['source_reelle'];
                 $source_eq_counts[$source] = ($source_eq_counts[$source] ?? 0) + 1;
             }
             arsort($source_eq_counts);
@@ -174,10 +194,10 @@ try {
                 $result['equipements_par_source'][] = ['label' => $label, 'count' => $count_val];
             }
 
-            // Articles par source (groupement en mémoire)
+            // Articles par source (groupement en mémoire avec sources réelles)
             $source_art_counts = [];
             foreach ($all_articles as $article) {
-                $source = $article['source'];
+                $source = $article['source_reelle'];
                 $source_art_counts[$source] = ($source_art_counts[$source] ?? 0) + 1;
             }
             arsort($source_art_counts);
