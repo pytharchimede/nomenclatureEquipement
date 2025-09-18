@@ -18,7 +18,7 @@ async function loadDataLight() {
 
     console.log("📊 Données reçues:", result);
 
-    if (result && result.success !== false) {
+  if (result && result.success !== false) {
       // Mise à jour des états de progression
       updateLoadingStatus("stats", "Statistiques chargées", false);
       updateLoadingStatus("equipements", "Chargement équipements...", true);
@@ -28,6 +28,9 @@ async function loadDataLight() {
 
       // Mise à jour de l'aperçu rapide
       updateQuickPreview(result);
+
+      // KPI Accès rapides (3 cartes)
+      updateKpis(result);
 
       // Mise à jour de l'analyse détaillée
       updateDetailedAnalysis(result);
@@ -47,11 +50,11 @@ async function loadDataLight() {
       console.log("✅ Données affichées avec succès");
     } else {
       console.error("❌ Erreur dans la réponse:", result);
-      showErrorLight("Erreur de données");
+      await fallbackLoadStatsFromFamilles();
     }
   } catch (error) {
     console.error("❌ Erreur réseau:", error);
-    showErrorLight("Erreur réseau");
+    await fallbackLoadStatsFromFamilles();
   }
 }
 
@@ -145,9 +148,44 @@ function showErrorLight(message = "Erreur") {
   const artEl = document.getElementById("articlesNonSAP");
   const totalEl = document.getElementById("totalNonSAP");
 
-  if (equipEl) equipEl.textContent = "Erreur";
-  if (artEl) artEl.textContent = "Erreur";
-  if (totalEl) totalEl.textContent = "Erreur";
+  if (equipEl && equipEl.textContent === "...") equipEl.textContent = "0";
+  if (artEl && artEl.textContent === "...") artEl.textContent = "0";
+  if (totalEl && totalEl.textContent === "...") totalEl.textContent = "0";
+}
+
+// Mise à jour des KPI des 3 cartes Accès rapides
+async function updateKpis(data) {
+  try {
+    // KPI Équipements non SAP et Articles non SAP via stats globales
+    const kpiEq = document.getElementById("kpiEquipementsNonSAP");
+    const kpiAr = document.getElementById("kpiArticlesNonSAP");
+    if (kpiEq) kpiEq.textContent = data?.stats?.equipements_non_sap ?? "—";
+    if (kpiAr) kpiAr.textContent = data?.stats?.articles_non_sap ?? "—";
+
+    // KPI Équipements sans nomenclature: somme depuis l'API familles (nb_equipements_sans_nomenclature)
+    const kpiSansNom = document.getElementById("kpiSansNomenclature");
+    if (kpiSansNom) {
+      try {
+        const resp = await fetch("api/familles_repartition_uniques.php");
+        const json = await resp.json();
+        if (json && json.success && Array.isArray(json.data)) {
+          const totalSansNom = json.data.reduce(
+            (acc, row) =>
+              acc + parseInt(row.nb_equipements_sans_nomenclature || 0),
+            0
+          );
+          kpiSansNom.textContent = totalSansNom;
+        } else {
+          kpiSansNom.textContent = "—";
+        }
+      } catch (e) {
+        console.warn("Impossible de charger KPI sans nomenclature", e);
+        kpiSansNom.textContent = "—";
+      }
+    }
+  } catch (e) {
+    console.warn("Erreur updateKpis", e);
+  }
 }
 
 // Mise à jour de l'état de progression
@@ -287,6 +325,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Gestion du bouton d'activation des graphiques
   setupGraphicsToggle();
+
+  // Lancer également le chargement des compteurs des accès rapides
+  loadQuickAccessCounts();
 });
 
 // Configuration des boutons de graphiques
@@ -384,7 +425,26 @@ async function createAllCharts(data) {
 
   // Créer les graphiques Chart.js
   if (window.Chart && data) {
-    createEquipementsFamilleChart(data.equipements_par_famille || []);
+    // Si l'API dédiée existe, privilégier la répartition unique par repère
+    try {
+      const famResp = await fetch("api/familles_repartition_uniques.php");
+      const famJson = await famResp.json();
+      if (famJson && famJson.success && Array.isArray(famJson.data)) {
+        const chartData = famJson.data.map((row) => ({
+          label: row.famille,
+          count: parseInt(row.nb_reperes_uniques || 0),
+        }));
+        createEquipementsFamilleChart(chartData);
+      } else {
+        createEquipementsFamilleChart(data.equipements_par_famille || []);
+      }
+    } catch (e) {
+      console.warn(
+        "Répartition familles unique indisponible, fallback aux données locales",
+        e
+      );
+      createEquipementsFamilleChart(data.equipements_par_famille || []);
+    }
     createArticlesMetierChart(data.articles_par_metier || []);
     createEquipementsSourceChart(data.equipements_par_source || []);
     createArticlesSourceChart(data.articles_par_source || []);
@@ -511,3 +571,62 @@ function createArticlesSourceChart(data) {
 }
 
 console.log("🎯 Script ultra-léger chargé");
+
+// Fallback: charger les totals depuis l'API familles si l'API principale échoue
+async function fallbackLoadStatsFromFamilles() {
+  try {
+    const resp = await fetch('api/familles_repartition_uniques.php');
+    const json = await resp.json();
+    if (json && json.success && Array.isArray(json.data)) {
+      const equipementsNonSAP = json.data.reduce((acc, row) => acc + (parseInt(row.nb_equipements_non_sap || 0)), 0);
+      const articlesNonSAP = json.data.reduce((acc, row) => acc + (parseInt(row.nb_articles_non_sap || 0)), 0);
+      updateStatsLight({ equipements_non_sap: equipementsNonSAP, articles_non_sap: articlesNonSAP });
+
+      // Finaliser l'état de chargement minimal
+      updateLoadingStatus("stats", "Statistiques chargées (fallback)", false);
+      hideLoadingSections();
+      return;
+    }
+  } catch (e) {
+    console.warn('Fallback familles indisponible', e);
+  }
+  // Si tout échoue, afficher 0 pour éviter "Erreur"
+  updateStatsLight({ equipements_non_sap: 0, articles_non_sap: 0 });
+  updateLoadingStatus("stats", "Statistiques chargées (0)", false);
+  hideLoadingSections();
+}
+
+// Chargement des compteurs Accès rapides
+async function loadQuickAccessCounts() {
+  try {
+    // 1) Équipements sans nomenclature
+    const respFam = await fetch("api/familles_repartition_uniques.php");
+    const famJson = await respFam.json();
+    if (famJson && famJson.success) {
+      const totalSansNomen = famJson.data.reduce(
+        (acc, row) => acc + parseInt(row.nb_equipements_sans_nomenclature || 0),
+        0
+      );
+      const el1 = document.getElementById("quickNoNomenclaturesCount");
+      if (el1) el1.textContent = totalSansNomen;
+      const elEquip = document.getElementById("quickEquipNonSAPCount");
+      if (elEquip) {
+        const totalNonSAP = famJson.data.reduce(
+          (acc, row) => acc + parseInt(row.nb_equipements_non_sap || 0),
+          0
+        );
+        elEquip.textContent = totalNonSAP;
+      }
+      const elArt = document.getElementById("quickArticlesNonSAPCount");
+      if (elArt) {
+        const totalArtNonSAP = famJson.data.reduce(
+          (acc, row) => acc + parseInt(row.nb_articles_non_sap || 0),
+          0
+        );
+        elArt.textContent = totalArtNonSAP;
+      }
+    }
+  } catch (e) {
+    console.warn("Impossible de charger les compteurs rapides", e);
+  }
+}

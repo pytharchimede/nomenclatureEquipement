@@ -38,6 +38,30 @@ $stmt = $pdo->query("
 $articlesCodesSAP = $stmt->fetchColumn();
 $articlesNonCodesSAP = $totalArticles - $articlesCodesSAP;
 
+// Équipements non SAP (repères qui n'apparaissent pas avec source='SAP')
+$equipementsNonSAP = (int)$pdo->query("
+        SELECT COUNT(DISTINCT e.repere_equipement) AS total
+        FROM equipements e
+        WHERE e.repere_equipement IS NOT NULL
+            AND e.repere_equipement NOT IN (
+                SELECT DISTINCT n.repere_equipement
+                FROM nomenclatures n
+                WHERE n.source = 'SAP' AND n.repere_equipement IS NOT NULL
+            )
+")->fetchColumn();
+
+// Articles non SAP côté SPL (codes article présents en nomenclatures mais absents en SAP)
+$articlesNonSAP_SPL = (int)$pdo->query("
+        SELECT COUNT(DISTINCT n.code_article) AS total
+        FROM nomenclatures n
+        WHERE n.code_article IS NOT NULL
+            AND n.code_article NOT IN (
+                SELECT DISTINCT code_article
+                FROM nomenclatures
+                WHERE source = 'SAP' AND code_article IS NOT NULL
+            )
+")->fetchColumn();
+
 // Répartition par source
 $stmt = $pdo->query("
     SELECT 
@@ -555,6 +579,66 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                     </div>
                 </div>
             <?php endif; ?>
+
+            <!-- Accès rapide — Non SAP & Exports -->
+            <div class="row mb-4">
+                <div class="col-xl-4 col-lg-4 col-md-6 mb-3">
+                    <div class="metric-card" style="border-left-color: var(--warning-color);">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <div class="text-muted small">Équipements sans nomenclature</div>
+                                <div class="h3 mb-0" style="font-weight:800; color: var(--warning-color);">
+                                    <?= number_format($equipSansNomenclature) ?>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="request/export_equipements_sans_nomenclature.php" class="btn btn-outline-warning btn-sm">
+                                    <span class="material-icons me-1" style="font-size:16px;">download</span>
+                                    Exporter
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4 col-lg-4 col-md-6 mb-3">
+                    <div class="metric-card" style="border-left-color: var(--danger-color);">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <div class="text-muted small">Équipements non SAP</div>
+                                <div class="h3 mb-0" style="font-weight:800; color: var(--danger-color);">
+                                    <?= number_format($equipementsNonSAP) ?>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="request/export_equipements_non_sap.php" class="btn btn-outline-danger btn-sm">
+                                    <span class="material-icons me-1" style="font-size:16px;">download</span>
+                                    Exporter
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-4 col-lg-4 col-md-12 mb-3">
+                    <div class="metric-card" style="border-left-color: var(--info-color);">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <div>
+                                <div class="text-muted small">Articles non SAP (SPL)</div>
+                                <div class="h3 mb-0" style="font-weight:800; color: var(--info-color);">
+                                    <?= number_format($articlesNonSAP_SPL) ?>
+                                </div>
+                            </div>
+                            <div>
+                                <a href="request/export_articles_non_sap_spl.php" class="btn btn-outline-info btn-sm">
+                                    <span class="material-icons me-1" style="font-size:16px;">download</span>
+                                    Exporter
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Statistiques Principales -->
             <div class="row mb-5">

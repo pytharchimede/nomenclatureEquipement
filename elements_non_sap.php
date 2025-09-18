@@ -28,8 +28,6 @@ require_once 'includes/auth.php';
         </div>
     </div> -->
 
-
-
     <div class="d-flex">
         <?php include 'menu.php'; ?>
 
