@@ -2,6 +2,19 @@
 // Suppression de tout ce qui n'est pas essentiel
 console.log("⚡ Chargement ultra-rapide en cours...");
 
+// Mode léger global pour Chart.js: désactiver animations et effets
+if (window.Chart) {
+  try {
+    Chart.defaults.animation = false;
+    Chart.defaults.plugins = Chart.defaults.plugins || {};
+    Chart.defaults.plugins.legend = { display: false };
+    Chart.defaults.elements = Chart.defaults.elements || {};
+    Chart.defaults.elements.point = { radius: 0 };
+  } catch (e) {
+    console.warn("Chart defaults non modifiables", e);
+  }
+}
+
 // CHARGEMENT ULTRA-SIMPLE
 async function loadDataLight() {
   try {

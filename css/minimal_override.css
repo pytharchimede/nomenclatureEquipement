@@ -1,0 +1,66 @@
+/* Minimal override to reduce shadows, gradients, animations and complex effects */
+:root{
+    --primary-color: #1976d2;
+    --secondary-color: #424242;
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --info-color: #2196f3;
+}
+
+/* Simplify page background and typography */
+body{
+    background: #ffffff !important;
+    color: #222 !important;
+    font-weight: 400 !important;
+}
+
+/* Remove heavy shadows and gradients */
+.dashboard-card, .stat-card, .metric-card, .chart-container, .alert-modern {
+    box-shadow: none !important;
+    background: #ffffff !important;
+    border-radius: 8px !important;
+    border: 1px solid #e9ecef !important;
+}
+
+/* Remove hover transforms and transitions */
+.dashboard-card, .stat-card, .metric-card, .btn-modern, .stat-number {
+    transition: none !important;
+    transform: none !important;
+}
+
+.dashboard-card::before, .chart-container::before, .stat-card::after {
+    display: none !important;
+}
+
+/* Reduce visual weight of icons */
+.material-icons{
+    font-size: 18px !important;
+}
+
+/* Tables simplified */
+.table thead th {
+    background: #f8f9fa !important;
+}
+
+/* Disable CSS animations/spinners visibility for lightweight mode */
+.spinner-border, .spinner {
+    display: none !important;
+}
+
+/* Ensure charts occupy less complex layout space */
+.chart-container, .chart-container canvas {
+    background: transparent !important;
+}
+
+/* Ensure buttons remain usable but simple */
+.btn-modern, .btn {
+    box-shadow: none !important;
+    border-radius: 6px !important;
+}
+
+/* Accessibility: keep contrast */
+.stat-number, .metric-card { color: inherit !important; }
+
+/* Remove entry animations */
+* { animation: none !important; }

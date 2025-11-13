@@ -109,7 +109,91 @@ try {
 
     sendProgress('preparing', "Préparation de l'export de $totalNomenclatures nomenclatures...", 10);
 
-    // Création du spreadsheet
+    // Prévention timeout/long running
+    if (!ini_get('safe_mode')) {
+        @set_time_limit(0);
+    }
+    @ignore_user_abort(true);
+
+    // Seuil: si grand volume, privilégier un CSV streamable (évite PhpSpreadsheet timeouts)
+    $csvThreshold = 20000; // lignes après lesquelles on bascule automatiquement en CSV
+    $preferCsv = (isset($_GET['type']) && strtolower($_GET['type']) === 'csv') || ($totalNomenclatures > $csvThreshold);
+
+    if ($preferCsv) {
+        sendProgress('mode', 'Mode CSV activé pour gros export', 12);
+        // Préparer le fichier CSV temporaire
+        $timestamp = date('Y-m-d_H-i-s');
+        $filterSuffix = '';
+        if ($exportType === 'filtered') $filterSuffix = '_filtre';
+        if ($exportType === 'selected') $filterSuffix = '_selection';
+        $filename = "nomenclatures{$filterSuffix}_{$timestamp}.csv";
+        $filepath = "../tmp/$filename";
+        if (!is_dir('../tmp')) mkdir('../tmp', 0755, true);
+        $out = fopen($filepath, 'w');
+        // BOM pour Excel Windows
+        fprintf($out, "\xEF\xBB\xBF");
+        // Écrire en-têtes
+        $headerRow = array_values([
+            'Code Équipement',
+            'Repère Équipement',
+            'Désignation Équipement',
+            'Fabricant',
+            'Type',
+            'N° Série Fabricant',
+            'Code Article',
+            'Désignation Article',
+            'N° Poste',
+            'Quantité',
+            'Unité',
+            'Poste Technique',
+            'Métier',
+            'Date Création',
+            'Source'
+        ]);
+        fputcsv($out, $headerRow, ';');
+
+        // Réexécuter la requête (le même $stmt est déjà préparé et exécuté plus haut; on le réinitialise proprement)
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+        $processed = 0;
+        while ($nomenclature = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $rowOut = [
+                $nomenclature['code_equipement'] ?? '',
+                $nomenclature['repere_equipement'] ?? '',
+                $nomenclature['designation_equipement'] ?? '',
+                $nomenclature['fabricant'] ?? '',
+                $nomenclature['type'] ?? '',
+                $nomenclature['numero_serie_fabricant'] ?? '',
+                $nomenclature['code_article'] ?? '',
+                $nomenclature['designation_article'] ?? '',
+                $nomenclature['numero_poste'] ?? '',
+                $nomenclature['quantite'] ?? '',
+                $nomenclature['unite'] ?? '',
+                $nomenclature['poste_technique'] ?? '',
+                $nomenclature['metier'] ?? '',
+                $nomenclature['date_creation'] ?? '',
+                $nomenclature['source'] ?? ''
+            ];
+            fputcsv($out, $rowOut, ';');
+            $processed++;
+            if ($processed % 200 === 0) {
+                $percent = 12 + (($processed / $totalNomenclatures) * 68);
+                sendProgress('processing', "Traitement en cours... $processed/$totalNomenclatures", $percent);
+                if (ob_get_level()) ob_flush();
+                flush();
+            }
+        }
+        fclose($out);
+        sendProgress('complete', "Export CSV terminé ! $processed nomenclatures exportées", 100, [
+            'filename' => $filename,
+            'filepath' => $filepath,
+            'total_processed' => $processed,
+            'download_url' => "tmp/$filename"
+        ]);
+        exit;
+    }
+
+    // Création du spreadsheet (mode Excel seulement si pas basculé en CSV)
     $spreadsheet = new Spreadsheet();
     $sheet = $spreadsheet->getActiveSheet();
     $sheet->setTitle('Nomenclatures');

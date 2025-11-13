@@ -97,6 +97,8 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
     <!-- Material Icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="css/style_dashboard.css" rel="stylesheet">
+    <!-- Minimal override for lightweight rendering -->
+    <link href="css/minimal_override.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #1976d2;
@@ -611,7 +613,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
                                 </div>
                             </div>
                             <div>
-                                <a href="request/export_equipements_non_sap.php" class="btn btn-outline-danger btn-sm">
+                                <a href="request/export_equipements_non_sap.php?format=csv" class="btn btn-outline-danger btn-sm">
                                     <span class="material-icons me-1" style="font-size:16px;">download</span>
                                     Exporter
                                 </a>
@@ -1286,20 +1288,7 @@ $nbAjoutsNomenclatures = Nomenclature::countAddedLast30Days();
             });
         }
 
-        // Animation d'entrée pour les cartes
-        document.addEventListener('DOMContentLoaded', function() {
-            const cards = document.querySelectorAll('.stat-card, .chart-container, .metric-card');
-            cards.forEach((card, index) => {
-                card.style.opacity = '0';
-                card.style.transform = 'translateY(20px)';
-
-                setTimeout(() => {
-                    card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
-                    card.style.opacity = '1';
-                    card.style.transform = 'translateY(0)';
-                }, index * 100);
-            });
-        });
+        // Mode léger : pas d'animation d'entrée pour réduire le travail du rendu
     </script>
 </body>
 

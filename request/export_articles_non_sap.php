@@ -3,11 +3,9 @@ session_start();
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../model/Database.php';
 
-header('Content-Type: application/vnd.ms-excel');
-header('Content-Disposition: attachment; filename="articles_non_sap_' . date('Y-m-d_H-i-s') . '.xls"');
-header('Cache-Control: max-age=0');
-
 try {
+    $format = isset($_GET['format']) ? strtolower($_GET['format']) : 'xls';
+    $limit = isset($_GET['limit']) ? max(0, (int)$_GET['limit']) : 0;
     $pdo = Database::getConnection();
 
     // Récupération des articles qui ne sont pas dans SAP
@@ -18,9 +16,6 @@ try {
             a.type_article,
             a.fabricant,
             a.numero_piece_fabricant,
-            a.groupe_articles,
-            a.groupe_marche_externe,
-            a.uq_base,
             a.temsup_niv_mdt,
             a.description,
             a.date_creation,
@@ -65,6 +60,115 @@ try {
     ");
 
     $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $articles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Mode CSV léger: streaming
+    if ($format === 'csv') {
+        $sqlCsv = "
+            SELECT DISTINCT
+                a.code_article,
+                a.designation_article,
+                a.type_article,
+                a.fabricant,
+                a.numero_piece_fabricant,
+                a.groupe_articles,
+                a.groupe_marche_externe,
+                a.uq_base,
+                a.temsup_niv_mdt,
+                a.description,
+                a.date_creation,
+                a.cree_par,
+                CASE 
+                    WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source = 'RGM') THEN 'RGM'
+                    WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article AND n.source = 'Template') THEN 'Template'
+                    ELSE 'Aucune source'
+                END as source_actuelle,
+                CASE 
+                    WHEN EXISTS (SELECT 1 FROM nomenclatures n WHERE n.code_article = a.code_article) THEN 'Oui' 
+                    ELSE 'Non' 
+                END as a_nomenclature,
+                COUNT(DISTINCT n.repere_equipement) as nb_equipements_lies,
+                CASE 
+                    WHEN a.code_article LIKE '1%' THEN 'Mécanique'
+                    WHEN a.code_article LIKE '2%' THEN 'Électrique'
+                    WHEN a.code_article LIKE '3%' THEN 'Instrumentation'
+                    WHEN a.code_article LIKE '4%' THEN 'Tuyauterie'
+                    WHEN a.code_article LIKE '5%' THEN 'Chaudronnerie'
+                    WHEN a.code_article LIKE '6%' THEN 'Civil/Structure'
+                    WHEN a.code_article LIKE '7%' THEN 'Chimie/Process'
+                    WHEN a.code_article LIKE '8%' THEN 'Sécurité'
+                    WHEN a.code_article LIKE '9%' THEN 'Maintenance'
+                    ELSE 'Autres'
+                END as metier
+            FROM articles a
+            LEFT JOIN nomenclatures n ON a.code_article = n.code_article
+            WHERE a.code_article NOT IN (
+                SELECT DISTINCT n2.code_article 
+                FROM nomenclatures n2 
+                WHERE n2.source = 'SAP' AND n2.code_article IS NOT NULL
+            )
+            GROUP BY a.id, a.code_article, a.designation_article, a.type_article, a.fabricant,
+                     a.numero_piece_fabricant, a.groupe_articles, a.groupe_marche_externe,
+                     a.uq_base, a.temsup_niv_mdt, a.description, a.date_creation, a.cree_par
+            ORDER BY a.code_article";
+        if ($limit > 0) {
+            $sqlCsv .= "\n            LIMIT " . (int)$limit;
+        }
+
+        $stmtCsv = $pdo->query($sqlCsv);
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="articles_non_sap_' . date('Y-m-d_H-i-s') . '.csv"');
+        header('Cache-Control: max-age=0');
+        $out = fopen('php://output', 'w');
+        fprintf($out, "\xEF\xBB\xBF");
+        fputcsv($out, [
+            'Code Article',
+            'Désignation',
+            'Type Article',
+            'Métier',
+            'Fabricant',
+            'N° Pièce Fabricant',
+            'Groupe Articles',
+            'Groupe Marché',
+            'UQ Base',
+            'Niveau MDT',
+            'Description',
+            'Date Création',
+            'Créé Par',
+            'Source Actuelle',
+            'A Nomenclature',
+            'Nb Équipements Liés',
+            'Statut SAP'
+        ], ';');
+        while ($row = $stmtCsv->fetch(PDO::FETCH_ASSOC)) {
+            fputcsv($out, [
+                $row['code_article'] ?? '',
+                $row['designation_article'] ?? '',
+                $row['type_article'] ?? '',
+                $row['metier'] ?? '',
+                $row['fabricant'] ?? '',
+                $row['numero_piece_fabricant'] ?? '',
+                $row['groupe_articles'] ?? '',
+                $row['groupe_marche_externe'] ?? '',
+                $row['uq_base'] ?? '',
+                $row['temsup_niv_mdt'] ?? '',
+                $row['description'] ?? '',
+                $row['date_creation'] ?? '',
+                $row['cree_par'] ?? '',
+                $row['source_actuelle'] ?? '',
+                $row['a_nomenclature'] ?? '',
+                $row['nb_equipements_lies'] ?? 0,
+                'NON CODIFIÉ SAP'
+            ], ';');
+        }
+        fclose($out);
+        exit;
+    }
+
+    // En-têtes pour export XLS (HTML table compatible)
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename="articles_non_sap_' . date('Y-m-d_H-i-s') . '.xls"');
+    header('Cache-Control: max-age=0');
 
     echo '<table border="1">';
     echo '<tr style="background-color: #f0f0f0; font-weight: bold;">';
@@ -120,7 +224,6 @@ try {
         }
         $resumeMetier[$metier]++;
     }
-
     echo '<br><br>';
     echo '<table border="1">';
     echo '<tr style="background-color: #e8f5e8;">';
